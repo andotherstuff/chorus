@@ -8,16 +8,51 @@ import LoginDialog from './LoginDialog';
 import SignupDialog from './SignupDialog';
 import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
 import { AccountSwitcher } from './AccountSwitcher';
+import { useNostr } from '@nostrify/react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostrLogin } from '@nostrify/react/login';
 
 export function LoginArea() {
   const { currentUser } = useLoggedInAccounts();
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
+  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
+  const { addLogin, removeLogin } = useNostrLogin();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    try {
+      // This is a simplified implementation - in a real app, you would use the proper login flow
+      console.log('Login functionality would be implemented here');
+      setLoginDialogOpen(false);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    if (user) {
+      removeLogin(user.pubkey);
+    }
+  };
+
+  const handleLoginArea = () => {
     setLoginDialogOpen(false);
     setSignupDialogOpen(false);
   };
+
+  if (user) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">
+          {user.pubkey.slice(0, 8)}...
+        </span>
+        <Button variant="outline" size="sm" onClick={handleLogout}>
+          Logout
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -36,7 +71,7 @@ export function LoginArea() {
       <LoginDialog
         isOpen={loginDialogOpen} 
         onClose={() => setLoginDialogOpen(false)} 
-        onLogin={handleLogin}
+        onLogin={handleLoginArea}
         onSignup={() => setSignupDialogOpen(true)}
       />
 

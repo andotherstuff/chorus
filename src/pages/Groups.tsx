@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { LoginArea } from "@/components/auth/LoginArea";
 import { Separator } from "@/components/ui/separator";
-import { Users, Plus } from "lucide-react";
+import { Users, Plus, MessageSquare, Activity } from "lucide-react";
 
 export default function Groups() {
   const { nostr } = useNostr();
@@ -21,6 +21,48 @@ export default function Groups() {
       return events;
     },
     enabled: !!nostr,
+  });
+  
+  // Query for community stats (posts and participants)
+  const { data: communityStats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ["community-stats"],
+    queryFn: async (c) => {
+      if (!communities || communities.length === 0) return {};
+      
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
+      const stats: Record<string, { posts: number; participants: Set<string> }> = {};
+      
+      // Create a filter for all communities to get posts in a single query
+      const communityRefs = communities.map(community => {
+        const dTag = community.tags.find(tag => tag[0] === "d");
+        return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+      });
+      
+      // Get all posts that reference any community
+      const posts = await nostr.query([{ 
+        kinds: [1, 4550], 
+        "#a": communityRefs,
+        limit: 500
+      }], { signal });
+      
+      // Process posts to get stats for each community
+      posts.forEach(post => {
+        const communityTag = post.tags.find(tag => tag[0] === "a");
+        if (!communityTag) return;
+        
+        const communityId = communityTag[1];
+        if (!stats[communityId]) {
+          stats[communityId] = { posts: 0, participants: new Set() };
+        }
+        
+        // Count posts and unique participants
+        stats[communityId].posts++;
+        stats[communityId].participants.add(post.pubkey);
+      });
+      
+      return stats;
+    },
+    enabled: !!nostr && !!communities && communities.length > 0,
   });
 
   if (isLoading) {
@@ -80,9 +122,57 @@ export default function Groups() {
                 </div>
                 <CardHeader>
                   <CardTitle>{name}</CardTitle>
-                  <CardDescription className="flex items-center">
-                    <Users className="h-4 w-4 mr-1" />
-                    {moderatorTags.length} moderator{moderatorTags.length !== 1 ? 's' : ''}
+                  <CardDescription>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                        <Users className="h-3 w-3 mr-1" />
+                        {moderatorTags.length} mod{moderatorTags.length !== 1 ? 's' : ''}
+                      </div>
+                      
+                      {isLoadingStats ? (
+                        <>
+                          <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                            Loading...
+                          </div>
+                          <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                            <Activity className="h-3 w-3 mr-1" />
+                            Loading...
+                          </div>
+                        </>
+                      ) : communityStats && (() => {
+                        const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+                        const stats = communityStats[communityId];
+                        
+                        if (!stats) {
+                          return (
+                            <>
+                              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                0 posts
+                              </div>
+                              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                                <Activity className="h-3 w-3 mr-1" />
+                                0 participants
+                              </div>
+                            </>
+                          );
+                        }
+                        
+                        return (
+                          <>
+                            <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              {stats.posts} post{stats.posts !== 1 ? 's' : ''}
+                            </div>
+                            <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                              <Activity className="h-3 w-3 mr-1" />
+                              {stats.participants.size} participant{stats.participants.size !== 1 ? 's' : ''}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
