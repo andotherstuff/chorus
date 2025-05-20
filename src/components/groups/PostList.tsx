@@ -42,6 +42,55 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [filterBy, setFilterBy] = useState<FilterOption>(showOnlyApproved ? "approved" : "all");
   
+  // Query for likes and reactions
+  const { data: reactions, isLoading: isLoadingReactions } = useQuery({
+    queryKey: ["post-reactions", communityId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      // Get reaction events (likes = kind 7, comments = kind 1 with 'e' tag)
+      const likes = await nostr.query([{ 
+        kinds: [7], // Reaction events
+        "#a": [communityId],
+        limit: 500,
+      }], { signal });
+      
+      const comments = await nostr.query([{ 
+        kinds: [1], // Comment notes 
+        "#a": [communityId],
+        limit: 500,
+      }], { signal });
+      
+      // Process and count reactions by post ID
+      const reactionCounts: Record<string, { likes: number; comments: number; shares: number }> = {};
+      
+      // Count likes
+      likes.forEach(like => {
+        // Get the post ID from the 'e' tag
+        const postTag = like.tags.find(tag => tag[0] === 'e');
+        if (postTag) {
+          const postId = postTag[1];
+          reactionCounts[postId] = reactionCounts[postId] || { likes: 0, comments: 0, shares: 0 };
+          reactionCounts[postId].likes++;
+        }
+      });
+      
+      // Count comments
+      comments.forEach(comment => {
+        // Get the post ID from the 'e' tag (direct reply)
+        const replyTag = comment.tags.find(tag => tag[0] === 'e');
+        if (replyTag) {
+          const postId = replyTag[1];
+          reactionCounts[postId] = reactionCounts[postId] || { likes: 0, comments: 0, shares: 0 };
+          reactionCounts[postId].comments++;
+        }
+      });
+      
+      return reactionCounts;
+    },
+    enabled: !!nostr && !!communityId,
+  });
+  
   // Query for approved posts
   const { data: approvedPosts, isLoading: isLoadingApproved } = useQuery({
     queryKey: ["approved-posts", communityId],
@@ -60,6 +109,15 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
         try {
           // Parse the approved post from the content
           const approvedPost = JSON.parse(approval.content) as NostrEvent;
+          const postId = approvedPost.id;
+          
+          // Use actual reaction counts if available
+          const postReactions = reactions?.[postId] || { 
+            likes: 0, 
+            comments: 0, 
+            shares: 0 
+          };
+          
           // Add the approval information
           return {
             ...approvedPost,
@@ -68,11 +126,7 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
               pubkey: approval.pubkey,
               created_at: approval.created_at,
             },
-            reactions: {
-              likes: Math.floor(Math.random() * 50), // TODO: Replace with actual reaction counts
-              comments: Math.floor(Math.random() * 20),
-              shares: Math.floor(Math.random() * 10),
-            }
+            reactions: postReactions
           };
         } catch (error) {
           console.error("Error parsing approved post:", error);
@@ -83,7 +137,7 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
         reactions: { likes: number; comments: number; shares: number };
       } => post !== null);
     },
-    enabled: !!nostr && !!communityId,
+    enabled: !!nostr && !!communityId && !!reactions,
   });
   
   // Query for pending posts
@@ -99,16 +153,23 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
         limit: 50,
       }], { signal });
       
-      return posts.map(post => ({
-        ...post,
-        reactions: {
-          likes: Math.floor(Math.random() * 50), // TODO: Replace with actual reaction counts
-          comments: Math.floor(Math.random() * 20),
-          shares: Math.floor(Math.random() * 10),
-        }
-      }));
+      return posts.map(post => {
+        const postId = post.id;
+        
+        // Use actual reaction counts if available
+        const postReactions = reactions?.[postId] || { 
+          likes: 0, 
+          comments: 0, 
+          shares: 0 
+        };
+        
+        return {
+          ...post,
+          reactions: postReactions
+        };
+      });
     },
-    enabled: !!nostr && !!communityId,
+    enabled: !!nostr && !!communityId && !!reactions,
   });
   
   // Query for approved members list
@@ -237,7 +298,7 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
     totalShares: uniquePosts.reduce((sum, post) => sum + (post.reactions?.shares || 0), 0),
   };
   
-  if (isLoadingApproved || isLoadingPending) {
+  if (isLoadingApproved || isLoadingPending || isLoadingReactions) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
@@ -484,15 +545,15 @@ function PostItem({ post, communityId, isApproved }: PostItemProps) {
         <div className="flex gap-4">
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Heart className="h-4 w-4 mr-2" />
-            Like
+            Like {post.reactions?.likes > 0 && `(${post.reactions.likes})`}
           </Button>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <MessageSquare className="h-4 w-4 mr-2" />
-            Comment
+            Comment {post.reactions?.comments > 0 && `(${post.reactions.comments})`}
           </Button>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Share2 className="h-4 w-4 mr-2" />
-            Share
+            Share {post.reactions?.shares > 0 && `(${post.reactions.shares})`}
           </Button>
         </div>
       </CardFooter>
