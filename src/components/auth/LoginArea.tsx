@@ -11,6 +11,7 @@ import { AccountSwitcher } from './AccountSwitcher';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrLogin } from '@nostrify/react/login';
+import { useLoginActions } from '@/hooks/useLoginActions';
 
 export function LoginArea() {
   const { currentUser } = useLoggedInAccounts();
@@ -18,7 +19,7 @@ export function LoginArea() {
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const { addLogin, removeLogin } = useNostrLogin();
+  const { logout } = useLoginActions();
 
   const handleLogin = async () => {
     try {
@@ -32,7 +33,7 @@ export function LoginArea() {
 
   const handleLogout = () => {
     if (user) {
-      removeLogin(user.pubkey);
+      logout();
     }
   };
 
