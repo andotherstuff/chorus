@@ -8,6 +8,8 @@ import { toast } from "@/hooks/useToast";
 import { randomTwoWordName } from "@/lib/utils";
 import { useCallback, useEffect, useState } from "react";
 
+const ONBOARDED_KEY = "hasOnboarded";
+
 const Index = () => {
 	const { currentUser } = useLoggedInAccounts();
 	const [step, setStep] = useState<
@@ -17,43 +19,74 @@ const Index = () => {
 	const { mutateAsync: publishEvent, isPending: isPublishing } =
 		useNostrPublish();
 	const [profileSaved, setProfileSaved] = useState(false);
-
-	// When a user logs in (after signup or login), go to profile step if not done
-	useEffect(() => {
-		if (currentUser && step !== "profile" && !profileSaved) {
-			// Only trigger onboarding if user has no name (or is just created)
-			setStep("profile");
-			if (!randomName) setRandomName(randomTwoWordName());
+	const [hasOnboarded, setHasOnboarded] = useState(() => {
+		try {
+			return localStorage.getItem(ONBOARDED_KEY) === "true";
+		} catch {
+			return false;
 		}
-	}, [currentUser, step, randomName, profileSaved]);
+	});
+	const [initialProfileSaved, setInitialProfileSaved] = useState(false);
+
+	// Helper: check if currentUser has a name (existing profile)
+	const hasProfile = !!currentUser?.metadata?.name;
+
+	// On login/signup, handle onboarding logic
+	useEffect(() => {
+		if (!currentUser) return;
+
+		if (!hasOnboarded && !hasProfile && !initialProfileSaved) {
+			// New user: generate fake name and save kind:0 event
+			const generatedName = randomTwoWordName();
+			setRandomName(generatedName);
+			setStep("profile");
+			setInitialProfileSaved(true);
+			(async () => {
+				try {
+					await publishEvent({
+						kind: 0,
+						content: JSON.stringify({ name: generatedName }),
+					});
+					// Optionally: invalidate queries here if needed
+				} catch (e) {
+					toast({
+						title: "Error",
+						description: "Failed to save initial profile",
+						variant: "destructive",
+					});
+					setInitialProfileSaved(false); // allow retry on error
+				}
+			})();
+		} else if (!hasOnboarded && hasProfile) {
+			// Existing user: mark as onboarded, skip onboarding
+			setHasOnboarded(true);
+			try {
+				localStorage.setItem(ONBOARDED_KEY, "true");
+			} catch {}
+			setStep("done");
+		}
+	}, [
+		currentUser,
+		hasOnboarded,
+		hasProfile,
+		initialProfileSaved,
+		publishEvent,
+	]);
 
 	// Handler for finishing onboarding (after profile save or skip)
 	const handleFinish = useCallback(() => {
 		setStep("done");
 		setProfileSaved(true);
+		setHasOnboarded(true);
+		try {
+			localStorage.setItem(ONBOARDED_KEY, "true");
+		} catch {}
 	}, []);
 
-	// Handler for skipping profile setup
+	// Handler for skipping profile setup (should not double-save kind:0)
 	const handleSkip = useCallback(async () => {
-		if (!currentUser) return;
-		try {
-			await publishEvent({
-				kind: 0,
-				content: JSON.stringify({ name: randomName }),
-			});
-			toast({
-				title: "Profile created",
-				description: `Welcome, ${randomName}!`,
-			});
-			handleFinish();
-		} catch (e) {
-			toast({
-				title: "Error",
-				description: "Failed to save profile",
-				variant: "destructive",
-			});
-		}
-	}, [currentUser, publishEvent, randomName, handleFinish]);
+		handleFinish();
+	}, [handleFinish]);
 
 	// Handler for when EditProfileForm is submitted
 	const handleProfileSaved = useCallback(() => {
@@ -79,7 +112,7 @@ const Index = () => {
 
 			<main className="flex-1 flex items-center justify-center">
 				<div className="container mx-auto px-4 py-16 max-w-md w-full">
-					{step === "start" && (
+					{!hasOnboarded && step === "start" && (
 						<div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
 							<h2 className="text-3xl font-bold mb-2">Welcome to Chorus</h2>
 							<p className="text-gray-600 mb-6">
@@ -105,11 +138,11 @@ const Index = () => {
 						</div>
 					)}
 
-					{step === "signup" && (
+					{!hasOnboarded && step === "signup" && (
 						<SignupDialog isOpen={true} onClose={() => setStep("start")} />
 					)}
 
-					{step === "login" && (
+					{!hasOnboarded && step === "login" && (
 						<LoginDialog
 							isOpen={true}
 							onClose={() => setStep("start")}
@@ -117,29 +150,32 @@ const Index = () => {
 						/>
 					)}
 
-					{step === "profile" && currentUser && !profileSaved && (
-						<div className="bg-white rounded-2xl shadow-lg p-8">
-							<h2 className="text-2xl font-bold mb-4 text-center">
-								Set up your profile
-							</h2>
-							<p className="text-gray-600 text-center mb-6">
-								This is how you'll appear to others. You can change it later.
-							</p>
-							<EditProfileForm
-								key={currentUser.pubkey}
-								initialName={randomName}
-								onSaved={handleProfileSaved}
-							/>
-							<Button
-								variant="outline"
-								className="w-full mt-4"
-								onClick={handleSkip}
-								disabled={isPublishing}
-							>
-								Skip for now
-							</Button>
-						</div>
-					)}
+					{!hasOnboarded &&
+						step === "profile" &&
+						currentUser &&
+						!profileSaved && (
+							<div className="bg-white rounded-2xl shadow-lg p-8">
+								<h2 className="text-2xl font-bold mb-4 text-center">
+									Set up your profile
+								</h2>
+								<p className="text-gray-600 text-center mb-6">
+									This is how you'll appear to others. You can change it later.
+								</p>
+								<EditProfileForm
+									key={currentUser.pubkey}
+									initialName={randomName}
+									onSaved={handleProfileSaved}
+								/>
+								<Button
+									variant="outline"
+									className="w-full mt-4"
+									onClick={handleSkip}
+									disabled={isPublishing}
+								>
+									Skip for now
+								</Button>
+							</div>
+						)}
 
 					{step === "done" && (
 						<div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
