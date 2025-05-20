@@ -770,78 +770,6 @@ This command will typecheck the code and attempt to build it.
 Your task is not considered finished until this test passes without errors.
 </file>
 
-<file path="src/components/auth/AccountSwitcher.tsx">
-// NOTE: This file is stable and usually should not be modified.
-// It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
-import { ChevronDown, LogOut, UserIcon, UserPlus } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
-import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
-interface AccountSwitcherProps {
-  onAddAccountClick: () => void;
-}
-export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
-  const { currentUser, otherUsers, setLogin, removeLogin } = useLoggedInAccounts();
-  if (!currentUser) return null;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className='flex items-center gap-3 p-3 rounded-full hover:bg-accent transition-all w-full text-foreground'>
-          <Avatar className='w-10 h-10'>
-            <AvatarImage src={currentUser.metadata.picture} alt={currentUser.metadata.name} />
-            <AvatarFallback>{currentUser.metadata.name?.charAt(0) || <UserIcon />}</AvatarFallback>
-          </Avatar>
-          <div className='flex-1 text-left hidden md:block truncate'>
-            <p className='font-medium text-sm'>{currentUser.metadata.name || currentUser.pubkey}</p>
-          </div>
-          <ChevronDown className='w-4 h-4 text-muted-foreground' />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-56 p-2 animate-scale-in'>
-        <div className='font-medium text-sm px-2 py-1.5'>Switch Account</div>
-        {otherUsers.map((user) => (
-          <DropdownMenuItem
-            key={user.id}
-            onClick={() => setLogin(user.id)}
-            className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
-          >
-            <Avatar className='w-8 h-8'>
-              <AvatarImage src={user.metadata.picture} alt={user.metadata.name} />
-              <AvatarFallback>{user.metadata.name?.charAt(0) || <UserIcon />}</AvatarFallback>
-            </Avatar>
-            <div className='flex-1 truncate'>
-              <p className='text-sm font-medium'>{user.metadata.name || user.pubkey}</p>
-            </div>
-            {user.id === currentUser.id && <div className='w-2 h-2 rounded-full bg-primary'></div>}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={onAddAccountClick}
-          className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
-        >
-          <UserPlus className='w-4 h-4' />
-          <span>Add another account</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => removeLogin(currentUser.id)}
-          className='flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500'
-        >
-          <LogOut className='w-4 h-4' />
-          <span>Log out</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-</file>
-
 <file path="src/components/auth/LoginArea.tsx">
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
@@ -5827,336 +5755,6 @@ TooltipContent.displayName = TooltipPrimitive.Content.displayName
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
 </file>
 
-<file path="src/components/EditProfileForm.tsx">
-import React, { useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { useToast } from '@/hooks/useToast';
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Loader2, Upload } from 'lucide-react';
-import { NSchema as n, type NostrMetadata } from '@nostrify/nostrify';
-import { useQueryClient } from '@tanstack/react-query';
-import { useUploadFile } from '@/hooks/useUploadFile';
-export const EditProfileForm: React.FC = () => {
-  const queryClient = useQueryClient();
-  const { user, metadata } = useCurrentUser();
-  const { mutateAsync: publishEvent, isPending } = useNostrPublish();
-  const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
-  const { toast } = useToast();
-  // Initialize the form with default values
-  const form = useForm<NostrMetadata>({
-    resolver: zodResolver(n.metadata()),
-    defaultValues: {
-      name: '',
-      about: '',
-      picture: '',
-      banner: '',
-      website: '',
-      nip05: '',
-      bot: false,
-    },
-  });
-  // Update form values when user data is loaded
-  useEffect(() => {
-    if (metadata) {
-      form.reset({
-        name: metadata.name || '',
-        about: metadata.about || '',
-        picture: metadata.picture || '',
-        banner: metadata.banner || '',
-        website: metadata.website || '',
-        nip05: metadata.nip05 || '',
-        bot: metadata.bot || false,
-      });
-    }
-  }, [metadata, form]);
-  // Handle file uploads for profile picture and banner
-  const uploadPicture = async (file: File, field: 'picture' | 'banner') => {
-    try {
-      // The first tuple in the array contains the URL
-      const [[_, url]] = await uploadFile(file);
-      form.setValue(field, url);
-      toast({
-        title: 'Success',
-        description: `${field === 'picture' ? 'Profile picture' : 'Banner'} uploaded successfully`,
-      });
-    } catch (error) {
-      console.error(`Failed to upload ${field}:`, error);
-      toast({
-        title: 'Error',
-        description: `Failed to upload ${field === 'picture' ? 'profile picture' : 'banner'}. Please try again.`,
-        variant: 'destructive',
-      });
-    }
-  };
-  const onSubmit = async (values: NostrMetadata) => {
-    if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to update your profile',
-        variant: 'destructive',
-      });
-      return;
-    }
-    try {
-      // Combine existing metadata with new values
-      const data = { ...metadata, ...values };
-      // Clean up empty values
-      for (const key in data) {
-        if (data[key] === '') {
-          delete data[key];
-        }
-      }
-      // Publish the metadata event (kind 0)
-      await publishEvent({
-        kind: 0,
-        content: JSON.stringify(data),
-      });
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['logins'] });
-      queryClient.invalidateQueries({ queryKey: ['author', user.pubkey] });
-      toast({
-        title: 'Success',
-        description: 'Your profile has been updated',
-      });
-    } catch (error) {
-      console.error('Failed to update profile:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update your profile. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Your name" {...field} />
-              </FormControl>
-              <FormDescription>
-                This is your display name that will be displayed to others.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="about"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Bio</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Tell others about yourself" 
-                  className="resize-none" 
-                  {...field} 
-                />
-              </FormControl>
-              <FormDescription>
-                A short description about yourself.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="picture"
-            render={({ field }) => (
-              <ImageUploadField
-                field={field}
-                label="Profile Picture"
-                placeholder="https://example.com/profile.jpg"
-                description="URL to your profile picture. You can upload an image or provide a URL."
-                previewType="square"
-                onUpload={(file) => uploadPicture(file, 'picture')}
-              />
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="banner"
-            render={({ field }) => (
-              <ImageUploadField
-                field={field}
-                label="Banner Image"
-                placeholder="https://example.com/banner.jpg"
-                description="URL to a wide banner image for your profile. You can upload an image or provide a URL."
-                previewType="wide"
-                onUpload={(file) => uploadPicture(file, 'banner')}
-              />
-            )}
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="website"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Website</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://yourwebsite.com" {...field} />
-                </FormControl>
-                <FormDescription>
-                  Your personal website or social media link.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="nip05"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>NIP-05 Identifier</FormLabel>
-                <FormControl>
-                  <Input placeholder="you@example.com" {...field} />
-                </FormControl>
-                <FormDescription>
-                  Your verified Nostr identifier.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <FormField
-          control={form.control}
-          name="bot"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Bot Account</FormLabel>
-                <FormDescription>
-                  Mark this account as automated or a bot.
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <Button 
-          type="submit" 
-          className="w-full md:w-auto" 
-          disabled={isPending || isUploading}
-        >
-          {(isPending || isUploading) && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          Save Profile
-        </Button>
-      </form>
-    </Form>
-  );
-};
-// Reusable component for image upload fields
-interface ImageUploadFieldProps {
-  field: {
-    value: string | undefined;
-    onChange: (value: string) => void;
-    name: string;
-    onBlur: () => void;
-  };
-  label: string;
-  placeholder: string;
-  description: string;
-  previewType: 'square' | 'wide';
-  onUpload: (file: File) => void;
-}
-const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
-  field,
-  label,
-  placeholder,
-  description,
-  previewType,
-  onUpload,
-}) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  return (
-    <FormItem>
-      <FormLabel>{label}</FormLabel>
-      <div className="flex flex-col gap-2">
-        <FormControl>
-          <Input
-            placeholder={placeholder}
-            name={field.name}
-            value={field.value ?? ''}
-            onChange={e => field.onChange(e.target.value)}
-            onBlur={field.onBlur}
-          />
-        </FormControl>
-        <div className="flex items-center gap-2">
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                onUpload(file);
-              }
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Image
-          </Button>
-          {field.value && (
-            <div className={`h-10 ${previewType === 'square' ? 'w-10' : 'w-24'} rounded overflow-hidden`}>
-              <img 
-                src={field.value} 
-                alt={`${label} preview`} 
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-        </div>
-      </div>
-      <FormDescription>
-        {description}
-      </FormDescription>
-      <FormMessage />
-    </FormItem>
-  );
-};
-</file>
-
 <file path="src/components/NostrProvider.tsx">
 import { NostrEvent, NPool, NRelay1 } from '@nostrify/nostrify';
 import { NostrContext } from '@nostrify/react';
@@ -6817,14 +6415,6 @@ export function formatRelativeTime(timestamp: number): string {
 }
 </file>
 
-<file path="src/lib/utils.ts">
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-</file>
-
 <file path="src/pages/CreateGroup.tsx">
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -7037,120 +6627,162 @@ export default function CreateGroup() {
 </file>
 
 <file path="src/pages/Groups.tsx">
-import { useEffect, useState } from "react";
+import { LoginArea } from "@/components/auth/LoginArea";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
+import { Plus, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { LoginArea } from "@/components/auth/LoginArea";
-import { Separator } from "@/components/ui/separator";
-import { Users, Plus } from "lucide-react";
 export default function Groups() {
-  const { nostr } = useNostr();
-  const { user } = useCurrentUser();
-  const { data: communities, isLoading } = useQuery({
-    queryKey: ["communities"],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      const events = await nostr.query([{ kinds: [34550], limit: 50 }], { signal });
-      return events;
-    },
-    enabled: !!nostr,
-  });
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Loading communities...</h1>
-      </div>
-    );
-  }
-  return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Nostr Communities</h1>
-        <div className="flex items-center gap-2">
-          <LoginArea />
-          {user && (
-            <Button asChild>
-              <Link to="/create-group">
-                <Plus className="mr-2 h-4 w-4" /> Create Community
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
-      <Separator className="my-6" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {communities && communities.length > 0 ? (
-          communities.map((community) => {
-            // Extract community data from tags
-            const nameTag = community.tags.find(tag => tag[0] === "name");
-            const descriptionTag = community.tags.find(tag => tag[0] === "description");
-            const imageTag = community.tags.find(tag => tag[0] === "image");
-            const dTag = community.tags.find(tag => tag[0] === "d");
-            const moderatorTags = community.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator");
-            const name = nameTag ? nameTag[1] : (dTag ? dTag[1] : "Unnamed Community");
-            const description = descriptionTag ? descriptionTag[1] : "No description available";
-            const image = imageTag ? imageTag[1] : "/placeholder-community.jpg";
-            const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
-            return (
-              <Card key={community.id} className="overflow-hidden flex flex-col">
-                <div className="h-40 overflow-hidden">
-                  {image && (
-                    <img 
-                      src={image} 
-                      alt={name} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://placehold.co/600x400?text=Community";
-                      }}
-                    />
-                  )}
-                </div>
-                <CardHeader>
-                  <CardTitle>{name}</CardTitle>
-                  <CardDescription className="flex items-center">
-                    <Users className="h-4 w-4 mr-1" />
-                    {moderatorTags.length} moderator{moderatorTags.length !== 1 ? 's' : ''}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <p className="line-clamp-3">{description}</p>
-                </CardContent>
-                <CardFooter>
-                  <Button asChild className="w-full">
-                    <Link to={`/group/${encodeURIComponent(communityId)}`}>
-                      View Community
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })
-        ) : (
-          <div className="col-span-full text-center py-10">
-            <h2 className="text-xl font-semibold mb-2">No communities found</h2>
-            <p className="text-muted-foreground mb-4">
-              Be the first to create a community on this platform!
-            </p>
-            {user ? (
-              <Button asChild>
-                <Link to="/create-group">
-                  <Plus className="mr-2 h-4 w-4" /> Create Community
-                </Link>
-              </Button>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Please log in to create a community
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+	const { nostr } = useNostr();
+	const { user } = useCurrentUser();
+	const { data: communities, isLoading } = useQuery({
+		queryKey: ["communities"],
+		queryFn: async (c) => {
+			const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+			const events = await nostr.query([{ kinds: [34550], limit: 50 }], {
+				signal,
+			});
+			return events;
+		},
+		enabled: !!nostr,
+	});
+	if (isLoading) {
+		return (
+			<div className="container mx-auto p-4">
+				<h1 className="text-2xl font-bold mb-4">Loading communities...</h1>
+			</div>
+		);
+	}
+	return (
+		<>
+			<style>{`
+				.account-switcher-small button { padding: 0.25rem !important; gap: 0.25rem !important; }
+				.account-switcher-small .w-10, .account-switcher-small .h-10 { width: 2rem !important; height: 2rem !important; }
+				.account-switcher-small .md\\:block { display: none !important; }
+			`}</style>
+			<div className="container mx-auto p-4">
+				<div className="flex justify-between items-center mb-6 gap-2 sm:gap-4">
+					<h1 className="font-bold text-2xl sm:text-3xl tracking-tight whitespace-nowrap flex items-baseline gap-0">
+						<span className="text-red-500 font-black text-3xl sm:text-4xl mr-1">
+							+
+						</span>
+						Chorus
+					</h1>
+					<div className="flex items-center gap-2 sm:gap-3">
+						<div className="account-switcher-small">
+							<LoginArea />
+						</div>
+						{user && (
+							<Button asChild size="icon">
+								<Link to="/create-group">
+									<Plus className="h-5 w-5" />
+								</Link>
+							</Button>
+						)}
+					</div>
+				</div>
+				<Separator className="my-6" />
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					{communities && communities.length > 0 ? (
+						communities.map((community) => {
+							// Extract community data from tags
+							const nameTag = community.tags.find((tag) => tag[0] === "name");
+							const descriptionTag = community.tags.find(
+								(tag) => tag[0] === "description",
+							);
+							const imageTag = community.tags.find((tag) => tag[0] === "image");
+							const dTag = community.tags.find((tag) => tag[0] === "d");
+							const moderatorTags = community.tags.filter(
+								(tag) => tag[0] === "p" && tag[3] === "moderator",
+							);
+							const name = nameTag
+								? nameTag[1]
+								: dTag
+									? dTag[1]
+									: "Unnamed Community";
+							const description = descriptionTag
+								? descriptionTag[1]
+								: "No description available";
+							const image = imageTag
+								? imageTag[1]
+								: "/placeholder-community.jpg";
+							const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+							return (
+								<Card
+									key={community.id}
+									className="overflow-hidden flex flex-col"
+								>
+									<div className="h-40 overflow-hidden">
+										{image && (
+											<img
+												src={image}
+												alt={name}
+												className="w-full h-full object-cover"
+												onError={(e) => {
+													e.currentTarget.src =
+														"https://placehold.co/600x400?text=Community";
+												}}
+											/>
+										)}
+									</div>
+									<CardHeader>
+										<CardTitle>{name}</CardTitle>
+										<CardDescription className="flex items-center">
+											<Users className="h-4 w-4 mr-1" />
+											{moderatorTags.length} moderator
+											{moderatorTags.length !== 1 ? "s" : ""}
+										</CardDescription>
+									</CardHeader>
+									<CardContent className="flex-grow">
+										<p className="line-clamp-3">{description}</p>
+									</CardContent>
+									<CardFooter>
+										<Button asChild className="w-full">
+											<Link to={`/group/${encodeURIComponent(communityId)}`}>
+												View Community
+											</Link>
+										</Button>
+									</CardFooter>
+								</Card>
+							);
+						})
+					) : (
+						<div className="col-span-full text-center py-10">
+							<h2 className="text-xl font-semibold mb-2">
+								No communities found
+							</h2>
+							<p className="text-muted-foreground mb-4">
+								Be the first to create a community on this platform!
+							</p>
+							{user ? (
+								<Button asChild>
+									<Link to="/create-group">
+										<Plus className="mr-2 h-4 w-4" /> Create Community
+									</Link>
+								</Button>
+							) : (
+								<p className="text-sm text-muted-foreground">
+									Please log in to create a community
+								</p>
+							)}
+						</div>
+					)}
+				</div>
+			</div>
+		</>
+	);
 }
 </file>
 
@@ -8899,95 +8531,6 @@ export default tseslint.config(
 );
 </file>
 
-<file path="package.json">
-{
-  "name": "mkstack",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "npm i && vite",
-    "build": "npm i && vite build && cp dist/index.html dist/404.html",
-    "build:dev": "npm i && vite build --mode development",
-    "ci": "npm i && tsc -p tsconfig.app.json --noEmit && vite build",
-    "lint": "npm i && eslint .",
-    "preview": "npm i && vite preview",
-    "deploy": "npm run build && npx -y surge@latest dist"
-  },
-  "dependencies": {
-    "@hookform/resolvers": "^3.9.0",
-    "@nostrify/nostrify": "npm:@jsr/nostrify__nostrify@^0.46.1",
-    "@nostrify/react": "npm:@jsr/nostrify__react@^0.2.5",
-    "@radix-ui/react-accordion": "^1.2.0",
-    "@radix-ui/react-alert-dialog": "^1.1.1",
-    "@radix-ui/react-aspect-ratio": "^1.1.0",
-    "@radix-ui/react-avatar": "^1.1.0",
-    "@radix-ui/react-checkbox": "^1.1.1",
-    "@radix-ui/react-collapsible": "^1.1.0",
-    "@radix-ui/react-context-menu": "^2.2.1",
-    "@radix-ui/react-dialog": "^1.1.2",
-    "@radix-ui/react-dropdown-menu": "^2.1.1",
-    "@radix-ui/react-hover-card": "^1.1.1",
-    "@radix-ui/react-label": "^2.1.0",
-    "@radix-ui/react-menubar": "^1.1.1",
-    "@radix-ui/react-navigation-menu": "^1.2.0",
-    "@radix-ui/react-popover": "^1.1.1",
-    "@radix-ui/react-progress": "^1.1.0",
-    "@radix-ui/react-radio-group": "^1.2.0",
-    "@radix-ui/react-scroll-area": "^1.1.0",
-    "@radix-ui/react-select": "^2.1.1",
-    "@radix-ui/react-separator": "^1.1.0",
-    "@radix-ui/react-slider": "^1.2.0",
-    "@radix-ui/react-slot": "^1.1.0",
-    "@radix-ui/react-switch": "^1.1.0",
-    "@radix-ui/react-tabs": "^1.1.0",
-    "@radix-ui/react-toast": "^1.2.1",
-    "@radix-ui/react-toggle": "^1.1.0",
-    "@radix-ui/react-toggle-group": "^1.1.0",
-    "@radix-ui/react-tooltip": "^1.1.4",
-    "@tanstack/react-query": "^5.56.2",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.0.0",
-    "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.3.0",
-    "input-otp": "^1.2.4",
-    "lucide-react": "^0.462.0",
-    "next-themes": "^0.3.0",
-    "react": "^18.3.1",
-    "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.53.0",
-    "react-resizable-panels": "^2.1.3",
-    "react-router-dom": "^6.26.2",
-    "recharts": "^2.12.7",
-    "sonner": "^1.5.0",
-    "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7",
-    "vaul": "^0.9.3",
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.9.0",
-    "@tailwindcss/typography": "^0.5.15",
-    "@types/node": "^22.5.5",
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react-swc": "^3.5.0",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^9.9.0",
-    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
-    "eslint-plugin-react-refresh": "^0.4.9",
-    "globals": "^15.9.0",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.11",
-    "typescript": "^5.5.3",
-    "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
-  }
-}
-</file>
-
 <file path="postcss.config.js">
 export default {
   plugins: {
@@ -9250,6 +8793,441 @@ export default defineConfig(() => ({
     },
   },
 }));
+</file>
+
+<file path="src/components/auth/AccountSwitcher.tsx">
+// NOTE: This file is stable and usually should not be modified.
+// It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
+import { ChevronDown, LogOut, UserIcon, UserPlus } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu.tsx';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
+import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
+interface AccountSwitcherProps {
+  onAddAccountClick: () => void;
+}
+export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
+  const { currentUser, otherUsers, setLogin, removeLogin } = useLoggedInAccounts();
+  if (!currentUser) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className='flex items-center gap-3 p-3 rounded-full hover:bg-accent transition-all w-full text-foreground max-w-60'>
+          <Avatar className='w-10 h-10'>
+            <AvatarImage src={currentUser.metadata.picture} alt={currentUser.metadata.name} />
+            <AvatarFallback>{currentUser.metadata.name?.charAt(0) || <UserIcon />}</AvatarFallback>
+          </Avatar>
+          <div className='flex-1 text-left hidden md:block truncate'>
+            <p className='font-medium text-sm truncate'>{currentUser.metadata.name || currentUser.pubkey}</p>
+          </div>
+          <ChevronDown className='w-4 h-4 text-muted-foreground' />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className='w-56 p-2 animate-scale-in'>
+        <div className='font-medium text-sm px-2 py-1.5'>Switch Account</div>
+        {otherUsers.map((user) => (
+          <DropdownMenuItem
+            key={user.id}
+            onClick={() => setLogin(user.id)}
+            className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
+          >
+            <Avatar className='w-8 h-8'>
+              <AvatarImage src={user.metadata.picture} alt={user.metadata.name} />
+              <AvatarFallback>{user.metadata.name?.charAt(0) || <UserIcon />}</AvatarFallback>
+            </Avatar>
+            <div className='flex-1 truncate'>
+              <p className='text-sm font-medium'>{user.metadata.name || user.pubkey}</p>
+            </div>
+            {user.id === currentUser.id && <div className='w-2 h-2 rounded-full bg-primary'></div>}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={onAddAccountClick}
+          className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
+        >
+          <UserPlus className='w-4 h-4' />
+          <span>Add another account</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => removeLogin(currentUser.id)}
+          className='flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500'
+        >
+          <LogOut className='w-4 h-4' />
+          <span>Log out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+</file>
+
+<file path="src/components/EditProfileForm.tsx">
+import { Button } from "@/components/ui/button";
+import {
+	Form,
+	FormControl,
+	FormDescription,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useNostrPublish } from "@/hooks/useNostrPublish";
+import { useToast } from "@/hooks/useToast";
+import { useUploadFile } from "@/hooks/useUploadFile";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { type NostrMetadata, NSchema as n } from "@nostrify/nostrify";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, Upload } from "lucide-react";
+import type React from "react";
+import { useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+interface EditProfileFormProps {
+	initialName?: string;
+	onSaved?: () => void;
+}
+export const EditProfileForm: React.FC<EditProfileFormProps> = ({
+	initialName,
+	onSaved,
+}) => {
+	const queryClient = useQueryClient();
+	const { user, metadata } = useCurrentUser();
+	const { mutateAsync: publishEvent, isPending } = useNostrPublish();
+	const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+	const { toast } = useToast();
+	// Initialize the form with default values
+	const form = useForm<NostrMetadata>({
+		resolver: zodResolver(n.metadata()),
+		defaultValues: {
+			name: initialName || "",
+			about: "",
+			picture: "",
+			banner: "",
+			website: "",
+			nip05: "",
+			bot: false,
+		},
+	});
+	// Update form values when user data is loaded
+	useEffect(() => {
+		if (metadata) {
+			form.reset({
+				name: metadata.name || initialName || "",
+				about: metadata.about || "",
+				picture: metadata.picture || "",
+				banner: metadata.banner || "",
+				website: metadata.website || "",
+				nip05: metadata.nip05 || "",
+				bot: metadata.bot || false,
+			});
+		} else if (initialName) {
+			form.setValue("name", initialName);
+		}
+	}, [metadata, form, initialName]);
+	// Handle file uploads for profile picture and banner
+	const uploadPicture = async (file: File, field: "picture" | "banner") => {
+		try {
+			// The first tuple in the array contains the URL
+			const [[_, url]] = await uploadFile(file);
+			form.setValue(field, url);
+			toast({
+				title: "Success",
+				description: `${field === "picture" ? "Profile picture" : "Banner"} uploaded successfully`,
+			});
+		} catch (error) {
+			console.error(`Failed to upload ${field}:`, error);
+			toast({
+				title: "Error",
+				description: `Failed to upload ${field === "picture" ? "profile picture" : "banner"}. Please try again.`,
+				variant: "destructive",
+			});
+		}
+	};
+	const onSubmit = async (values: NostrMetadata) => {
+		if (!user) {
+			toast({
+				title: "Error",
+				description: "You must be logged in to update your profile",
+				variant: "destructive",
+			});
+			return;
+		}
+		try {
+			// Combine existing metadata with new values
+			const data = { ...metadata, ...values };
+			// Clean up empty values
+			for (const key in data) {
+				if (data[key] === "") {
+					delete data[key];
+				}
+			}
+			// Publish the metadata event (kind 0)
+			await publishEvent({
+				kind: 0,
+				content: JSON.stringify(data),
+			});
+			// Invalidate queries to refresh the data
+			queryClient.invalidateQueries({ queryKey: ["logins"] });
+			queryClient.invalidateQueries({ queryKey: ["author", user.pubkey] });
+			toast({
+				title: "Success",
+				description: "Your profile has been updated",
+			});
+			if (onSaved) onSaved();
+		} catch (error) {
+			console.error("Failed to update profile:", error);
+			toast({
+				title: "Error",
+				description: "Failed to update your profile. Please try again.",
+				variant: "destructive",
+			});
+		}
+	};
+	return (
+		<Form {...form}>
+			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+				<FormField
+					control={form.control}
+					name="name"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Name</FormLabel>
+							<FormControl>
+								<Input placeholder="Your name" {...field} />
+							</FormControl>
+							<FormDescription>
+								This is your display name that will be displayed to others.
+							</FormDescription>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="about"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Bio</FormLabel>
+							<FormControl>
+								<Textarea
+									placeholder="Tell others about yourself"
+									className="resize-none"
+									{...field}
+								/>
+							</FormControl>
+							<FormDescription>
+								A short description about yourself.
+							</FormDescription>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<FormField
+						control={form.control}
+						name="picture"
+						render={({ field }) => (
+							<ImageUploadField
+								field={field}
+								label="Profile Picture"
+								placeholder="https://example.com/profile.jpg"
+								description="URL to your profile picture. You can upload an image or provide a URL."
+								previewType="square"
+								onUpload={(file) => uploadPicture(file, "picture")}
+							/>
+						)}
+					/>
+					<FormField
+						control={form.control}
+						name="banner"
+						render={({ field }) => (
+							<ImageUploadField
+								field={field}
+								label="Banner Image"
+								placeholder="https://example.com/banner.jpg"
+								description="URL to a wide banner image for your profile. You can upload an image or provide a URL."
+								previewType="wide"
+								onUpload={(file) => uploadPicture(file, "banner")}
+							/>
+						)}
+					/>
+				</div>
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<FormField
+						control={form.control}
+						name="website"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>Website</FormLabel>
+								<FormControl>
+									<Input placeholder="https://yourwebsite.com" {...field} />
+								</FormControl>
+								<FormDescription>
+									Your personal website or social media link.
+								</FormDescription>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+				</div>
+				<Button
+					type="submit"
+					className="w-full md:w-auto"
+					disabled={isPending || isUploading}
+				>
+					{(isPending || isUploading) && (
+						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+					)}
+					Save Profile
+				</Button>
+			</form>
+		</Form>
+	);
+};
+// Reusable component for image upload fields
+interface ImageUploadFieldProps {
+	field: {
+		value: string | undefined;
+		onChange: (value: string) => void;
+		name: string;
+		onBlur: () => void;
+	};
+	label: string;
+	placeholder: string;
+	description: string;
+	previewType: "square" | "wide";
+	onUpload: (file: File) => void;
+}
+const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
+	field,
+	label,
+	placeholder,
+	description,
+	previewType,
+	onUpload,
+}) => {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	return (
+		<FormItem>
+			<FormLabel>{label}</FormLabel>
+			<div className="flex flex-col gap-2">
+				<FormControl>
+					<Input
+						placeholder={placeholder}
+						name={field.name}
+						value={field.value ?? ""}
+						onChange={(e) => field.onChange(e.target.value)}
+						onBlur={field.onBlur}
+					/>
+				</FormControl>
+				<div className="flex items-center gap-2">
+					<input
+						type="file"
+						ref={fileInputRef}
+						accept="image/*"
+						className="hidden"
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							if (file) {
+								onUpload(file);
+							}
+						}}
+					/>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onClick={() => fileInputRef.current?.click()}
+					>
+						<Upload className="h-4 w-4 mr-2" />
+						Upload Image
+					</Button>
+					{field.value && (
+						<div
+							className={`h-10 ${previewType === "square" ? "w-10" : "w-24"} rounded overflow-hidden`}
+						>
+							<img
+								src={field.value}
+								alt={`${label} preview`}
+								className="h-full w-full object-cover"
+							/>
+						</div>
+					)}
+				</div>
+			</div>
+			<FormDescription>{description}</FormDescription>
+			<FormMessage />
+		</FormItem>
+	);
+};
+</file>
+
+<file path="src/lib/utils.ts">
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+export function cn(...inputs: ClassValue[]) {
+	return twMerge(clsx(inputs));
+}
+// Returns a random two-word name, e.g. "Happy Hamster"
+export function randomTwoWordName() {
+	const adjectives = [
+		"Happy",
+		"Brave",
+		"Clever",
+		"Lucky",
+		"Gentle",
+		"Swift",
+		"Quiet",
+		"Bold",
+		"Sunny",
+		"Mighty",
+		"Jolly",
+		"Witty",
+		"Chill",
+		"Nimble",
+		"Calm",
+		"Daring",
+		"Fuzzy",
+		"Glowing",
+		"Peppy",
+		"Zesty",
+	];
+	const animals = [
+		"Hamster",
+		"Otter",
+		"Fox",
+		"Panda",
+		"Tiger",
+		"Hawk",
+		"Dolphin",
+		"Wolf",
+		"Bear",
+		"Rabbit",
+		"Sparrow",
+		"Lynx",
+		"Seal",
+		"Falcon",
+		"Moose",
+		"Badger",
+		"Finch",
+		"Mole",
+		"Fawn",
+		"Crane",
+	];
+	const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+	const animal = animals[Math.floor(Math.random() * animals.length)];
+	return `${adj} ${animal}`;
+}
 </file>
 
 <file path="src/AppRouter.tsx">
@@ -9809,6 +9787,95 @@ When extending the NostrGroups platform:
 </html>
 </file>
 
+<file path="package.json">
+{
+	"name": "mkstack",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "npm i && vite",
+		"build": "npm i && vite build && cp dist/index.html dist/404.html",
+		"build:dev": "npm i && vite build --mode development",
+		"ci": "npm i && tsc -p tsconfig.app.json --noEmit && vite build",
+		"lint": "npm i && eslint .",
+		"preview": "npm i && vite preview",
+		"deploy": "npm run build && npx -y surge@latest dist"
+	},
+	"dependencies": {
+		"@hookform/resolvers": "^3.9.0",
+		"@nostrify/nostrify": "npm:@jsr/nostrify__nostrify@^0.46.1",
+		"@nostrify/react": "npm:@jsr/nostrify__react@^0.2.5",
+		"@radix-ui/react-accordion": "^1.2.0",
+		"@radix-ui/react-alert-dialog": "^1.1.1",
+		"@radix-ui/react-aspect-ratio": "^1.1.0",
+		"@radix-ui/react-avatar": "^1.1.0",
+		"@radix-ui/react-checkbox": "^1.1.1",
+		"@radix-ui/react-collapsible": "^1.1.0",
+		"@radix-ui/react-context-menu": "^2.2.1",
+		"@radix-ui/react-dialog": "^1.1.2",
+		"@radix-ui/react-dropdown-menu": "^2.1.1",
+		"@radix-ui/react-hover-card": "^1.1.1",
+		"@radix-ui/react-label": "^2.1.0",
+		"@radix-ui/react-menubar": "^1.1.1",
+		"@radix-ui/react-navigation-menu": "^1.2.0",
+		"@radix-ui/react-popover": "^1.1.1",
+		"@radix-ui/react-progress": "^1.1.0",
+		"@radix-ui/react-radio-group": "^1.2.0",
+		"@radix-ui/react-scroll-area": "^1.1.0",
+		"@radix-ui/react-select": "^2.1.1",
+		"@radix-ui/react-separator": "^1.1.0",
+		"@radix-ui/react-slider": "^1.2.0",
+		"@radix-ui/react-slot": "^1.1.0",
+		"@radix-ui/react-switch": "^1.1.0",
+		"@radix-ui/react-tabs": "^1.1.0",
+		"@radix-ui/react-toast": "^1.2.1",
+		"@radix-ui/react-toggle": "^1.1.0",
+		"@radix-ui/react-toggle-group": "^1.1.0",
+		"@radix-ui/react-tooltip": "^1.1.4",
+		"@tanstack/react-query": "^5.56.2",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"cmdk": "^1.0.0",
+		"date-fns": "^3.6.0",
+		"embla-carousel-react": "^8.3.0",
+		"input-otp": "^1.2.4",
+		"lucide-react": "^0.511.0",
+		"next-themes": "^0.3.0",
+		"react": "^18.3.1",
+		"react-day-picker": "^8.10.1",
+		"react-dom": "^18.3.1",
+		"react-hook-form": "^7.53.0",
+		"react-resizable-panels": "^2.1.3",
+		"react-router-dom": "^6.26.2",
+		"recharts": "^2.12.7",
+		"sonner": "^1.5.0",
+		"tailwind-merge": "^2.5.2",
+		"tailwindcss-animate": "^1.0.7",
+		"vaul": "^0.9.3",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.9.0",
+		"@tailwindcss/typography": "^0.5.15",
+		"@types/node": "^22.5.5",
+		"@types/react": "^18.3.1",
+		"@types/react-dom": "^18.3.1",
+		"@vitejs/plugin-react-swc": "^3.5.0",
+		"autoprefixer": "^10.4.20",
+		"eslint": "^9.9.0",
+		"eslint-plugin-react-hooks": "^5.1.0-rc.0",
+		"eslint-plugin-react-refresh": "^0.4.9",
+		"globals": "^15.9.0",
+		"postcss": "^8.4.47",
+		"tailwindcss": "^3.4.11",
+		"typescript": "^5.5.3",
+		"typescript-eslint": "^8.0.1",
+		"vite": "^5.4.1"
+	}
+}
+</file>
+
 <file path="README.md">
 # NostrGroups - A NIP-72 Groups Platform
 
@@ -10338,77 +10405,160 @@ function ModeratorItem({ pubkey, isCreator = false }: { pubkey: string; isCreato
 </file>
 
 <file path="src/pages/Index.tsx">
-import { Link } from "react-router-dom";
+import { EditProfileForm } from "@/components/EditProfileForm";
+import LoginDialog from "@/components/auth/LoginDialog";
+import SignupDialog from "@/components/auth/SignupDialog";
 import { Button } from "@/components/ui/button";
-import { LoginArea } from "@/components/auth/LoginArea";
-import { Users } from "lucide-react";
+import { useLoggedInAccounts } from "@/hooks/useLoggedInAccounts";
+import { useNostrPublish } from "@/hooks/useNostrPublish";
+import { toast } from "@/hooks/useToast";
+import { randomTwoWordName } from "@/lib/utils";
+import { useCallback, useEffect, useState } from "react";
 const Index = () => {
-  return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto p-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">NostrGroups</h1>
-          <div className="ml-auto"><LoginArea /></div>
-        </div>
-      </header>
-      {/* Hero Section */}
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-blue-50 to-white">
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-5xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-            Connect with Communities on Nostr
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-10">
-            Join, create, and participate in decentralized communities powered by the Nostr protocol.
-            Share ideas, connect with like-minded people, and build your network.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="text-lg px-8">
-              <Link to="/groups">
-                <Users className="mr-2 h-5 w-5" />
-                Explore Communities
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-      {/* Features Section */}
-      <div className="bg-white py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Why NostrGroups?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-6 border rounded-lg shadow-sm">
-              <h3 className="text-xl font-semibold mb-3">Decentralized</h3>
-              <p className="text-gray-600">
-                Built on the Nostr protocol, your data isn't controlled by any single entity.
-                You own your content and connections.
-              </p>
-            </div>
-            <div className="p-6 border rounded-lg shadow-sm">
-              <h3 className="text-xl font-semibold mb-3">Censorship Resistant</h3>
-              <p className="text-gray-600">
-                Communities can't be arbitrarily shut down or censored.
-                Your voice remains heard.
-              </p>
-            </div>
-            <div className="p-6 border rounded-lg shadow-sm">
-              <h3 className="text-xl font-semibold mb-3">User-Controlled</h3>
-              <p className="text-gray-600">
-                Create and moderate your own communities with flexible tools.
-                Set your own rules and culture.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Footer */}
-      <footer className="bg-gray-100 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-600">
-          <p>Built with Nostr NIP-72 • Decentralized Communities</p>
-        </div>
-      </footer>
-    </div>
-  );
+	const { currentUser } = useLoggedInAccounts();
+	const [step, setStep] = useState<
+		"start" | "signup" | "login" | "profile" | "done"
+	>("start");
+	const [randomName, setRandomName] = useState<string>("");
+	const { mutateAsync: publishEvent, isPending: isPublishing } =
+		useNostrPublish();
+	const [profileSaved, setProfileSaved] = useState(false);
+	// When a user logs in (after signup or login), go to profile step if not done
+	useEffect(() => {
+		if (currentUser && step !== "profile" && !profileSaved) {
+			// Only trigger onboarding if user has no name (or is just created)
+			setStep("profile");
+			if (!randomName) setRandomName(randomTwoWordName());
+		}
+	}, [currentUser, step, randomName, profileSaved]);
+	// Handler for finishing onboarding (after profile save or skip)
+	const handleFinish = useCallback(() => {
+		setStep("done");
+		setProfileSaved(true);
+	}, []);
+	// Handler for skipping profile setup
+	const handleSkip = useCallback(async () => {
+		if (!currentUser) return;
+		try {
+			await publishEvent({
+				kind: 0,
+				content: JSON.stringify({ name: randomName }),
+			});
+			toast({
+				title: "Profile created",
+				description: `Welcome, ${randomName}!`,
+			});
+			handleFinish();
+		} catch (e) {
+			toast({
+				title: "Error",
+				description: "Failed to save profile",
+				variant: "destructive",
+			});
+		}
+	}, [currentUser, publishEvent, randomName, handleFinish]);
+	// Handler for when EditProfileForm is submitted
+	const handleProfileSaved = useCallback(() => {
+		toast({
+			title: "Profile updated",
+			description: "Your profile has been saved.",
+		});
+		handleFinish();
+	}, [handleFinish]);
+	// UI rendering logic
+	return (
+		<div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
+			{/* Header */}
+			<header className="border-b">
+				<div className="container mx-auto p-4 flex justify-between items-center">
+					<h1 className="text-4xl font-bold flex flex-row items-baseline gap-0">
+						<span className="text-red-500 font-black text-5xl">+</span>
+						Chorus
+					</h1>
+				</div>
+			</header>
+			<main className="flex-1 flex items-center justify-center">
+				<div className="container mx-auto px-4 py-16 max-w-md w-full">
+					{step === "start" && (
+						<div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
+							<h2 className="text-3xl font-bold mb-2">Welcome to Chorus</h2>
+							<p className="text-gray-600 mb-6">
+								Join decentralized communities on Nostr. To get started, create
+								a new account or sign in with your existing Nostr key.
+							</p>
+							<Button
+								className="w-full py-6 text-lg"
+								onClick={() => setStep("signup")}
+							>
+								Create a new account
+							</Button>
+							<div className="text-sm text-gray-500 mt-4">
+								Already have an account?{" "}
+								<button
+									type="button"
+									className="text-blue-600 hover:underline font-medium"
+									onClick={() => setStep("login")}
+								>
+									Sign in with existing Nostr account
+								</button>
+							</div>
+						</div>
+					)}
+					{step === "signup" && (
+						<SignupDialog isOpen={true} onClose={() => setStep("start")} />
+					)}
+					{step === "login" && (
+						<LoginDialog
+							isOpen={true}
+							onClose={() => setStep("start")}
+							onLogin={() => setStep("profile")}
+						/>
+					)}
+					{step === "profile" && currentUser && !profileSaved && (
+						<div className="bg-white rounded-2xl shadow-lg p-8">
+							<h2 className="text-2xl font-bold mb-4 text-center">
+								Set up your profile
+							</h2>
+							<p className="text-gray-600 text-center mb-6">
+								This is how you'll appear to others. You can change it later.
+							</p>
+							<EditProfileForm
+								key={currentUser.pubkey}
+								initialName={randomName}
+								onSaved={handleProfileSaved}
+							/>
+							<Button
+								variant="outline"
+								className="w-full mt-4"
+								onClick={handleSkip}
+								disabled={isPublishing}
+							>
+								Skip for now
+							</Button>
+						</div>
+					)}
+					{step === "done" && (
+						<div className="bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
+							<h2 className="text-2xl font-bold">You're all set!</h2>
+							<p className="text-gray-600">
+								Your account is ready. You can now join communities and start
+								connecting.
+							</p>
+							<Button className="w-full py-6 text-lg" asChild>
+								<a href="/groups">Continue to Communities</a>
+							</Button>
+						</div>
+					)}
+				</div>
+			</main>
+			{/* Footer */}
+			<footer className="bg-gray-100 py-8 mt-auto">
+				<div className="container mx-auto px-4 text-center text-gray-600">
+					<p>Built with Nostr NIP-72 • Decentralized Communities</p>
+				</div>
+			</footer>
+		</div>
+	);
 };
 export default Index;
 </file>
