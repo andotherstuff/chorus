@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { ChevronDown, LogOut, UserIcon, UserPlus } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu.tsx';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
 import { useLoggedInAccounts } from '@/hooks/useLoggedInAccounts';
+import { ChevronDown, LogOut, UserIcon, UserPlus } from 'lucide-react';
 
 interface AccountSwitcherProps {
   onAddAccountClick: () => void;
@@ -24,48 +24,56 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className='flex items-center gap-3 p-3 rounded-full hover:bg-accent transition-all w-full text-foreground max-w-60'>
-          <Avatar className='w-10 h-10'>
+        <button
+          type='button'
+          className='flex w-full max-w-60 items-center gap-3 rounded-full p-3 text-foreground transition-all hover:bg-accent'
+        >
+          <Avatar className='h-10 w-10'>
             <AvatarImage src={currentUser.metadata.picture} alt={currentUser.metadata.name} />
             <AvatarFallback>{currentUser.metadata.name?.charAt(0) || <UserIcon />}</AvatarFallback>
           </Avatar>
-          <div className='flex-1 text-left hidden md:block truncate'>
-            <p className='font-medium text-sm truncate'>{currentUser.metadata.name || currentUser.pubkey}</p>
+          <div className='hidden flex-1 truncate text-left md:block'>
+            <p className='truncate font-medium text-sm'>
+              {currentUser.metadata.name || currentUser.pubkey}
+            </p>
           </div>
-          <ChevronDown className='w-4 h-4 text-muted-foreground' />
+          <ChevronDown className='h-4 w-4 text-muted-foreground' />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-56 p-2 animate-scale-in'>
-        <div className='font-medium text-sm px-2 py-1.5'>Switch Account</div>
+      <DropdownMenuContent className='w-56 animate-scale-in p-2'>
+        <div className='px-2 py-1.5 font-medium text-sm'>Switch Account</div>
         {otherUsers.map((user) => (
           <DropdownMenuItem
             key={user.id}
             onClick={() => setLogin(user.id)}
-            className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
+            className='flex cursor-pointer items-center gap-2 rounded-md p-2'
           >
-            <Avatar className='w-8 h-8'>
+            <Avatar className='h-8 w-8'>
               <AvatarImage src={user.metadata.picture} alt={user.metadata.name} />
               <AvatarFallback>{user.metadata.name?.charAt(0) || <UserIcon />}</AvatarFallback>
             </Avatar>
             <div className='flex-1 truncate'>
-              <p className='text-sm font-medium'>{user.metadata.name || user.pubkey}</p>
+              <p className='font-medium text-sm'>{user.metadata.name || user.pubkey}</p>
             </div>
-            {user.id === currentUser.id && <div className='w-2 h-2 rounded-full bg-primary'></div>}
+            {user.id === currentUser.id && <div className='h-2 w-2 rounded-full bg-primary' />}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={onAddAccountClick}
-          className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
+          className='flex cursor-pointer items-center gap-2 rounded-md p-2'
         >
-          <UserPlus className='w-4 h-4' />
+          <UserPlus className='h-4 w-4' />
           <span>Add another account</span>
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => removeLogin(currentUser.id)}
-          className='flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500'
+          onClick={() => {
+            localStorage.removeItem('hasOnboarded');
+            removeLogin(currentUser.id);
+          }}
+          className='flex cursor-pointer items-center gap-2 rounded-md p-2 text-red-500'
         >
-          <LogOut className='w-4 h-4' />
+          <LogOut className='h-4 w-4' />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -5,7 +5,6 @@ import NostrProvider from '@/components/NostrProvider';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import Settings from '@/pages/Settings';
 import { NostrLoginProvider } from '@nostrify/react/login';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppRouter from './AppRouter';
