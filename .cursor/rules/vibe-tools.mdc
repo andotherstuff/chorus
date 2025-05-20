@@ -152,7 +152,7 @@ Users can ask for these tools using nicknames
 Gemini is a nickname for vibe-tools repo
 Perplexity is a nickname for vibe-tools web
 Stagehand is a nickname for vibe-tools browser
-If people say "ask Gemini" or "ask Perplexity" or "ask Stagehand" they mean to use the `vibe-tools` command with the `repo`, `web`, or `browser` commands respectively.
+If people say "ask Gemini", "Ask Gemini", "ask Perplexity", "Ask Perplexity", "Ask Stagehand", or "ask Stagehand" they mean to use the `vibe-tools` command with the `repo`, `web`, or `browser` commands respectively.
 
 **Xcode Commands:**
 `vibe-tools xcode build [buildPath=<path>] [destination=<destination>]` - Build Xcode project and report errors.
