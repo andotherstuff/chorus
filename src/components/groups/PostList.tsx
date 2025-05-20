@@ -15,6 +15,8 @@ import { NostrEvent } from "@nostrify/nostrify";
 import { NoteContent } from "../NoteContent";
 import { Link } from "react-router-dom";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { ReplyList } from "./ReplyList";
+import { CreateReplyForm } from "./CreateReplyForm";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -109,7 +111,7 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
-      // Get posts that tag the community
+      // Get posts that tag the community (both regular posts and replies)
       const posts = await nostr.query([{ 
         kinds: [1],
         "#a": [communityId],
@@ -324,18 +326,39 @@ interface PostItemProps {
 }
 
 function PostItem({ post, communityId, isApproved, isModerator }: PostItemProps) {
+  const { nostr } = useNostr();
   const author = useAuthor(post.pubkey);
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { banUser } = useBannedUsers(communityId);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
+  const [showReplyForm, setShowReplyForm] = useState(false);
+  const [replyCount, setReplyCount] = useState(0);
   
   const metadata = author.data?.metadata;
   const displayName = metadata?.name || post.pubkey.slice(0, 8);
   const profileImage = metadata?.picture;
   
-  // isModerator is now passed as a prop, so we don't need to check again
+  // Query for reply count
+  const { data: replies, refetch: refetchReplies } = useQuery({
+    queryKey: ["reply-count", post.id],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      
+      // Get replies (kind 1111) that reference this post
+      const replyEvents = await nostr.query([{ 
+        kinds: [1111],
+        "#e": [post.id],
+        "#a": [communityId],
+        limit: 100,
+      }], { signal });
+      
+      setReplyCount(replyEvents.length);
+      return replyEvents;
+    },
+    enabled: !!nostr && !!post.id,
+  });
   
   const handleApprovePost = async () => {
     if (!user) {
@@ -410,6 +433,15 @@ function PostItem({ post, communityId, isApproved, isModerator }: PostItemProps)
       console.error("Error banning user:", error);
       toast.error("Failed to ban user. Please try again.");
     }
+  };
+  
+  const handleReplyCreated = () => {
+    // Refetch replies to update the count and list
+    refetchReplies();
+  };
+  
+  const toggleReplyForm = () => {
+    setShowReplyForm(prev => !prev);
   };
   
   return (
@@ -541,21 +573,45 @@ function PostItem({ post, communityId, isApproved, isModerator }: PostItemProps)
         </div>
       </CardContent>
       
-      <CardFooter>
-        <div className="flex gap-4">
+      <CardFooter className="flex flex-col w-full">
+        <div className="flex gap-4 w-full">
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Heart className="h-4 w-4 mr-2" />
             Like
           </Button>
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className={`${showReplyForm ? 'bg-muted' : ''} text-muted-foreground`}
+            onClick={toggleReplyForm}
+          >
             <MessageSquare className="h-4 w-4 mr-2" />
-            Comment
+            {replyCount > 0 ? `Comment (${replyCount})` : 'Comment'}
           </Button>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
         </div>
+        
+        {/* Show replies if they exist */}
+        {replyCount > 0 && <ReplyList postId={post.id} communityId={communityId} />}
+        
+        {/* Show reply form if comment button was clicked */}
+        {showReplyForm && (
+          user ? (
+            <CreateReplyForm 
+              postId={post.id} 
+              communityId={communityId} 
+              postAuthorPubkey={post.pubkey}
+              onReplyCreated={handleReplyCreated}
+            />
+          ) : (
+            <div className="pl-6 border-l-2 border-muted mt-2 text-sm text-muted-foreground">
+              You need to be logged in to comment.
+            </div>
+          )
+        )}
       </CardFooter>
     </Card>
   );

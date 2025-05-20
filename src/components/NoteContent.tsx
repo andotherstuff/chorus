@@ -18,7 +18,7 @@ export function NoteContent({
   
   // Process the content to render mentions, links, etc.
   useEffect(() => {
-    if (!event || event.kind !== 1) return;
+    if (!event || (event.kind !== 1 && event.kind !== 1111)) return;
     
     const processContent = async () => {
       const text = event.content;
