@@ -8,9 +8,27 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { toast } from "sonner";
-import { Heart, MessageSquare, Share2, CheckCircle } from "lucide-react";
+import { Heart, MessageSquare, Share2, CheckCircle, TrendingUp, Clock, Star } from "lucide-react";
 import { NostrEvent } from "@nostrify/nostrify";
 import { NoteContent } from "../NoteContent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+
+type SortOption = "newest" | "oldest" | "popular" | "trending";
+type FilterOption = "all" | "approved" | "pending";
 
 interface PostListProps {
   communityId: string;
@@ -19,6 +37,8 @@ interface PostListProps {
 
 export function PostList({ communityId, showOnlyApproved = false }: PostListProps) {
   const { nostr } = useNostr();
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [filterBy, setFilterBy] = useState<FilterOption>(showOnlyApproved ? "approved" : "all");
   
   // Query for approved posts
   const { data: approvedPosts, isLoading: isLoadingApproved } = useQuery({
@@ -45,6 +65,11 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
               id: approval.id,
               pubkey: approval.pubkey,
               created_at: approval.created_at,
+            },
+            reactions: {
+              likes: Math.floor(Math.random() * 50), // TODO: Replace with actual reaction counts
+              comments: Math.floor(Math.random() * 20),
+              shares: Math.floor(Math.random() * 10),
             }
           };
         } catch (error) {
@@ -52,13 +77,14 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
           return null;
         }
       }).filter((post): post is NostrEvent & { 
-        approval: { id: string; pubkey: string; created_at: number } 
+        approval: { id: string; pubkey: string; created_at: number };
+        reactions: { likes: number; comments: number; shares: number };
       } => post !== null);
     },
     enabled: !!nostr && !!communityId,
   });
   
-  // Query for pending posts (posts that tag the community but don't have approvals yet)
+  // Query for pending posts
   const { data: pendingPosts, isLoading: isLoadingPending } = useQuery({
     queryKey: ["pending-posts", communityId],
     queryFn: async (c) => {
@@ -71,7 +97,14 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
         limit: 50,
       }], { signal });
       
-      return posts;
+      return posts.map(post => ({
+        ...post,
+        reactions: {
+          likes: Math.floor(Math.random() * 50), // TODO: Replace with actual reaction counts
+          comments: Math.floor(Math.random() * 20),
+          shares: Math.floor(Math.random() * 10),
+        }
+      }));
     },
     enabled: !!nostr && !!communityId,
   });
@@ -79,22 +112,51 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
   // Combine and sort all posts
   const allPosts = [...(approvedPosts || []), ...(pendingPosts || [])];
   
-  // Remove duplicates (posts that are both in pending and approved)
+  // Remove duplicates
   const uniquePosts = allPosts.filter((post, index, self) => 
     index === self.findIndex(p => p.id === post.id)
   );
   
-  // Count approved and pending posts
-  const approvedCount = uniquePosts.filter(post => 'approval' in post).length;
-  const pendingCount = uniquePosts.length - approvedCount;
+  // Filter posts based on filterBy
+  const filteredPosts = uniquePosts.filter(post => {
+    switch (filterBy) {
+      case "approved":
+        return 'approval' in post;
+      case "pending":
+        return !('approval' in post);
+      default:
+        return true;
+    }
+  });
   
-  // Filter posts based on approval status if showOnlyApproved is true
-  const filteredPosts = showOnlyApproved 
-    ? uniquePosts.filter(post => 'approval' in post)
-    : uniquePosts;
+  // Sort posts based on sortBy
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    switch (sortBy) {
+      case "oldest":
+        return a.created_at - b.created_at;
+      case "popular":
+        return (b.reactions?.likes || 0) - (a.reactions?.likes || 0);
+      case "trending":
+        // Simple trending algorithm: (likes + comments * 2) / hours since post
+        const hoursA = (Date.now() / 1000 - a.created_at) / 3600;
+        const hoursB = (Date.now() / 1000 - b.created_at) / 3600;
+        const scoreA = ((a.reactions?.likes || 0) + (a.reactions?.comments || 0) * 2) / Math.max(hoursA, 1);
+        const scoreB = ((b.reactions?.likes || 0) + (b.reactions?.comments || 0) * 2) / Math.max(hoursB, 1);
+        return scoreB - scoreA;
+      default: // "newest"
+        return b.created_at - a.created_at;
+    }
+  });
   
-  // Sort by created_at (newest first)
-  const sortedPosts = filteredPosts.sort((a, b) => b.created_at - a.created_at);
+  // Calculate statistics
+  const stats = {
+    total: uniquePosts.length,
+    approved: uniquePosts.filter(post => 'approval' in post).length,
+    pending: uniquePosts.filter(post => !('approval' in post)).length,
+    totalLikes: uniquePosts.reduce((sum, post) => sum + (post.reactions?.likes || 0), 0),
+    totalComments: uniquePosts.reduce((sum, post) => sum + (post.reactions?.comments || 0), 0),
+    totalShares: uniquePosts.reduce((sum, post) => sum + (post.reactions?.shares || 0), 0),
+  };
   
   if (isLoadingApproved || isLoadingPending) {
     return (
@@ -130,13 +192,15 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
     return (
       <Card className="p-8 text-center">
         <p className="text-muted-foreground mb-2">
-          {showOnlyApproved 
+          {filterBy === "approved" 
             ? "No approved posts in this community yet" 
+            : filterBy === "pending"
+            ? "No pending posts in this community"
             : "No posts in this community yet"}
         </p>
         <p className="text-sm">
-          {showOnlyApproved && pendingCount > 0
-            ? `There are ${pendingCount} pending posts waiting for approval.`
+          {filterBy === "approved" && stats.pending > 0
+            ? `There are ${stats.pending} pending posts waiting for approval.`
             : "Be the first to post something!"}
         </p>
       </Card>
@@ -145,33 +209,90 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-sm text-muted-foreground">
-          Showing {sortedPosts.length} {showOnlyApproved ? "approved" : ""} posts
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-3">
+            <Badge variant="outline" className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              {stats.total} Posts
+            </Badge>
+            <Badge variant="outline" className="flex items-center gap-1 bg-green-50 dark:bg-green-950">
+              <CheckCircle className="h-3 w-3 text-green-600" />
+              {stats.approved} Approved
+            </Badge>
+            {stats.pending > 0 && (
+              <Badge variant="outline" className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950">
+                <Clock className="h-3 w-3 text-amber-600" />
+                {stats.pending} Pending
+              </Badge>
+            )}
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Heart className="h-3 w-3 text-rose-600" />
+              {stats.totalLikes} Likes
+            </Badge>
+            <Badge variant="outline" className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3 text-blue-600" />
+              {stats.totalComments} Comments
+            </Badge>
+          </div>
+          
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Select value={filterBy} onValueChange={(value) => setFilterBy(value as FilterOption)}>
+              <SelectTrigger className="w-full sm:w-[130px]">
+                <SelectValue placeholder="Filter by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Posts</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+              <SelectTrigger className="w-full sm:w-[130px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Newest
+                  </div>
+                </SelectItem>
+                <SelectItem value="oldest">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Oldest
+                  </div>
+                </SelectItem>
+                <SelectItem value="popular">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    Popular
+                  </div>
+                </SelectItem>
+                <SelectItem value="trending">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Trending
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        
-        <div className="flex gap-3 text-sm">
-          <span className="flex items-center">
-            <span className="h-2 w-2 rounded-full bg-green-500 mr-1"></span>
-            {approvedCount} approved
-          </span>
-          {!showOnlyApproved && pendingCount > 0 && (
-            <span className="flex items-center">
-              <span className="h-2 w-2 rounded-full bg-amber-500 mr-1"></span>
-              {pendingCount} pending
-            </span>
-          )}
-        </div>
-      </div>
+      </Card>
       
-      {sortedPosts.map((post) => (
-        <PostItem 
-          key={post.id} 
-          post={post} 
-          communityId={communityId}
-          isApproved={'approval' in post}
-        />
-      ))}
+      <div className="space-y-4">
+        {sortedPosts.map((post) => (
+          <PostItem 
+            key={post.id} 
+            post={post} 
+            communityId={communityId}
+            isApproved={'approval' in post}
+          />
+        ))}
+      </div>
     </div>
   );
 }

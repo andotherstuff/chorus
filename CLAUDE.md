@@ -1,6 +1,10 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Project Overview
 
-This project is a Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, shadcn/ui, and Nostrify.
+NostrGroups is a Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, shadcn/ui, and Nostrify. It implements a Facebook-inspired groups platform using NIP-72 for moderated communities.
 
 ## Technology Stack
 
@@ -21,63 +25,72 @@ This project is a Nostr client application built with React 18.x, TailwindCSS 3.
 - `/src/lib/`: Utility functions and shared logic
 - `/public/`: Static assets
 
-## UI Components
+# Essential Development Commands
 
-The project uses shadcn/ui components located in `@/components/ui`. These are unstyled, accessible components built with Radix UI and styled with Tailwind CSS. Available components include:
+## Development Server
 
-- **Accordion**: Vertically collapsing content panels
-- **Alert**: Displays important messages to users
-- **AlertDialog**: Modal dialog for critical actions requiring confirmation
-- **AspectRatio**: Maintains consistent width-to-height ratio
-- **Avatar**: User profile pictures with fallback support
-- **Badge**: Small status descriptors for UI elements
-- **Breadcrumb**: Navigation aid showing current location in hierarchy
-- **Button**: Customizable button with multiple variants and sizes
-- **Calendar**: Date picker component 
-- **Card**: Container with header, content, and footer sections
-- **Carousel**: Slideshow for cycling through elements
-- **Chart**: Data visualization component
-- **Checkbox**: Selectable input element
-- **Collapsible**: Toggle for showing/hiding content
-- **Command**: Command palette for keyboard-first interfaces
-- **ContextMenu**: Right-click menu component
-- **Dialog**: Modal window overlay
-- **Drawer**: Side-sliding panel
-- **DropdownMenu**: Menu that appears from a trigger element
-- **Form**: Form validation and submission handling
-- **HoverCard**: Card that appears when hovering over an element
-- **InputOTP**: One-time password input field
-- **Input**: Text input field
-- **Label**: Accessible form labels
-- **Menubar**: Horizontal menu with dropdowns
-- **NavigationMenu**: Accessible navigation component
-- **Pagination**: Controls for navigating between pages
-- **Popover**: Floating content triggered by a button
-- **Progress**: Progress indicator
-- **RadioGroup**: Group of radio inputs
-- **Resizable**: Resizable panels and interfaces
-- **ScrollArea**: Scrollable container with custom scrollbars
-- **Select**: Dropdown selection component
-- **Separator**: Visual divider between content
-- **Sheet**: Side-anchored dialog component
-- **Sidebar**: Navigation sidebar component
-- **Skeleton**: Loading placeholder
-- **Slider**: Input for selecting a value from a range
-- **Sonner**: Toast notification manager
-- **Switch**: Toggle switch control
-- **Table**: Data table with headers and rows
-- **Tabs**: Tabbed interface component
-- **Textarea**: Multi-line text input
-- **Toast**: Toast notification component
-- **ToggleGroup**: Group of toggle buttons
-- **Toggle**: Two-state button
-- **Tooltip**: Informational text that appears on hover
+Start the development server on port 8080:
 
-These components follow a consistent pattern using React's `forwardRef` and use the `cn()` utility for class name merging. Many are built on Radix UI primitives for accessibility and customized with Tailwind CSS.
+```bash
+npm run dev
+```
 
-## Nostr Protocol Integration
+## Building the Application
 
-This project comes with custom hooks for querying and publishing events on the Nostr network.
+Build for production (includes copying index.html to 404.html for SPA routing):
+
+```bash
+npm run build
+```
+
+Build for development:
+
+```bash
+npm run build:dev
+```
+
+## Testing and Validation
+
+Typecheck the code and validate build:
+
+```bash
+npm run ci
+```
+
+This command must pass without errors for any changes to be considered complete.
+
+Run linting:
+
+```bash
+npm run lint
+```
+
+Preview the built application:
+
+```bash
+npm run preview
+```
+
+## Deployment
+
+Deploy the application to Surge:
+
+```bash
+npm run deploy
+```
+
+# Nostr Protocol Integration
+
+This project implements NIP-72 for moderated communities on Nostr.
+
+## Key Event Types
+
+- **Kind 34550**: Community definition events that include community metadata and moderator lists
+- **Kind 4550**: Post approval events that moderators use to approve posts 
+- **Kind 30000**: Custom list events used for approved users lists
+- **Kind 1**: Standard text note events used for posts within communities
+
+## Custom Hooks
 
 ### The `useNostr` Hook
 
@@ -115,8 +128,6 @@ function usePosts() {
 }
 ```
 
-The data may be transformed into a more appropriate format if needed, and multiple calls to `nostr.query()` may be made in a single queryFn.
-
 ### The `useAuthor` Hook
 
 To display profile data for a user by their Nostr pubkey (such as an event author), use the `useAuthor` hook.
@@ -133,34 +144,6 @@ function Post({ event }: { event: NostrEvent }) {
   const profileImage = metadata?.picture;
 
   // ...render elements with this data
-}
-```
-
-#### `NostrMetadata` type
-
-```ts
-/** Kind 0 metadata. */
-interface NostrMetadata {
-  /** A short description of the user. */
-  about?: string;
-  /** A URL to a wide (~1024x768) picture to be optionally displayed in the background of a profile screen. */
-  banner?: string;
-  /** A boolean to clarify that the content is entirely or partially the result of automation, such as with chatbots or newsfeeds. */
-  bot?: boolean;
-  /** An alternative, bigger name with richer characters than `name`. `name` should always be set regardless of the presence of `display_name` in the metadata. */
-  display_name?: string;
-  /** A bech32 lightning address according to NIP-57 and LNURL specifications. */
-  lud06?: string;
-  /** An email-like lightning address according to NIP-57 and LNURL specifications. */
-  lud16?: string;
-  /** A short name to be displayed for the user. */
-  name?: string;
-  /** An email-like Nostr address according to NIP-05. */
-  nip05?: string;
-  /** A URL to the user's avatar. */
-  picture?: string;
-  /** A web URL related in any way to the event author. */
-  website?: string;
 }
 ```
 
@@ -196,103 +179,7 @@ export function MyComponent() {
 }
 ```
 
-The `useCurrentUser` hook should be used to ensure that the user is logged in before they are able to publish Nostr events.
-
-### Nostr Login
-
-To enable login with Nostr, simply use the `LoginArea` component already included in this project.
-
-```tsx
-import { LoginArea } from "@/components/auth/LoginArea";
-
-function MyComponent() {
-  return (
-    <div>
-      {/* other components ... */}
-
-      <LoginArea />
-    </div>
-  );
-}
-```
-
-The `LoginArea` component displays a "Log in" button when the user is logged out, and changes to an account switcher once the user is logged in. It handles all the login-related UI and interactions internally, including displaying login dialogs and switching between accounts. It should not be wrapped in any conditional logic.
-
-### `npub`, `naddr`, and other Nostr addresses
-
-Nostr defines a set identifiers in NIP-19. Their prefixes:
-
-- `npub`: public keys
-- `nsec`: private keys
-- `note`: note ids
-- `nprofile`: a nostr profile
-- `nevent`: a nostr event
-- `naddr`: a nostr replaceable event coordinate
-- `nrelay`: a nostr relay (deprecated)
-
-NIP-19 identifiers include a prefix, the number "1", then a base32-encoded data string.
-
-#### Use in Filters
-
-The base Nostr protocol uses hex string identifiers when filtering by event IDs and pubkeys. Nostr filters only accept hex strings.
-
-```ts
-// ❌ Wrong: naddr is not decoded
-const events = await nostr.query(
-  [{ ids: [naddr] }],
-  { signal }
-);
-```
-
-Corrected example:
-
-```ts
-// Import nip19 from nostr-tools
-import { nip19 } from 'nostr-tools';
-
-// Decode a NIP-19 identifier
-const decoded = nip19.decode(value);
-
-// Optional: guard certain types (depending on the use-case)
-if (decoded.type !== 'naddr') {
-  throw new Error('Unsupported Nostr identifier');
-}
-
-// Get the addr object
-const naddr = decoded.data;
-
-// ✅ Correct: naddr is expanded into the correct filter
-const events = await nostr.query(
-  [{
-    kinds: [naddr.kind],
-    authors: [naddr.pubkey],
-    '#d': [naddr.identifier],
-  }],
-  { signal }
-);
-```
-
-### Nostr Edit Profile
-
-To include an Edit Profile form, place the `EditProfileForm` component in the project:
-
-```tsx
-import { EditProfileForm } from "@/components/EditProfileForm";
-
-function EditProfilePage() {
-  return (
-    <div>
-      {/* you may want to wrap this in a layout or include other components depending on the project ... */}
-
-      <EditProfileForm />
-    </div>
-  );
-}
-```
-
-The `EditProfileForm` component displays just the form. It requires no props, and will "just work" automatically.
-
-### Uploading Files on Nostr
+### File Uploads with `useUploadFile`
 
 Use the `useUploadFile` hook to upload files.
 
@@ -317,49 +204,97 @@ function MyComponent() {
 }
 ```
 
-To attach files to kind 1 events, each file's URL should be appended to the event's `content`, and an `imeta` tag should be added for each file. For kind 0 events, the URL by itself can be used in relevant fields of the JSON content.
+# Authentication and User Management
 
-### Nostr Encryption and Decryption
+## Nostr Login
 
-The logged-in user has a `signer` object (matching the NIP-07 signer interface) that can be used for encryption and decryption.
+To enable login with Nostr, use the `LoginArea` component:
+
+```tsx
+import { LoginArea } from "@/components/auth/LoginArea";
+
+function MyComponent() {
+  return (
+    <div>
+      {/* other components ... */}
+
+      <LoginArea />
+    </div>
+  );
+}
+```
+
+The `LoginArea` component displays a "Log in" button when the user is logged out, and changes to an account switcher once the user is logged in. It should not be wrapped in conditional logic.
+
+## Profile Management
+
+To include an Edit Profile form, use the `EditProfileForm` component:
+
+```tsx
+import { EditProfileForm } from "@/components/EditProfileForm";
+
+function EditProfilePage() {
+  return (
+    <div>
+      <EditProfileForm />
+    </div>
+  );
+}
+```
+
+# Working with Nostr Identifiers
+
+## NIP-19 Identifiers
+
+When working with Nostr identifiers, be aware of the different formats:
+
+- `npub`: public keys
+- `nsec`: private keys
+- `note`: note ids
+- `nprofile`: a nostr profile
+- `nevent`: a nostr event
+- `naddr`: a nostr replaceable event coordinate
+
+Always decode NIP-19 identifiers before using them in filters:
 
 ```ts
-// Get the current user
-const { user } = useCurrentUser();
+// Import nip19 from nostr-tools
+import { nip19 } from 'nostr-tools';
 
-// Optional guard to check that nip44 is available
-if (!user.signer.nip44) {
-  throw new Error("Please upgrade your signer extension to a version that supports NIP-44 encryption");
+// Decode a NIP-19 identifier
+const decoded = nip19.decode(value);
+
+// Optional: guard certain types (depending on the use-case)
+if (decoded.type !== 'naddr') {
+  throw new Error('Unsupported Nostr identifier');
 }
 
-// Encrypt message to self
-const encrypted = await user.signer.nip44.encrypt(user.pubkey, "hello world");
-// Decrypt message to self
-const decrypted = await user.signer.nip44.decrypt(user.pubkey, encrypted) // "hello world"
+// Get the addr object
+const naddr = decoded.data;
+
+// Use decoded values in filters
+const events = await nostr.query(
+  [{
+    kinds: [naddr.kind],
+    authors: [naddr.pubkey],
+    '#d': [naddr.identifier],
+  }],
+  { signal }
+);
 ```
 
-## Development Practices
+# NostrGroups Post Approval Flow
 
-- Uses React Query for data fetching and caching
-- Follows shadcn/ui component patterns
-- Implements Path Aliases with `@/` prefix for cleaner imports
-- Uses Vite for fast development and production builds
-- Component-based architecture with React hooks
-- Default connection to multiple Nostr relays for network redundancy
+1. User creates a post in a community (kind 1 with community "a" tag)
+2. If the user is in the approved users list, the post is automatically marked as approved
+3. If not, a moderator must create a kind 4550 approval event referencing the post
+4. The UI shows approved posts by default, with an option to view pending posts
 
-## Build & Deployment
+# Architecture Patterns
 
-- Build for production: `npm run build`
-- Development build: `npm run build:dev`
-
-## Testing Your Changes
-
-Whenever you modify code, you should test your changes after you're finished by running:
-
-```bash
-npm run ci
-```
-
-This command will typecheck the code and attempt to build it.
-
-Your task is not considered finished until this test passes without errors.
+- Use the shadcn/ui component patterns for UI components
+- Use the path alias `@/` for imports from the src directory
+- Follow React Query patterns for data fetching and caching
+- Implement custom hooks that wrap Nostr functionality
+- Use React Router for navigation between pages
+- Rely on the Nostr protocol for data storage and retrieval

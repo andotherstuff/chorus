@@ -1,0 +1,81 @@
+# Nostr Client Application with Task Management
+
+## Overview
+This project aims to create a modern Nostr client application with integrated task management features. The application will be built using React 18.x, TailwindCSS 3.x, Vite, shadcn/ui components, and Nostrify for Nostr protocol integration.
+
+## Core Features
+
+### 1. Nostr Integration
+- Implement Nostr protocol integration using Nostrify
+- Support multiple relay connections
+- Handle event publishing and subscription
+- Implement NIP-07 compliant authentication
+
+### 2. User Authentication
+- Support login with Nostr extension (NIP-07)
+- Display user profile information
+- Allow account switching
+- Implement secure session management
+
+### 3. Task Management
+- Create, read, update, and delete tasks
+- Support task categorization and prioritization
+- Enable task dependencies and subtasks
+- Implement task status tracking
+- Add task descriptions and comments
+
+### 4. User Interface
+- Implement responsive design using TailwindCSS
+- Use shadcn/ui components for consistent UI
+- Create intuitive navigation and layout
+- Add loading states and error handling
+- Implement toast notifications for user feedback
+
+### 5. Data Management
+- Implement efficient data fetching with TanStack Query
+- Handle Nostr event caching
+- Manage application state
+- Implement optimistic updates
+
+### 6. Performance & Security
+- Optimize bundle size and loading performance
+- Implement proper error boundaries
+- Add input validation and sanitization
+- Follow security best practices for Nostr integration
+
+## Technical Requirements
+
+### Frontend Framework
+- React 18.x with TypeScript
+- Vite for build tooling
+- TailwindCSS for styling
+- shadcn/ui component library
+
+### Nostr Integration
+- Nostrify for Nostr protocol support
+- Support for multiple relays
+- NIP-07 compliant authentication
+
+### State Management
+- TanStack Query for server state
+- React Context for application state
+- Custom hooks for shared logic
+
+### Routing
+- React Router for navigation
+- Protected routes for authenticated content
+- Dynamic route handling
+
+### Development
+- TypeScript for type safety
+- ESLint for code quality
+- Proper error handling and logging
+- Comprehensive documentation
+
+## Success Criteria
+- Users can authenticate using their Nostr extension
+- Tasks can be created, updated, and deleted
+- Task management features work reliably
+- UI is responsive and user-friendly
+- Application performs well under load
+- Code is well-documented and maintainable 

@@ -1,0 +1,21 @@
+{
+  "web": {
+    "provider": "perplexity",
+    "model": "sonar-pro"
+  },
+  "plan": {
+    "fileProvider": "gemini",
+    "thinkingProvider": "gemini",
+    "fileModel": "gemini-2.5-pro-preview-03-25",
+    "thinkingModel": "gemini-2.5-pro-preview-03-25"
+  },
+  "repo": {
+    "provider": "openrouter",
+    "model": "anthropic/claude-3.7-sonnet"
+  },
+  "doc": {
+    "provider": "gemini",
+    "model": "gemini-2.5-pro-preview-03-25"
+  },
+  "ide": "cursor"
+}
