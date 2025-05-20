@@ -133,7 +133,7 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
           return null;
         }
       }).filter((post): post is NostrEvent & { 
-        approval: { id: string; pubkey: string; created_at: number };
+        approval: { id: string; pubkey: string; created_at: number; autoApproved?: boolean };
         reactions: { likes: number; comments: number; shares: number };
       } => post !== null);
     },
@@ -444,7 +444,12 @@ interface PostItemProps {
       pubkey: string; 
       created_at: number;
       autoApproved?: boolean;
-    } 
+    };
+    reactions?: {
+      likes: number;
+      comments: number;
+      shares: number;
+    };
   };
   communityId: string;
   isApproved: boolean;
@@ -545,15 +550,15 @@ function PostItem({ post, communityId, isApproved }: PostItemProps) {
         <div className="flex gap-4">
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Heart className="h-4 w-4 mr-2" />
-            Like {post.reactions?.likes > 0 && `(${post.reactions.likes})`}
+            Like {post.reactions && post.reactions.likes > 0 && `(${post.reactions.likes})`}
           </Button>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <MessageSquare className="h-4 w-4 mr-2" />
-            Comment {post.reactions?.comments > 0 && `(${post.reactions.comments})`}
+            Comment {post.reactions && post.reactions.comments > 0 && `(${post.reactions.comments})`}
           </Button>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Share2 className="h-4 w-4 mr-2" />
-            Share {post.reactions?.shares > 0 && `(${post.reactions.shares})`}
+            Share {post.reactions && post.reactions.shares > 0 && `(${post.reactions.shares})`}
           </Button>
         </div>
       </CardFooter>

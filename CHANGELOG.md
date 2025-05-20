@@ -20,3 +20,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed TypeScript errors in the LoginArea component
 - Fixed build issues related to the Nostr login implementation
+- Fixed TypeScript errors for post.reactions property in PostList component
+- Improved reaction count display with proper null/undefined checks
