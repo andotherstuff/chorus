@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { Heart, MessageSquare, Share2, CheckCircle, TrendingUp, Clock, Star } from "lucide-react";
 import { NostrEvent } from "@nostrify/nostrify";
 import { NoteContent } from "../NoteContent";
+import { Link } from "react-router-dom";
+import { parseNostrAddress } from "@/lib/nostr-utils";
 import {
   Select,
   SelectContent,
@@ -109,6 +111,57 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
     enabled: !!nostr && !!communityId,
   });
   
+  // Query for approved members list
+  const { data: approvedMembersEvents } = useQuery({
+    queryKey: ["approved-members-list", communityId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      const events = await nostr.query([{ 
+        kinds: [14550],
+        "#a": [communityId],
+        limit: 10,
+      }], { signal });
+      
+      return events;
+    },
+    enabled: !!nostr && !!communityId,
+  });
+  
+  // Query for community details to get moderators
+  const { data: communityEvent } = useQuery({
+    queryKey: ["community-details", communityId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      // Parse the community ID to get the pubkey and identifier
+      const parsedId = communityId.includes(':') 
+        ? parseNostrAddress(communityId)
+        : null;
+      
+      if (!parsedId) return null;
+      
+      const events = await nostr.query([{ 
+        kinds: [34550],
+        authors: [parsedId.pubkey],
+        "#d": [parsedId.identifier],
+      }], { signal });
+      
+      return events[0] || null;
+    },
+    enabled: !!nostr && !!communityId,
+  });
+  
+  // Extract approved members pubkeys
+  const approvedMembers = approvedMembersEvents?.flatMap(event => 
+    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
+  ) || [];
+  
+  // Extract moderator pubkeys
+  const moderators = communityEvent?.tags
+    .filter(tag => tag[0] === "p" && tag[3] === "moderator")
+    .map(tag => tag[1]) || [];
+  
   // Combine and sort all posts
   const allPosts = [...(approvedPosts || []), ...(pendingPosts || [])];
   
@@ -117,8 +170,34 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
     index === self.findIndex(p => p.id === post.id)
   );
   
+  // Process posts to mark auto-approved ones
+  const processedPosts = uniquePosts.map(post => {
+    // If it's already approved, keep it as is
+    if ('approval' in post) {
+      return post;
+    }
+    
+    // Auto-approve if author is an approved member or moderator
+    const isApprovedMember = approvedMembers.includes(post.pubkey);
+    const isModerator = moderators.includes(post.pubkey);
+    
+    if (isApprovedMember || isModerator) {
+      return {
+        ...post,
+        approval: {
+          id: `auto-approved-${post.id}`,
+          pubkey: post.pubkey,
+          created_at: post.created_at,
+          autoApproved: true
+        }
+      };
+    }
+    
+    return post;
+  });
+
   // Filter posts based on filterBy
-  const filteredPosts = uniquePosts.filter(post => {
+  const filteredPosts = processedPosts.filter(post => {
     switch (filterBy) {
       case "approved":
         return 'approval' in post;
@@ -151,8 +230,8 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
   // Calculate statistics
   const stats = {
     total: uniquePosts.length,
-    approved: uniquePosts.filter(post => 'approval' in post).length,
-    pending: uniquePosts.filter(post => !('approval' in post)).length,
+    approved: processedPosts.filter(post => 'approval' in post).length,
+    pending: processedPosts.filter(post => !('approval' in post)).length,
     totalLikes: uniquePosts.reduce((sum, post) => sum + (post.reactions?.likes || 0), 0),
     totalComments: uniquePosts.reduce((sum, post) => sum + (post.reactions?.comments || 0), 0),
     totalShares: uniquePosts.reduce((sum, post) => sum + (post.reactions?.shares || 0), 0),
@@ -298,7 +377,14 @@ export function PostList({ communityId, showOnlyApproved = false }: PostListProp
 }
 
 interface PostItemProps {
-  post: NostrEvent & { approval?: { id: string; pubkey: string; created_at: number } };
+  post: NostrEvent & { 
+    approval?: { 
+      id: string; 
+      pubkey: string; 
+      created_at: number;
+      autoApproved?: boolean;
+    } 
+  };
   communityId: string;
   isApproved: boolean;
 }
@@ -346,21 +432,25 @@ function PostItem({ post, communityId, isApproved }: PostItemProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start gap-4 pb-2">
-        <Avatar>
-          <AvatarImage src={profileImage} />
-          <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <Link to={`/profile/${post.pubkey}`}>
+          <Avatar className="cursor-pointer hover:opacity-80 transition-opacity">
+            <AvatarImage src={profileImage} />
+            <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+        </Link>
         
         <div className="flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-semibold">{displayName}</p>
+              <Link to={`/profile/${post.pubkey}`} className="hover:underline">
+                <p className="font-semibold">{displayName}</p>
+              </Link>
               <div className="flex items-center text-xs text-muted-foreground">
                 <span>{new Date(post.created_at * 1000).toLocaleString()}</span>
                 {isApproved ? (
                   <span className="ml-2 text-green-600 dark:text-green-400 flex items-center">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Approved
+                    {post.approval?.autoApproved ? 'Auto-approved' : 'Approved'}
                   </span>
                 ) : (
                   <span className="ml-2 text-amber-600 dark:text-amber-400 flex items-center">

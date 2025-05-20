@@ -14,7 +14,10 @@ import { Label } from "@/components/ui/label";
 import { useAuthor } from "@/hooks/useAuthor";
 import { CreatePostForm } from "@/components/groups/CreatePostForm";
 import { PostList } from "@/components/groups/PostList";
-import { Users, Settings, Info, MessageSquare, CheckCircle } from "lucide-react";
+import { JoinRequestButton } from "@/components/groups/JoinRequestButton";
+import { MemberManagement } from "@/components/groups/MemberManagement";
+import { ApprovedMembersList } from "@/components/groups/ApprovedMembersList";
+import { Users, Settings, Info, MessageSquare, CheckCircle, UserPlus } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 
 export default function GroupDetail() {
@@ -95,8 +98,11 @@ export default function GroupDetail() {
           </Link>
           <h1 className="text-3xl font-bold">{name}</h1>
         </div>
-        <div className="ml-auto">
-          <LoginArea />
+        <div className="flex items-center gap-4">
+          <JoinRequestButton communityId={groupId || ''} />
+          <div className="ml-auto">
+            <LoginArea />
+          </div>
         </div>
       </div>
       
@@ -119,16 +125,15 @@ export default function GroupDetail() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Users className="h-5 w-5 mr-2" />
-                Moderators
+                <UserPlus className="h-5 w-5 mr-2" />
+                Join this group
               </CardTitle>
+              <CardDescription>
+                Request to join this community to participate in discussions
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {moderatorTags.map((tag) => (
-                  <ModeratorItem key={tag[1]} pubkey={tag[1]} />
-                ))}
-              </div>
+            <CardContent className="flex justify-center py-4">
+              <JoinRequestButton communityId={groupId || ''} />
             </CardContent>
             {isModerator && (
               <CardFooter>
@@ -151,6 +156,10 @@ export default function GroupDetail() {
           <TabsTrigger value="posts">
             <MessageSquare className="h-4 w-4 mr-2" />
             Posts
+          </TabsTrigger>
+          <TabsTrigger value="members">
+            <Users className="h-4 w-4 mr-2" />
+            Members
           </TabsTrigger>
           <TabsTrigger value="about">
             <Info className="h-4 w-4 mr-2" />
@@ -178,6 +187,32 @@ export default function GroupDetail() {
           </div>
           
           <PostList communityId={groupId || ''} showOnlyApproved={showOnlyApproved} />
+        </TabsContent>
+        
+        <TabsContent value="members" className="space-y-6">
+          {isModerator && (
+            <MemberManagement communityId={groupId || ''} isModerator={isModerator} />
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  Moderators
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {moderatorTags.map((tag) => (
+                    <ModeratorItem key={tag[1]} pubkey={tag[1]} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <ApprovedMembersList communityId={groupId || ''} />
+          </div>
         </TabsContent>
         
         <TabsContent value="about">
@@ -216,15 +251,17 @@ function ModeratorItem({ pubkey, isCreator = false }: { pubkey: string; isCreato
   const profileImage = metadata?.picture;
   
   return (
-    <div className="flex items-center space-x-3">
-      <Avatar>
-        <AvatarImage src={profileImage} />
-        <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-      </Avatar>
-      <div>
-        <p className="font-medium">{displayName}</p>
-        {isCreator && <p className="text-xs text-muted-foreground">Creator</p>}
+    <Link to={`/profile/${pubkey}`} className="block hover:bg-muted rounded-md transition-colors">
+      <div className="flex items-center space-x-3 p-2">
+        <Avatar>
+          <AvatarImage src={profileImage} />
+          <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div>
+          <p className="font-medium">{displayName}</p>
+          {isCreator && <p className="text-xs text-muted-foreground">Creator</p>}
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

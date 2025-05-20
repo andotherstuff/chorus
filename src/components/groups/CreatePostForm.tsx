@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Image, Loader2, Send } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { Link } from "react-router-dom";
 
 interface CreatePostFormProps {
   communityId: string;
@@ -106,10 +107,12 @@ export function CreatePostForm({ communityId }: CreatePostFormProps) {
     <Card>
       <CardContent className="pt-6">
         <div className="flex gap-4">
-          <Avatar>
-            <AvatarImage src={profileImage} />
-            <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
+          <Link to={`/profile/${user.pubkey}`}>
+            <Avatar className="cursor-pointer hover:opacity-80 transition-opacity">
+              <AvatarImage src={profileImage} />
+              <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+          </Link>
           
           <div className="flex-1">
             <Textarea

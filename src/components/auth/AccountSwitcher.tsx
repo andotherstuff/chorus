@@ -24,13 +24,13 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className='flex items-center gap-3 p-3 rounded-full hover:bg-accent transition-all w-full text-foreground'>
+        <button className='flex items-center gap-3 p-3 rounded-full hover:bg-accent transition-all w-full text-foreground max-w-60'>
           <Avatar className='w-10 h-10'>
             <AvatarImage src={currentUser.metadata.picture} alt={currentUser.metadata.name} />
             <AvatarFallback>{currentUser.metadata.name?.charAt(0) || <UserIcon />}</AvatarFallback>
           </Avatar>
           <div className='flex-1 text-left hidden md:block truncate'>
-            <p className='font-medium text-sm'>{currentUser.metadata.name || currentUser.pubkey}</p>
+            <p className='font-medium text-sm truncate'>{currentUser.metadata.name || currentUser.pubkey}</p>
           </div>
           <ChevronDown className='w-4 h-4 text-muted-foreground' />
         </button>
