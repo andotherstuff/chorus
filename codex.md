@@ -363,3 +363,35 @@ npm run ci
 This command will typecheck the code and attempt to build it.
 
 Your task is not considered finished until this test passes without errors.
+
+## Documentation
+
+### Updating the Changelog
+
+IMPORTANT: When making significant changes to the codebase, you MUST update the CHANGELOG.md file. The changelog follows the [Keep a Changelog](https://keepachangelog.com/) format with changes organized into the following categories:
+
+- **Added**: New features and capabilities
+- **Changed**: Changes to existing functionality
+- **Fixed**: Bug fixes and issue resolutions
+- **Removed**: Features that have been removed
+- **Security**: Security-related changes or fixes
+
+Before committing your changes:
+
+1. Update CHANGELOG.md by adding your changes to the appropriate category under the "[Unreleased]" section
+2. Keep entries concise and descriptive, focusing on the "what" and "why" of the change
+3. Group related changes under a single entry when appropriate
+4. Always maintain the existing format of the file
+
+Example:
+```markdown
+## [Unreleased]
+
+### Added
+- Activity indicators showing post count and participant count on group cards
+
+### Fixed
+- Profile page not displaying correctly on mobile devices
+```
+
+Maintaining an accurate changelog is essential for project transparency and helps track the evolution of features over time.
