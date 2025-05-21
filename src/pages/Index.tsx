@@ -10,7 +10,6 @@ import { useNostrLogin, NLogin } from "@nostrify/react/login";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { generateSecretKey, nip19 } from "nostr-tools";
 import { toast } from "@/hooks/useToast";
-import { useRef } from "react";
 
 const Index = () => {
   const { currentUser } = useLoggedInAccounts();

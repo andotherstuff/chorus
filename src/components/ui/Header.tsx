@@ -1,5 +1,4 @@
 import { LoginArea } from "@/components/auth/LoginArea";
-// import { Separator } from "@/components/ui/separator"; // Removed
 import type React from "react";
 import { Link } from "react-router-dom";
 

@@ -10,12 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { NoteContent } from "@/components/NoteContent";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Copy, UserPlus, UserMinus, Loader2, Users } from "lucide-react";
+import { ExternalLink, Copy, UserPlus, UserMinus, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
-import { Separator } from "@/components/ui/separator";
 import { VerifiedNip05 } from "@/components/VerifiedNip05";
 
 // Helper function to extract group information from a post

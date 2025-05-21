@@ -10,7 +10,6 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { GroupCard } from "@/components/groups/GroupCard";
 import { GroupSearch } from "@/components/groups/GroupSearch";
 import { useState } from "react";
-import { MessageSquare, Activity } from "lucide-react";
 
 export default function Groups() {
   const { nostr } = useNostr();

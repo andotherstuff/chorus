@@ -101,9 +101,9 @@ export function usePendingReplies(communityId: string) {
       
       // Create a map of parent events for easy lookup
       const parentMap = new Map<string, NostrEvent>();
-      parentEvents.forEach(event => {
+      for (const event of parentEvents) {
         parentMap.set(event.id, event);
-      });
+      }
       
       // Enhance pending replies with parent information
       const enhancedPendingReplies = pendingReplies.map(reply => {

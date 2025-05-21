@@ -1,14 +1,12 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/ui/Header";
-import { ArrowLeft, Eye, EyeOff, User, Copy, Check, Bell } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Eye, EyeOff, Copy, Check } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Navigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { nip19 } from 'nostr-tools';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';

@@ -33,10 +33,10 @@ export function useUserGroups() {
       
       // Create a map of community IDs to community events for faster lookups
       const communityMap = new Map<string, NostrEvent>();
-      allCommunities.forEach(community => {
+      for (const community of allCommunities) {
         const communityId = getCommunityId(community);
         communityMap.set(communityId, community);
-      });
+      }
       
       // Owned communities (where user is the creator)
       const ownedCommunities = allCommunities.filter(

@@ -223,9 +223,9 @@ export function useCashuWallet() {
         await nostr.event(newTokenEvent);
 
         // update local event IDs on all newProofs
-        newProofs.forEach(proof => {
+        for (const proof of newProofs) {
           cashuStore.setProofEventId(proof, newTokenEvent.id);
-        });
+        }
 
         eventToReturn = newTokenEvent;
       }

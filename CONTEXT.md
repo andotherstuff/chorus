@@ -33,7 +33,7 @@ The project uses shadcn/ui components located in `@/components/ui`. These are un
 - **Badge**: Small status descriptors for UI elements
 - **Breadcrumb**: Navigation aid showing current location in hierarchy
 - **Button**: Customizable button with multiple variants and sizes
-- **Calendar**: Date picker component 
+- **Calendar**: Date picker component
 - **Card**: Container with header, content, and footer sections
 - **Carousel**: Slideshow for cycling through elements
 - **Chart**: Data visualization component
@@ -494,3 +494,4 @@ When extending the NostrGroups platform:
 4. Ensure proper error handling for network operations
 5. Keep the UI consistent with the existing design language
 6. Test all changes with `npm run ci` before considering them complete
+7. Always use `for...of` instead of `forEach` in loops

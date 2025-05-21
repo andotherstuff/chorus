@@ -22,9 +22,9 @@ export function CashuHistoryCard() {
   useEffect(() => {
     if (queryHistory && queryHistory.length > 0) {
       // The store will handle duplicates internally
-      queryHistory.forEach((entry) => {
+      for (const entry of queryHistory) {
         transactionHistoryStore.addHistoryEntry(entry);
-      });
+      }
     }
   }, [queryHistory, transactionHistoryStore]);
 
