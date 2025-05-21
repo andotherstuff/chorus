@@ -147,7 +147,7 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
         <div className="mb-4 text-sm text-muted-foreground">
           Make sure you have a name set for your profile.
         </div>
-        
+
         <FormField
           control={form.control}
           name="name"
@@ -181,10 +181,10 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
 
 
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <Button
             type="submit"
-            className="w-full"
+            className="w-full font-medium dark:bg-blue-600 bg-blue-500 border-2 dark:border-blue-500 border-blue-400 text-white"
             disabled={isPending || isUploading}
           >
             {(isPending || isUploading) && (
@@ -192,12 +192,13 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
             )}
             Save Profile
           </Button>
-          
+
           {showSkipLink && (
             <div className="text-center">
-              <Button 
-                type="button" 
-                variant="link" 
+              <Button
+                type="button"
+                variant="link"
+                className="text-muted-foreground"
                 onClick={() => navigate('/groups')}
               >
                 Skip for now
