@@ -106,7 +106,7 @@ const Index = () => {
             <div className="text-4xl">welcome to</div>
             <div className="flex flex-row gap-0 items-baseline justify-center">
               <span className="text-red-500 font-extrabold text-4xl">+</span>
-              <span className="text-black font-extrabold text-4xl">chorus</span>
+              <span className="text-black dark:text-white font-extrabold text-4xl">chorus</span>
             </div>
           </h1>
           <p className="text-lg text-gray-600 mb-8">
