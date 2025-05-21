@@ -99,8 +99,33 @@ export function MyGroupsList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Use allGroups to avoid duplicates */}
-            {userGroups?.allGroups.map(community => {
+            {/* Use allGroups to avoid duplicates and sort by activity */}
+            {userGroups?.allGroups
+              .slice() // Create a copy to avoid mutating the original array
+              .sort((a, b) => {
+                const dTagA = a.tags.find(tag => tag[0] === "d");
+                const dTagB = b.tags.find(tag => tag[0] === "d");
+                
+                const communityIdA = `34550:${a.pubkey}:${dTagA ? dTagA[1] : ""}`;
+                const communityIdB = `34550:${b.pubkey}:${dTagB ? dTagB[1] : ""}`;
+                
+                const statsA = communityStats?.[communityIdA];
+                const statsB = communityStats?.[communityIdB];
+                
+                // Put pinned groups first
+                const isPinnedA = isGroupPinned(communityIdA);
+                const isPinnedB = isGroupPinned(communityIdB);
+                
+                if (isPinnedA && !isPinnedB) return -1;
+                if (!isPinnedA && isPinnedB) return 1;
+                
+                // Then sort by activity (posts + participants, with participants weighted more)
+                const activityScoreA = (statsA?.posts || 0) + (statsA?.participants.size || 0) * 3;
+                const activityScoreB = (statsB?.posts || 0) + (statsB?.participants.size || 0) * 3;
+                
+                return activityScoreB - activityScoreA;
+              })
+              .map(community => {
               const dTag = community.tags.find(tag => tag[0] === "d");
               const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
               const isPinned = isGroupPinned(communityId);

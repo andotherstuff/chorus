@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added loading states for community statistics while data is being fetched
 - Enhanced visual presentation of community metrics with badge-style elements
 - Added activity indicators to My Groups section showing post count and active participants
+- Implemented intelligent sorting of communities by activity level (posts + participants)
 
 ### Changed
 - Switched default relay to Chorus for better reliability
@@ -23,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved UI consistency for community statistics with proper loading states
 - Enhanced My Groups display with consistent activity metrics across all group views
 - Removed moderator count badge to focus on activity metrics
+- Communities now sorted by activity level with most active groups shown first
+- My Groups section shows pinned groups first, then sorted by activity
 
 ### Fixed
 - Various notification wording improvements and fixes

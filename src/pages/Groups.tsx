@@ -70,7 +70,7 @@ export default function Groups() {
     enabled: !!nostr && !!communities && communities.length > 0,
   });
   
-  // Filter communities based on search query
+  // Filter and sort communities based on search query and activity
   const filteredCommunities = communities?.filter(community => {
     if (!searchQuery) return true;
     
@@ -86,6 +86,25 @@ export default function Groups() {
       name.toLowerCase().includes(searchLower) || 
       description.toLowerCase().includes(searchLower)
     );
+  });
+  
+  // Sort communities by activity level (posts + participants, with participants weighted more)
+  const sortedCommunities = filteredCommunities?.slice().sort((a, b) => {
+    const dTagA = a.tags.find(tag => tag[0] === "d");
+    const dTagB = b.tags.find(tag => tag[0] === "d");
+    
+    const communityIdA = `34550:${a.pubkey}:${dTagA ? dTagA[1] : ""}`;
+    const communityIdB = `34550:${b.pubkey}:${dTagB ? dTagB[1] : ""}`;
+    
+    const statsA = communityStats?.[communityIdA];
+    const statsB = communityStats?.[communityIdB];
+    
+    // Calculate activity scores (participants weighted more heavily than posts)
+    const activityScoreA = (statsA?.posts || 0) + (statsA?.participants.size || 0) * 3;
+    const activityScoreB = (statsB?.posts || 0) + (statsB?.participants.size || 0) * 3;
+    
+    // Sort by activity score in descending order (most active first)
+    return activityScoreB - activityScoreA;
   });
 
   return (
@@ -128,8 +147,8 @@ export default function Groups() {
                 </CardFooter>
               </Card>
             ))
-          ) : filteredCommunities && filteredCommunities.length > 0 ? (
-            filteredCommunities.map((community) => {
+          ) : sortedCommunities && sortedCommunities.length > 0 ? (
+            sortedCommunities.map((community) => {
               const dTag = community.tags.find(tag => tag[0] === "d");
               const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
               const isPinned = isGroupPinned(communityId);
