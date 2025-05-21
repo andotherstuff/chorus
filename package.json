@@ -13,6 +13,7 @@
     "deploy": "npm run build && npx -y surge@latest dist"
   },
   "dependencies": {
+    "@cashu/cashu-ts": "^2.5.2",
     "@hookform/resolvers": "^3.9.0",
     "@nostrify/nostrify": "npm:@jsr/nostrify__nostrify@^0.46.1",
     "@nostrify/react": "npm:@jsr/nostrify__react@^0.2.5",
@@ -44,6 +45,7 @@
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.4",
     "@tanstack/react-query": "^5.56.2",
+    "bip39": "^3.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -68,6 +70,7 @@
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
+    "@types/bip39": "^2.4.2",
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
