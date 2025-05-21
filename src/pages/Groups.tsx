@@ -27,63 +27,63 @@ export default function Groups() {
     },
     enabled: !!nostr,
   });
-  
+
   // Query for community stats (posts and participants)
   const { data: communityStats, isLoading: isLoadingStats } = useQuery({
     queryKey: ["community-stats"],
     queryFn: async (c) => {
       if (!communities || communities.length === 0) return {};
-      
+
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
       const stats: Record<string, { posts: number; participants: Set<string> }> = {};
-      
+
       // Create a filter for all communities to get posts in a single query
       const communityRefs = communities.map(community => {
         const dTag = community.tags.find(tag => tag[0] === "d");
         return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
       });
-      
+
       // Get all posts that reference any community
-      const posts = await nostr.query([{ 
-        kinds: [1, 4550], 
+      const posts = await nostr.query([{
+        kinds: [1, 4550],
         "#a": communityRefs,
         limit: 500
       }], { signal });
-      
+
       // Process posts to get stats for each community
-      posts.forEach(post => {
+      for (const post of posts) {
         const communityTag = post.tags.find(tag => tag[0] === "a");
-        if (!communityTag) return;
-        
+        if (!communityTag) continue;
+
         const communityId = communityTag[1];
         if (!stats[communityId]) {
           stats[communityId] = { posts: 0, participants: new Set() };
         }
-        
+
         // Count posts and unique participants
         stats[communityId].posts++;
         stats[communityId].participants.add(post.pubkey);
-      });
-      
+      }
+
       return stats;
     },
     enabled: !!nostr && !!communities && communities.length > 0,
   });
-  
+
   // Filter communities based on search query
   const filteredCommunities = communities?.filter(community => {
     if (!searchQuery) return true;
-    
+
     const nameTag = community.tags.find(tag => tag[0] === "name");
     const descriptionTag = community.tags.find(tag => tag[0] === "description");
     const dTag = community.tags.find(tag => tag[0] === "d");
-    
+
     const name = nameTag ? nameTag[1] : (dTag ? dTag[1] : "");
     const description = descriptionTag ? descriptionTag[1] : "";
-    
+
     const searchLower = searchQuery.toLowerCase();
     return (
-      name.toLowerCase().includes(searchLower) || 
+      name.toLowerCase().includes(searchLower) ||
       description.toLowerCase().includes(searchLower)
     );
   });
@@ -92,21 +92,19 @@ export default function Groups() {
     <div className="container mx-auto py-4 px-6">
       <Header />
       <Separator className="my-4" />
-      
+
       <MyGroupsList />
-      
+
       <div className="flex flex-col mt-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold">All Groups</h2>
-          
           <div className="md:w-64 lg:w-72">
-            <GroupSearch 
-              onSearch={setSearchQuery} 
-              className="sticky top-0 z-10" 
+            <GroupSearch
+              onSearch={setSearchQuery}
+              className="sticky top-0 z-10"
             />
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, index) => (
@@ -134,9 +132,9 @@ export default function Groups() {
               const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
               const isPinned = isGroupPinned(communityId);
               const stats = communityStats ? communityStats[communityId] : undefined;
-              
+
               return (
-                <GroupCard 
+                <GroupCard
                   key={community.id}
                   community={community}
                   isPinned={isPinned}

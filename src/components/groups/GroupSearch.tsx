@@ -25,13 +25,12 @@ export function GroupSearch({ onSearch, className }: GroupSearchProps) {
   };
 
   return (
-    <div 
+    <div
       className={cn(
         "relative flex items-center w-full",
         "mx-auto md:mx-0", // Center on mobile, left-aligned on desktop
         "transition-all duration-200 ease-in-out",
         "sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-2",
-        isFocused && "ring-2 ring-primary/20 rounded-md",
         className
       )}
     >

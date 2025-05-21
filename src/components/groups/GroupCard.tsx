@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@nostrify/nostrify";
 
 interface GroupCardProps {
   community: NostrEvent;
@@ -25,7 +25,7 @@ interface GroupCardProps {
 
 export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdating, stats, isLoadingStats }: GroupCardProps) {
   const { user } = useCurrentUser();
-  
+
   // Extract community data from tags
   const nameTag = community.tags.find(tag => tag[0] === "name");
   const descriptionTag = community.tags.find(tag => tag[0] === "description");
@@ -37,7 +37,7 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
   const description = descriptionTag ? descriptionTag[1] : "No description available";
   const image = imageTag ? imageTag[1] : "/placeholder-community.jpg";
   const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
-  
+
   // Determine user's role in this group if logged in
   const { data: userRole } = useUserRole(communityId);
 
@@ -71,7 +71,7 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
             }}
           />
         )}
-        
+
         {/* Role indicator badge - only shown if user has a role */}
         {userRole && (
           <div className="absolute top-2 left-2">
@@ -81,48 +81,51 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
       </div>
       <CardHeader>
         <CardTitle>{name}</CardTitle>
-        <CardDescription>
-          <div className="flex flex-wrap gap-2 mt-1">
-            <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-              <Users className="h-3 w-3 mr-1" />
-              {moderatorTags.length} mod{moderatorTags.length !== 1 ? 's' : ''}
-            </div>
-            
-            {isLoadingStats ? (
-              <>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  Loading...
-                </div>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
-                  <Activity className="h-3 w-3 mr-1" />
-                  Loading...
-                </div>
-              </>
-            ) : stats ? (
-              <>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  {stats.posts} post{stats.posts !== 1 ? 's' : ''}
-                </div>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <Activity className="h-3 w-3 mr-1" />
-                  {stats.participants.size} participant{stats.participants.size !== 1 ? 's' : ''}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  0 posts
-                </div>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <Activity className="h-3 w-3 mr-1" />
-                  0 participants
-                </div>
-              </>
-            )}
-          </div>
+        {/* Using a div after CardTitle instead of nesting inside CardDescription */}
+        <div className="flex flex-wrap gap-2 mt-1">
+          <span className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+            <Users className="h-3 w-3 mr-1" />
+            {moderatorTags.length} mod{moderatorTags.length !== 1 ? 's' : ''}
+          </span>
+
+          {isLoadingStats ? (
+            <>
+              <span className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Loading...
+              </span>
+              <span className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                <Activity className="h-3 w-3 mr-1" />
+                Loading...
+              </span>
+            </>
+          ) : stats ? (
+            <>
+              <span className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                {stats.posts} post{stats.posts !== 1 ? 's' : ''}
+              </span>
+              <span className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <Activity className="h-3 w-3 mr-1" />
+                {stats.participants.size} participant{stats.participants.size !== 1 ? 's' : ''}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                0 posts
+              </span>
+              <span className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <Activity className="h-3 w-3 mr-1" />
+                0 participants
+              </span>
+            </>
+          )}
+        </div>
+        {/* Adding CardDescription with simple text content */}
+        <CardDescription className="mt-1">
+          Group Statistics
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -140,9 +143,9 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className={cn(
                   "absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity",
                   isPinned && "opacity-100"

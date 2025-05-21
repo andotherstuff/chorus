@@ -93,9 +93,11 @@ export function MyGroupCard({ community, role, isPinned, pinGroup, unpinGroup, i
       </div>
       <CardHeader>
         <CardTitle>{name}</CardTitle>
-        <CardDescription className="flex items-center">
-          <Users className="h-4 w-4 mr-1" />
-          {moderatorTags.length} moderator{moderatorTags.length !== 1 ? 's' : ''}
+        <CardDescription>
+          <span className="flex items-center">
+            <Users className="h-4 w-4 mr-1" />
+            {moderatorTags.length} moderator{moderatorTags.length !== 1 ? 's' : ''}
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">

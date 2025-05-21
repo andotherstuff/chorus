@@ -116,13 +116,15 @@ function UserGroupsList({
 
   // Create a map to deduplicate groups by ID
   const uniqueGroups = new Map<string, UserGroup>();
-  groups.forEach(group => {
+  for (const group of groups) {
     // Only add if not already in the map, or replace with newer version
-    if (!uniqueGroups.has(group.id) || 
-        (group.groupEvent.created_at > uniqueGroups.get(group.id)!.groupEvent.created_at)) {
+    if (
+      !uniqueGroups.has(group.id) ||
+      (group.groupEvent.created_at > (uniqueGroups.get(group.id)?.groupEvent.created_at ?? 0))
+    ) {
       uniqueGroups.set(group.id, group);
     }
-  });
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -244,63 +246,63 @@ export default function Profile() {
 
       // First, check if this is the current user - if so, we can use a more efficient approach
       const isCurrentUserProfile = user && pubkey === user.pubkey;
-      
-      let groupEvents: NostrEvent[] = [];
-      
+
+      const groupEvents: NostrEvent[] = [];
+
       if (isCurrentUserProfile) {
         // For current user, get all communities they're part of from various sources
-        
+
         // Get communities where user is owner or moderator
         const ownedOrModeratedEvents = await nostr.query([{
           kinds: [34550],
           authors: [pubkey], // Communities they created
           limit: 50,
         }], { signal });
-        
+
         groupEvents.push(...ownedOrModeratedEvents);
-        
+
         // Get communities where user is a moderator but not owner
         const moderatedEvents = await nostr.query([{
           kinds: [34550],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
-        
+
         // Filter to only include events where user is tagged as moderator
-        const moderatorEvents = moderatedEvents.filter(event => 
+        const moderatorEvents = moderatedEvents.filter(event =>
           event.pubkey !== pubkey && // Not already counted as owned
-          event.tags.some(tag => 
-            tag[0] === "p" && 
-            tag[1] === pubkey && 
+          event.tags.some(tag =>
+            tag[0] === "p" &&
+            tag[1] === pubkey &&
             tag[3] === "moderator"
           )
         );
-        
+
         groupEvents.push(...moderatorEvents);
-        
+
         // Get communities where user is a member
         const membershipEvents = await nostr.query([{
           kinds: [14550],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
-        
+
         // For each membership event, get the community details
         for (const event of membershipEvents) {
           const aTag = event.tags.find(tag => tag[0] === "a");
           if (!aTag || !aTag[1]) continue;
-          
+
           const groupId = aTag[1];
           const parsedGroup = parseNostrAddress(groupId);
-          
+
           if (!parsedGroup || parsedGroup.kind !== 34550) continue;
-          
+
           // Fetch the group details if we don't already have it
           const existingGroup = groupEvents.find(g => {
             const dTag = g.tags.find(tag => tag[0] === "d");
             return g.pubkey === parsedGroup.pubkey && dTag && dTag[1] === parsedGroup.identifier;
           });
-          
+
           if (!existingGroup) {
             const [groupEvent] = await nostr.query([{
               kinds: [34550],
@@ -308,7 +310,7 @@ export default function Profile() {
               "#d": [parsedGroup.identifier],
               limit: 1,
             }], { signal: AbortSignal.timeout(3000) });
-            
+
             if (groupEvent) {
               groupEvents.push(groupEvent);
             }
@@ -321,17 +323,17 @@ export default function Profile() {
           "#p": [pubkey],
           limit: 50,
         }], { signal });
-        
+
         // For each membership event, get the community details
         for (const event of membershipEvents) {
           const aTag = event.tags.find(tag => tag[0] === "a");
           if (!aTag || !aTag[1]) continue;
-          
+
           const groupId = aTag[1];
           const parsedGroup = parseNostrAddress(groupId);
-          
+
           if (!parsedGroup || parsedGroup.kind !== 34550) continue;
-          
+
           // Fetch the group details
           const [groupEvent] = await nostr.query([{
             kinds: [34550],
@@ -339,39 +341,39 @@ export default function Profile() {
             "#d": [parsedGroup.identifier],
             limit: 1,
           }], { signal: AbortSignal.timeout(3000) });
-          
+
           if (groupEvent) {
             groupEvents.push(groupEvent);
           }
         }
-        
+
         // Also get communities they created
         const ownedEvents = await nostr.query([{
           kinds: [34550],
           authors: [pubkey],
           limit: 50,
         }], { signal });
-        
+
         groupEvents.push(...ownedEvents);
       }
-      
+
       // Deduplicate groups by their unique ID
       const uniqueGroups = new Map<string, NostrEvent>();
       for (const event of groupEvents) {
         const dTag = event.tags.find(tag => tag[0] === "d");
         if (!dTag) continue;
-        
+
         const groupId = `34550:${event.pubkey}:${dTag[1]}`;
         uniqueGroups.set(groupId, event);
       }
-      
+
       // Convert to UserGroup format
       return Array.from(uniqueGroups.entries()).map(([id, event]) => {
         const nameTag = event.tags.find(tag => tag[0] === "name");
         const descriptionTag = event.tags.find(tag => tag[0] === "description");
         const imageTag = event.tags.find(tag => tag[0] === "image");
         const dTag = event.tags.find(tag => tag[0] === "d");
-        
+
         return {
           id,
           name: nameTag ? nameTag[1] : (dTag ? dTag[1] : "Unnamed Group"),
@@ -418,112 +420,133 @@ export default function Profile() {
 
   if (author.isLoading) {
     return (
-      <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
+      <div className="container mx-auto py-4 px-6">
         <Header />
-        <Separator className="my-4" />
-        <Card className="mb-8">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <Skeleton className="h-24 w-24 rounded-full" />
-            <div className="space-y-2 flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-4 w-72 mt-2" />
-                  <Skeleton className="h-4 w-32 mt-2" />
+        <div className="space-y-6 my-6">
+          <Card className="mb-8">
+            <CardHeader className="flex flex-row items-start gap-6">
+              <Skeleton className="h-24 w-24 rounded-full" />
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Skeleton className="h-6 w-48 mb-1" />
+                    <Skeleton className="h-4 w-32 mb-2" />
 
-                  <div className="flex items-center gap-4 mt-3">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-24" />
+                    <div className="mt-1">
+                      <Skeleton className="h-4 w-32 mb-1" />
+                    </div>
+
+                    <div className="mt-1">
+                      <Skeleton className="h-4 w-48 mb-2" />
+                    </div>
+
+                    <div className="flex items-center gap-4 mt-3">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
                   </div>
+
+                  <Skeleton className="h-9 w-24" />
                 </div>
 
-                <Skeleton className="h-9 w-24" />
+                <div className="mt-4">
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* Mobile loading state - Groups first, then Posts */}
+          <div className="md:hidden space-y-8 mb-8">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Groups</h2>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-16 w-16 rounded-md" />
+                    <div>
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-2/3" />
-          </CardContent>
-        </Card>
 
-        {/* Mobile loading state - Groups first, then Posts */}
-        <div className="md:hidden space-y-8 mb-8">
-          <div>
-            <Skeleton className="h-6 w-24 mb-4" />
-            <div className="space-y-4">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-12 w-12 rounded-md" />
-                  <div>
-                    <Skeleton className="h-4 w-32 mb-1" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                </div>
-              ))}
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Recent Posts</h2>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i}>
+                    <CardHeader className="flex flex-row items-start gap-4 pb-2">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div>
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </CardContent>
+                    <CardFooter className="pt-0 pb-3">
+                      <Skeleton className="h-6 w-32" />
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div>
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
+          {/* Desktop loading state - Posts and Groups side by side */}
+          <div className="hidden md:grid md:grid-cols-3 gap-6 mb-8">
+            <div className="col-span-2">
+              <h2 className="text-xl font-semibold mb-4">Recent Posts</h2>
+              <div className="space-y-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i}>
+                    <CardHeader className="flex flex-row items-start gap-4 pb-2">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Skeleton className="h-4 w-32 mb-1" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </CardContent>
+                    <CardFooter className="pt-0 pb-3">
+                      <Skeleton className="h-6 w-32" />
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Groups</h2>
+              <div className="grid grid-cols-1 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <div className="flex p-4">
+                      <Skeleton className="h-16 w-16 rounded-md mr-4 flex-shrink-0" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-48" />
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop loading state - Posts and Groups side by side */}
-        <div className="hidden md:grid md:grid-cols-3 gap-6 mb-8">
-          <div className="col-span-2">
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <Skeleton className="h-6 w-24 mb-4" />
-            <div className="space-y-4">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-12 w-12 rounded-md" />
-                  <div>
-                    <Skeleton className="h-4 w-32 mb-1" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                </div>
-              ))}
+                  </Card>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -534,7 +557,7 @@ export default function Profile() {
   return (
     <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
       <Header />
-      <Separator className="my-4" />
+      <div className="space-y-6 my-6">
       <Card className="mb-8">
         <CardHeader className="flex flex-row items-start gap-6">
           <Avatar className="h-24 w-24">
@@ -766,6 +789,7 @@ export default function Profile() {
           <h2 className="text-xl font-semibold mb-4">Groups</h2>
           <UserGroupsList groups={userGroups} isLoading={isLoadingGroups} />
         </div>
+      </div>
       </div>
     </div>
   );

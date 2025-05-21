@@ -5,7 +5,8 @@ import { ArrowLeft, Bell } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
-import { useNotifications, useMarkNotificationAsRead, Notification } from "@/hooks/useNotifications";
+import { useNotifications, useMarkNotificationAsRead } from "@/hooks/useNotifications";
+import type { Notification } from "@/hooks/useNotifications";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthor } from "@/hooks/useAuthor";
 import { formatDistanceToNow } from "date-fns";
@@ -18,17 +19,17 @@ export default function Notifications() {
 
   // Mark all notifications as read when the page is viewed
   useEffect(() => {
-    notifications.forEach(notification => {
+    for (const notification of notifications) {
       if (!notification.read) {
         markAsRead(notification.id);
       }
-    });
-    
+    }
+
     // Refetch after marking as read to update the UI
     const timer = setTimeout(() => {
       refetch();
     }, 500);
-    
+
     return () => clearTimeout(timer);
   }, [markAsRead, notifications, refetch]);
 
@@ -36,9 +37,9 @@ export default function Notifications() {
     const { data: authorData } = useAuthor(notification.pubkey || "");
     const authorName = authorData?.metadata?.name || notification.pubkey?.slice(0, 8) || "Unknown";
     const authorPicture = authorData?.metadata?.picture;
-    
+
     let linkTo = "";
-    
+
     switch (notification.type) {
       case "group_update":
       case "post_approved":
@@ -66,7 +67,7 @@ export default function Notifications() {
     if (!user) {
       return <Navigate to="/" />;
     }
-    
+
     return (
       <Card className={`mb-4 ${notification.read ? 'opacity-70' : ''}`}>
         <CardContent className="p-4">
@@ -107,18 +108,7 @@ export default function Notifications() {
   return (
     <div className="container mx-auto py-4 px-6">
       <Header />
-      <div className="my-6">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/settings">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-bold">Notifications</h1>
-        </div>
-      </div>
-
-      <div className="space-y-6 mb-6">
+      <div className="space-y-6 my-6">
         <Card>
           <CardHeader>
             <CardTitle>Your Notifications</CardTitle>

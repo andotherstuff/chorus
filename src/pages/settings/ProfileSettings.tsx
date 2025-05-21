@@ -15,14 +15,16 @@ export default function ProfileSettings() {
   return (
     <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
       <Header />
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit Profile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EditProfileForm />
-        </CardContent>
-      </Card>
+      <div className="space-y-6 my-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EditProfileForm />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

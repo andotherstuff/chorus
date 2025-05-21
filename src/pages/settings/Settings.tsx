@@ -121,32 +121,7 @@ export default function Settings() {
   return (
     <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
       <Header />
-      <div className="my-6">
-        <h1 className="text-3xl font-bold">Settings</h1>
-      </div>
-
-      <div className="space-y-6 mb-6">
-        {/* Notifications Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>Manage your notifications and stay updated</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link to="/settings/notifications" className="flex items-center justify-between p-2 hover:bg-accent rounded-md transition-colors">
-              <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-primary" />
-                <span>View all notifications</span>
-              </div>
-              {unreadCount > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
-                  {unreadCount} new
-                </span>
-              )}
-            </Link>
-          </CardContent>
-        </Card>
-        
+      <div className="space-y-6 my-6">
         {/* Keys Section */}
         <Card>
           <CardHeader>
