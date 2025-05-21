@@ -99,8 +99,38 @@ export function MyGroupsList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Use allGroups to avoid duplicates */}
-            {userGroups?.allGroups.map(community => {
+            {/* Use allGroups to avoid duplicates, sorted by recent activity */}
+            {userGroups?.allGroups
+              .sort((a, b) => {
+                // Sort by recent activity (most active communities first)
+                const getDTag = (community: NostrEvent) => community.tags?.find(tag => tag[0] === "d");
+                const getCommunityId = (community: NostrEvent) => `34550:${community.pubkey}:${getDTag(community) ? getDTag(community)![1] : ""}`;
+                
+                const aId = getCommunityId(a);
+                const bId = getCommunityId(b);
+                
+                const aStats = communityStats ? communityStats[aId] : undefined;
+                const bStats = communityStats ? communityStats[bId] : undefined;
+                
+                // Calculate activity score based on posts and participants
+                const getActivityScore = (stats: any) => {
+                  if (!stats) return 0;
+                  // Weight posts and unique participants to get a better activity score
+                  return stats.posts + (stats.participants.size * 2);
+                };
+                
+                const aScore = getActivityScore(aStats);
+                const bScore = getActivityScore(bStats);
+                
+                // Sort by activity score (descending)
+                if (aScore !== bScore) {
+                  return bScore - aScore;
+                }
+                
+                // If activity scores are equal, sort by creation time (newest first)
+                return b.created_at - a.created_at;
+              })
+              .map(community => {
               const dTag = community.tags.find(tag => tag[0] === "d");
               const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
               const isPinned = isGroupPinned(communityId);

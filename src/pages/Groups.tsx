@@ -69,8 +69,8 @@ export default function Groups() {
     enabled: !!nostr && !!communities && communities.length > 0,
   });
 
-  // Filter communities based on search query
-  const filteredCommunities = communities?.filter(community => {
+  // Filter and sort communities based on search query and recent activity
+  const filteredAndSortedCommunities = communities?.filter(community => {
     if (!searchQuery) return true;
 
     const nameTag = community.tags.find(tag => tag[0] === "name");
@@ -85,6 +85,34 @@ export default function Groups() {
       name.toLowerCase().includes(searchLower) ||
       description.toLowerCase().includes(searchLower)
     );
+  }).sort((a, b) => {
+    // Sort by recent activity (most active communities first)
+    const getDTag = (community: any) => community.tags?.find((tag: any) => tag[0] === "d");
+    const getCommunityId = (community: any) => `34550:${community.pubkey}:${getDTag(community) ? getDTag(community)![1] : ""}`;
+    
+    const aId = getCommunityId(a);
+    const bId = getCommunityId(b);
+    
+    const aStats = communityStats ? communityStats[aId] : undefined;
+    const bStats = communityStats ? communityStats[bId] : undefined;
+    
+    // Calculate activity score based on posts and participants
+    const getActivityScore = (stats: any) => {
+      if (!stats) return 0;
+      // Weight posts and unique participants to get a better activity score
+      return stats.posts + (stats.participants.size * 2);
+    };
+    
+    const aScore = getActivityScore(aStats);
+    const bScore = getActivityScore(bStats);
+    
+    // Sort by activity score (descending)
+    if (aScore !== bScore) {
+      return bScore - aScore;
+    }
+    
+    // If activity scores are equal, sort by creation time (newest first)
+    return b.created_at - a.created_at;
   });
 
   return (
@@ -123,8 +151,8 @@ export default function Groups() {
                 </CardFooter>
               </Card>
             ))
-          ) : filteredCommunities && filteredCommunities.length > 0 ? (
-            filteredCommunities.map((community) => {
+          ) : filteredAndSortedCommunities && filteredAndSortedCommunities.length > 0 ? (
+            filteredAndSortedCommunities.map((community) => {
               const dTag = community.tags.find(tag => tag[0] === "d");
               const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
               const isPinned = isGroupPinned(communityId);
