@@ -103,20 +103,20 @@ const Index = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white p-8">
         <div className="w-full max-w-md mx-auto p-8 bg-white rounded-2xl shadow-lg text-center">
           <h1 className="text-4xl font-extralight mb-4">
-            <div className="text-4xl">Welcome to</div>
+            <div className="text-4xl">welcome to</div>
             <div className="flex flex-row gap-0 items-baseline justify-center">
               <span className="text-red-500 font-extrabold text-4xl">+</span>
-              <span className="text-black font-extrabold text-4xl">Chorus</span>
+              <span className="text-black font-extrabold text-4xl">chorus</span>
             </div>
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            Create your account to get started.
+            public/private groups are money
           </p>
           <Button size="lg" className="w-full mb-4" onClick={handleCreateAccount} disabled={creating}>
-            {creating ? "Creating..." : "Create Account"}
+            {creating ? "Creating..." : "Start"}
           </Button>
           <div className="text-sm text-gray-600">
-            Already have a Nostr account?{' '}
+            Have a Nostr/+chorus account?{' '}
             <button type="button" className="text-primary font-medium hover:underline" onClick={() => setLoginOpen(true)}>
               Sign in
             </button>
