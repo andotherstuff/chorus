@@ -42,7 +42,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
     defaultValues: {
       name: '',
       picture: '',
-      nip05: '',
     },
   });
 
@@ -52,7 +51,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
       form.reset({
         name: metadata.name || '',
         picture: metadata.picture || '',
-        nip05: metadata.nip05 || '',
       });
     }
   }, [metadata, form]);
@@ -87,6 +85,22 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
       return;
     }
 
+    // Check if the name field is filled out or if any field has been updated
+    const hasName = values.name && values.name.trim() !== '';
+    const hasUpdatedField = Object.entries(values).some(([key, value]) => {
+      // Check if the value is not empty and is different from the original metadata
+      return value && value !== '' && value !== metadata?.[key as keyof NostrMetadata];
+    });
+
+    if (!hasName && !hasUpdatedField) {
+      toast({
+        title: 'Error',
+        description: 'Please provide a name or update at least one field',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       // Combine existing metadata with new values
       const data = { ...metadata, ...values };
@@ -112,6 +126,11 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
         title: 'Success',
         description: 'Your profile has been updated',
       });
+
+      // If this was part of onboarding, navigate to groups page
+      if (showSkipLink) {
+        navigate('/groups');
+      }
     } catch (error) {
       console.error('Failed to update profile:', error);
       toast({
@@ -125,6 +144,10 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="mb-4 text-sm text-muted-foreground">
+          Make sure you have a name set for your profile.
+        </div>
+        
         <FormField
           control={form.control}
           name="name"
@@ -156,24 +179,9 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="nip05"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>NIP-05 Identifier</FormLabel>
-              <FormControl>
-                <Input placeholder="you@example.com" {...field} />
-              </FormControl>
-              <FormDescription>
-                Your NIP-05 identifier for verification. Format: username@domain.com
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
-        <div className="flex justify-center">
+
+        <div className="flex flex-col gap-4">
           <Button
             type="submit"
             className="w-full"
@@ -184,6 +192,18 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
             )}
             Save Profile
           </Button>
+          
+          {showSkipLink && (
+            <div className="text-center">
+              <Button 
+                type="button" 
+                variant="link" 
+                onClick={() => navigate('/groups')}
+              >
+                Skip for now
+              </Button>
+            </div>
+          )}
         </div>
       </form>
     </Form>
@@ -216,38 +236,38 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   return (
     <FormItem>
       <FormLabel>{label}</FormLabel>
-        <div className="flex items-center gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                onUpload(file);
-              }
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Image
-          </Button>
-          {field.value && (
-            <div className={`h-10 ${previewType === 'square' ? 'w-10' : 'w-24'} rounded overflow-hidden`}>
-              <img
-                src={field.value}
-                alt={`${label} preview`}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-        </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              onUpload(file);
+            }
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Upload Image
+        </Button>
+        {field.value && (
+          <div className={`h-10 ${previewType === 'square' ? 'w-10' : 'w-24'} rounded overflow-hidden`}>
+            <img
+              src={field.value}
+              alt={`${label} preview`}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
+      </div>
       <FormDescription>
         {description}
       </FormDescription>

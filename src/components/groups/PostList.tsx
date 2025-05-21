@@ -10,8 +10,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useBannedUsers } from "@/hooks/useBannedUsers";
 import { toast } from "sonner";
-import { Heart, MessageSquare, Share2, CheckCircle, XCircle, Shield, MoreHorizontal, Ban, ChevronDown, ChevronUp } from "lucide-react";
-import { useLikes } from "@/hooks/useLikes";
+import { MessageSquare, Share2, CheckCircle, XCircle, Shield, MoreHorizontal, Ban, ChevronDown, ChevronUp } from "lucide-react";
+import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NostrEvent } from "@nostrify/nostrify";
 import { nip19 } from 'nostr-tools';
 import { NoteContent } from "../NoteContent";
@@ -347,37 +347,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
   );
 }
 
-interface LikeButtonProps {
-  postId: string;
-}
-
-function LikeButton({ postId }: LikeButtonProps) {
-  const { likeCount, hasLiked, toggleLike, isLoading } = useLikes(postId);
-  const { user } = useCurrentUser();
-  
-  const handleClick = async () => {
-    if (!user) {
-      toast.error("You must be logged in to like posts");
-      return;
-    }
-    await toggleLike();
-  };
-  
-  return (
-    <Button 
-      variant="ghost" 
-      size="sm" 
-      className={`${hasLiked ? 'text-pink-500 hover:text-pink-600' : 'text-muted-foreground hover:text-foreground'} flex items-center h-7 px-1.5`} 
-      onClick={handleClick}
-      disabled={isLoading || !user}
-    >
-      <Heart className={`h-3.5 w-3.5 mr-1 ${hasLiked ? 'fill-pink-500' : ''}`} /> 
-      <span className="text-xs">
-        {likeCount > 0 ? `${likeCount} ${likeCount === 1 ? 'Like' : 'Likes'}` : 'Like'}
-      </span>
-    </Button>
-  );
-}
+// LikeButton has been replaced with EmojiReactionButton
 
 interface PostItemProps {
   post: NostrEvent & {
@@ -495,7 +465,7 @@ function PostItem({ post, communityId, isApproved, isModerator }: PostItemProps)
           <div className="flex items-start justify-between">
             <div>
               <Link to={`/profile/${post.pubkey}`} className="hover:underline">
-                <p className="font-semibold text-sm leading-tight">{displayName}</p> 
+                <span className="font-semibold text-sm leading-tight block">{displayName}</span> 
               </Link>
               <div className="flex items-center text-xs text-muted-foreground mt-0 flex-wrap">
                 <span className="mr-1.5 hover:underline cursor-help" title={post.pubkey}>@{authorIdentifier}</span>
@@ -581,7 +551,7 @@ function PostItem({ post, communityId, isApproved, isModerator }: PostItemProps)
             <span className="text-xs">{showReplies ? "Hide" : "Reply"}</span>
             {showReplies ? <ChevronUp className="h-3 w-3 ml-0.5" /> : <ChevronDown className="h-3 w-3 ml-0.5" />}
           </Button>
-          <LikeButton postId={post.id} /> 
+          <EmojiReactionButton postId={post.id} /> 
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5">
             <Share2 className="h-3.5 w-3.5 mr-1" />
             <span className="text-xs">Share</span>

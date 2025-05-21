@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { PostImage } from '@/components/PostImage';
 import { DebugImageDisplay } from '@/components/DebugImageDisplay';
 import { DirectImageDisplay } from '@/components/DirectImageDisplay';
+import { LinkPreview } from '@/components/LinkPreview';
+import { useExtractUrls } from '@/hooks/useExtractUrls';
 import { DEBUG_IMAGES } from '@/lib/debug';
 
 interface NoteContentProps {
@@ -20,8 +22,10 @@ export function NoteContent({
 }: NoteContentProps) {
   const [processedContent, setProcessedContent] = useState<React.ReactNode[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [linkUrl, setLinkUrl] = useState<string | null>(null);
+  const { getFirstUrl } = useExtractUrls();
   
-  // Process the content to extract text and images
+  // Process the content to extract text, images, and links
   useEffect(() => {
     if (!event) return;
     
@@ -60,6 +64,10 @@ export function NoteContent({
           extractedImages.push(match[0]);
         }
       }
+      
+      // Extract the first non-image URL for link preview
+      const firstUrl = getFirstUrl(event.content);
+      setLinkUrl(firstUrl);
     }
     
     // Set the extracted image URLs
@@ -69,7 +77,7 @@ export function NoteContent({
     if (event.content) {
       processTextContent(event.content);
     }
-  }, [event]);
+  }, [event, getFirstUrl]);
   
   // Process text content with links, mentions, etc.
   const processTextContent = (text: string) => {
@@ -231,6 +239,11 @@ export function NoteContent({
       <div>
         {processedContent.length > 0 ? processedContent : event.content}
       </div>
+      
+      {/* Link Preview */}
+      {linkUrl && (
+        <LinkPreview url={linkUrl} />
+      )}
       
       {/* Images */}
       {imageUrls.length > 0 && (

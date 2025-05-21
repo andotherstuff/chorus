@@ -26,7 +26,8 @@ const queryClient = new QueryClient({
 });
 
 export function App() {
-  useSystemTheme(); // Called the hook
+  // Use the enhanced theme hook
+  useSystemTheme();
 
   return (
     <NostrLoginProvider storageKey='nostr:login'>

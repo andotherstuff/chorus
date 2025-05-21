@@ -126,6 +126,7 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
         {/* Adding CardDescription with simple text content */}
         <CardDescription className="mt-1">
           Group Statistics
+
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">

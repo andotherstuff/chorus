@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Pin, PinOff } from "lucide-react";
+import { Users, Pin, PinOff, MessageSquare, Activity } from "lucide-react";
 import { RoleBadge } from "@/components/groups/RoleBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -18,9 +18,14 @@ interface MyGroupCardProps {
   pinGroup: (communityId: string) => void;
   unpinGroup: (communityId: string) => void;
   isUpdating: boolean;
+  stats?: {
+    posts: number;
+    participants: Set<string>;
+  };
+  isLoadingStats?: boolean;
 }
 
-export function MyGroupCard({ community, role, isPinned, pinGroup, unpinGroup, isUpdating }: MyGroupCardProps) {
+export function MyGroupCard({ community, role, isPinned, pinGroup, unpinGroup, isUpdating, stats, isLoadingStats }: MyGroupCardProps) {
   const { user } = useCurrentUser();
   
   if (!user) return null;
@@ -98,6 +103,42 @@ export function MyGroupCard({ community, role, isPinned, pinGroup, unpinGroup, i
             <Users className="h-4 w-4 mr-1" />
             {moderatorTags.length} moderator{moderatorTags.length !== 1 ? 's' : ''}
           </span>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {isLoadingStats ? (
+              <>
+                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  Loading...
+                </div>
+                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                  <Activity className="h-3 w-3 mr-1" />
+                  Loading...
+                </div>
+              </>
+            ) : stats ? (
+              <>
+                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  {stats.posts} post{stats.posts !== 1 ? 's' : ''}
+                </div>
+                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                  <Activity className="h-3 w-3 mr-1" />
+                  {stats.participants.size} participant{stats.participants.size !== 1 ? 's' : ''}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  0 posts
+                </div>
+                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                  <Activity className="h-3 w-3 mr-1" />
+                  0 participants
+                </div>
+              </>
+            )}
+          </div>
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
