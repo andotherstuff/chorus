@@ -100,8 +100,8 @@ const Index = () => {
   // Onboarding step 1: Not logged in
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white p-8">
-        <div className="w-full max-w-md mx-auto p-8 bg-white rounded-2xl shadow-lg text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background p-8">
+        <div className="w-full max-w-md mx-auto p-8 bg-card dark:bg-dark-card rounded-2xl shadow-lg text-center">
           <h1 className="text-4xl font-extralight mb-4">
             <div className="text-4xl">welcome to</div>
             <div className="flex flex-row gap-0 items-baseline justify-center">
@@ -130,8 +130,8 @@ const Index = () => {
   // Onboarding step 2: New user (just created account)
   if (currentUser && newUser) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white">
-        <div className="w-full max-w-lg mx-auto p-8 bg-white rounded-2xl shadow-lg">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background">
+        <div className="w-full max-w-lg mx-auto p-8 bg-card dark:bg-dark-card rounded-2xl shadow-lg">
           <h2 className="text-2xl font-bold mb-4 text-center">Set up your profile</h2>
           <p className="text-gray-600 mb-6 text-center">
             Add your display name and picture. You can always update them later.
