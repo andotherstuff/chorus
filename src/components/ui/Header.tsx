@@ -1,5 +1,5 @@
 import { LoginArea } from "@/components/auth/LoginArea";
-// import { Separator } from "@/components/ui/separator"; // Removed
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type React from "react";
 import { Link } from "react-router-dom";
 
@@ -16,6 +16,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => (
       </h1>
     </Link>
     <div className="flex items-center gap-2">
+      <NotificationBell />
       <LoginArea />
     </div>
   </div>

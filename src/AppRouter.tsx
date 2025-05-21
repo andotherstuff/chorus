@@ -9,6 +9,7 @@ import CreateGroup from "./pages/CreateGroup";
 import Profile from "./pages/Profile";
 import ProfileSettings from "./pages/settings/ProfileSettings";
 import Settings from "./pages/settings/Settings";
+import Notifications from "./pages/Notifications";
 
 export function AppRouter() {
   return (
@@ -22,6 +23,7 @@ export function AppRouter() {
         <Route path="/profile/:pubkey" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/profile" element={<ProfileSettings />} />
+        <Route path="/notifications" element={<Notifications />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

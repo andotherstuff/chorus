@@ -4,9 +4,8 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-// import { Separator } from "@/components/ui/separator"; // Removed unused import
 import { Users } from "lucide-react";
-import Header from "@/components/ui/Header";
+import { AppLayout } from "@/components/ui/AppLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Groups() {
@@ -24,8 +23,7 @@ export default function Groups() {
   });
 
   return (
-    <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
-      <Header />
+    <AppLayout showHeader={false}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           // Skeleton loading state
@@ -112,6 +110,6 @@ export default function Groups() {
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
