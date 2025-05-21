@@ -90,8 +90,6 @@ export default function Groups() {
   return (
     <div className="container mx-auto py-4 px-6">
       <Header />
-      <Separator className="my-4" />
-
       <MyGroupsList />
 
       <div className="flex flex-col mt-6">
