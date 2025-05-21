@@ -19,7 +19,7 @@ export function useExtractUrls() {
     const imageUrlRegex = /https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp|tiff|avif|heic)(\?\S*)?/gi;
 
     // Regular expression to match URLs from common image hosting services
-    const imageHostRegex = /https?:\/\/(i\\.imgur\\.com|imgur\\.com\/[a-zA-Z0-9]+|pbs\\.twimg\\.com|i\\.ibb\\.co|nostr\\.build|void\\.cat\/d\/|imgproxy\\.snort\\.social|image\\.nostr\\.build|media\\.tenor\\.com|cloudflare-ipfs\\.com\/ipfs\/|ipfs\\.io\/ipfs\/|files\\.zaps\\.lol|img\\.zaps\\.lol|primal\\.b-cdn\\.net|cdn\\.nostr\\.build|nitter\\.net\/pic|postimages\\.org|ibb\\.co|cdn\\.discordapp\\.com\/attachments)\S+/gi;
+    const imageHostRegex = /https?:\/\/(i\.imgur\.com|imgur\.com\/[a-zA-Z0-9]+|pbs\.twimg\.com|i\.ibb\.co|nostr\.build|void\.cat\/d\/|imgproxy\.snort\.social|image\.nostr\.build|media\.tenor\.com|cloudflare-ipfs\.com\/ipfs\/|ipfs\.io\/ipfs\/|files\.zaps\.lol|img\.zaps\.lol|primal\.b-cdn\.net|cdn\.nostr\.build|nitter\.net\/pic|postimages\.org|ibb\.co|cdn\.discordapp\.com\/attachments)\S+/gi;
 
     // Extract all URLs
     const urls = text.match(urlRegex) || [];
