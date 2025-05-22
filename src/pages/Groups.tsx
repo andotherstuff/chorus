@@ -6,7 +6,8 @@ import Header from "@/components/ui/Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MyGroupsList } from "@/components/groups/MyGroupsList";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { GroupSearch } from "@/components/groups/GroupSearch";
 import { useState } from "react";
@@ -75,13 +76,13 @@ export default function Groups() {
   });
 
   return (
-    <div className="container mx-auto py-4 px-6">
+    <div className="container mx-auto py-3 px-3 sm:px-4">
       <Header />
       <MyGroupsList />
 
-      <div className="flex flex-col mt-6">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
-          <div className="md:w-64 lg:w-72">
+      <div className="flex flex-col mt-4">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
+          <div className="w-full md:w-64 lg:w-72">
             <GroupSearch
               onSearch={setSearchQuery}
               className="sticky top-0 z-10"
@@ -89,25 +90,24 @@ export default function Groups() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
           {isLoading ? (
-            Array.from({ length: 6 }).map((_, index) => (
-              <Card key={`skeleton-group-${index}-${Date.now()}`} className="overflow-hidden flex flex-col">
-                <div className="h-40 overflow-hidden">
-                  <Skeleton className="w-full h-full" />
-                </div>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
+            Array.from({ length: 12 }).map((_, index) => (
+              <Card key={`skeleton-group-${index}-${Date.now()}`} className="overflow-hidden flex flex-col h-[140px]">
+                <CardHeader className="flex flex-row items-center space-y-0 gap-3 pt-4 pb-2 px-3">
+                  <Skeleton className="h-12 w-12 rounded-md" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-4 w-3/4" />
+                    <div className="flex gap-1">
+                      <Skeleton className="h-3 w-8" />
+                      <Skeleton className="h-3 w-8" />
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="flex-grow">
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-2/3" />
+                <CardContent className="px-3 pb-3 pt-0">
+                  <Skeleton className="h-3 w-full mb-1" />
+                  <Skeleton className="h-3 w-2/3" />
                 </CardContent>
-                <CardFooter>
-                  <Skeleton className="h-10 w-full" />
-                </CardFooter>
               </Card>
             ))
           ) : filteredCommunities && filteredCommunities.length > 0 ? (

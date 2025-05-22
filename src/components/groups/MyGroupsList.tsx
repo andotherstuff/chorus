@@ -1,11 +1,11 @@
 import { useUserGroups } from "@/hooks/useUserGroups";
-import { Card, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { MyGroupCard } from "./MyGroupCard";
-import { NostrEvent } from "@nostrify/nostrify";
 import { useGroupStats } from "@/hooks/useGroupStats";
+import { Avatar } from "@/components/ui/avatar";
 
 export function MyGroupsList() {
   const { user } = useCurrentUser();
@@ -38,67 +38,70 @@ export function MyGroupsList() {
   }
 
   return (
-    <div className="mb-8">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">My Groups</h2>
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-xl font-bold">My Groups</h2>
       </div>
 
       {isLoading ? (
-        <div className="flex gap-4 pb-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={`skeleton-my-group-${index}`} className="min-w-[250px] max-w-[250px] flex flex-col">
-              <div className="h-28 overflow-hidden">
-                <Skeleton className="w-full h-full" />
-              </div>
-              <CardHeader className="p-3">
-                <Skeleton className="h-5 w-3/4" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Card key={`skeleton-my-group-${index}`} className="overflow-hidden flex flex-col h-[140px]">
+              <CardHeader className="flex flex-row items-center space-y-0 gap-3 pt-4 pb-2 px-3">
+                <Skeleton className="h-12 w-12 rounded-md" />
+                <div className="space-y-1 flex-1">
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="flex gap-1">
+                    <Skeleton className="h-3 w-8" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardFooter className="p-3 pt-0">
-                <Skeleton className="h-9 w-full" />
-              </CardFooter>
+              <Skeleton className="mx-3 h-3 w-full mb-1" />
+              <Skeleton className="mx-3 h-3 w-2/3" />
             </Card>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Use allGroups to avoid duplicates */}
-            {userGroups?.allGroups.map(community => {
-              const dTag = community.tags.find(tag => tag[0] === "d");
-              const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
-              const isPinned = isGroupPinned(communityId);
-              
-              // Determine the role
-              let role: "pinned" | "owner" | "moderator" | "member" = "member";
-              
-              if (isPinned) {
-                role = "pinned";
-              } else if (community.pubkey === user.pubkey) {
-                role = "owner";
-              } else if (community.tags.some(tag => 
-                tag[0] === "p" && 
-                tag[1] === user.pubkey && 
-                tag[3] === "moderator"
-              )) {
-                role = "moderator";
-              }
-              
-              const stats = communityStats ? communityStats[communityId] : undefined;
-              
-              return (
-                <MyGroupCard
-                  key={`${role}-${community.id}`}
-                  community={community}
-                  role={role}
-                  isPinned={isPinned}
-                  pinGroup={pinGroup}
-                  unpinGroup={unpinGroup}
-                  isUpdating={isUpdating}
-                  stats={stats}
-                  isLoadingStats={isLoadingStats}
-                />
-              );
-            })}
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+          {/* Use allGroups to avoid duplicates */}
+          {userGroups?.allGroups.map(community => {
+            const dTag = community.tags.find(tag => tag[0] === "d");
+            const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+            const isPinned = isGroupPinned(communityId);
+            
+            // Determine the role
+            let role: "pinned" | "owner" | "moderator" | "member" = "member";
+            
+            if (isPinned) {
+              role = "pinned";
+            } else if (community.pubkey === user.pubkey) {
+              role = "owner";
+            } else if (community.tags.some(tag => 
+              tag[0] === "p" && 
+              tag[1] === user.pubkey && 
+              tag[3] === "moderator"
+            )) {
+              role = "moderator";
+            }
+            
+            const stats = communityStats ? communityStats[communityId] : undefined;
+            
+            return (
+              <MyGroupCard
+                key={`${role}-${community.id}`}
+                community={community}
+                role={role}
+                isPinned={isPinned}
+                pinGroup={pinGroup}
+                unpinGroup={unpinGroup}
+                isUpdating={isUpdating}
+                stats={stats}
+                isLoadingStats={isLoadingStats}
+              />
+            );
+          })}
+        </div>
       )}
     </div>
   );

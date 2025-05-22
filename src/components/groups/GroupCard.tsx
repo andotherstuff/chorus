@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Pin, PinOff, MessageSquare, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Users, Pin, PinOff, MessageSquare, Activity } from "lucide-react";
 import { RoleBadge } from "@/components/groups/RoleBadge";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -31,7 +32,6 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
   const descriptionTag = community.tags.find(tag => tag[0] === "description");
   const imageTag = community.tags.find(tag => tag[0] === "image");
   const dTag = community.tags.find(tag => tag[0] === "d");
-  // No need to track moderator tags for stats display
 
   const name = nameTag ? nameTag[1] : (dTag ? dTag[1] : "Unnamed Group");
   const description = descriptionTag ? descriptionTag[1] : "No description available";
@@ -54,80 +54,79 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
       pinGroup(communityId);
     }
   };
+  
+  // Get the first letter of the group name for avatar fallback
+  const getInitials = () => {
+    return name.charAt(0).toUpperCase();
+  };
 
   return (
-    <Card className={cn(
-      "overflow-hidden flex flex-col relative group",
-      isPinned && "ring-1 ring-primary/20"
-    )}>
-      <div className="h-40 overflow-hidden relative">
-        {image && (
-          <img
-            src={image}
-            alt={name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Group";
-            }}
-          />
-        )}
+    <Card 
+      className={cn(
+        "overflow-hidden flex flex-col relative group h-full cursor-pointer",
+        isPinned && "ring-1 ring-primary/20"
+      )}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('button')) return;
+        window.location.href = `/group/${encodeURIComponent(communityId)}`;
+      }}
+    >
+      {userRole && (
+        <div className="absolute top-2 left-2 z-10">
+          <RoleBadge role={userRole} />
+        </div>
+      )}
 
-        {/* Role indicator badge - only shown if user has a role */}
-        {userRole && (
-          <div className="absolute top-2 left-2">
-            <RoleBadge role={userRole} />
+      <CardHeader className="flex flex-row items-center space-y-0 gap-3 pt-4 pb-2 px-3">
+        <Avatar className="h-12 w-12 rounded-md">
+          <AvatarImage src={image} alt={name} />
+          <AvatarFallback className="bg-primary/10 text-primary font-medium">
+            {getInitials()}
+          </AvatarFallback>
+        </Avatar>
+        <div className="space-y-1">
+          <CardTitle className="text-sm font-medium leading-tight">{name}</CardTitle>
+          <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+            {isLoadingStats ? (
+              <>
+                <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px] opacity-70">
+                  <MessageSquare className="h-2.5 w-2.5 mr-0.5" />
+                  ...
+                </div>
+                <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px] opacity-70">
+                  <Activity className="h-2.5 w-2.5 mr-0.5" />
+                  ...
+                </div>
+              </>
+            ) : stats ? (
+              <>
+                <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px]">
+                  <MessageSquare className="h-2.5 w-2.5 mr-0.5" />
+                  {stats.posts}
+                </div>
+                <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px]">
+                  <Activity className="h-2.5 w-2.5 mr-0.5" />
+                  {stats.participants.size}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px]">
+                  <MessageSquare className="h-2.5 w-2.5 mr-0.5" />
+                  0
+                </div>
+                <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px]">
+                  <Activity className="h-2.5 w-2.5 mr-0.5" />
+                  0
+                </div>
+              </>
+            )}
           </div>
-        )}
-      </div>
-      <CardHeader>
-        <CardTitle>{name}</CardTitle>
-        <div className="flex flex-wrap gap-2 mt-1 text-sm text-muted-foreground">
-          {isLoadingStats ? (
-            <>
-              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
-                <MessageSquare className="h-3 w-3 mr-1" />
-                Loading...
-              </div>
-              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
-                <Activity className="h-3 w-3 mr-1" />
-                Loading...
-              </div>
-            </>
-          ) : stats ? (
-            <>
-              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                <MessageSquare className="h-3 w-3 mr-1" />
-                {stats.posts} post{stats.posts !== 1 ? 's' : ''}
-              </div>
-              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                <Activity className="h-3 w-3 mr-1" />
-                {stats.participants.size} participant{stats.participants.size !== 1 ? 's' : ''}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                <MessageSquare className="h-3 w-3 mr-1" />
-                0 posts
-              </div>
-              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                <Activity className="h-3 w-3 mr-1" />
-                0 participants
-              </div>
-            </>
-          )}
         </div>
       </CardHeader>
-      <CardContent className="flex-grow">
-        <div className="line-clamp-3 text-sm">{description}</div>
+      <CardContent className="px-3 pb-3 pt-0">
+        <div className="line-clamp-2 text-xs">{description}</div>
       </CardContent>
-      <CardFooter>
-        <Button asChild className="w-full">
-          <Link to={`/group/${encodeURIComponent(communityId)}`}>
-            View Group
-          </Link>
-        </Button>
-      </CardFooter>
 
       {user && (
         <TooltipProvider>
@@ -137,16 +136,16 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity",
+                  "absolute top-2 right-2 h-6 w-6 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity",
                   isPinned && "opacity-100"
                 )}
                 onClick={handleTogglePin}
                 disabled={isUpdating}
               >
                 {isPinned ? (
-                  <PinOff className="h-4 w-4" />
+                  <PinOff className="h-3 w-3" />
                 ) : (
-                  <Pin className="h-4 w-4" />
+                  <Pin className="h-3 w-3" />
                 )}
                 <span className="sr-only">{isPinned ? "Unpin group" : "Pin group"}</span>
               </Button>
