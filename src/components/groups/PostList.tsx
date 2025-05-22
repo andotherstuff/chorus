@@ -747,7 +747,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                 
                 return (
                   <>
-                    <MessageSquare className={`h-3.5 w-3.5 ${showReplies ? 'text-primary fill-primary' : ''}`} />
+                    <MessageSquare className={`h-3.5 w-3.5`} />
                     {replyCount > 0 && <span className="text-xs ml-0.5">{replyCount}</span>}
                   </>
                 );

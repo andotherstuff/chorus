@@ -165,7 +165,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true 
         onClick={handleOpenDialog}
       >
         <Zap className={`h-3.5 w-3.5 ${nutzapTotal && nutzapTotal > 0 ? 'text-orange-500' : ''}`} />
-        {nutzapTotal && nutzapTotal > 0 && <span className="text-xs ml-0.5">{nutzapTotal}</span>}
+        {nutzapTotal && nutzapTotal > 0 ? <span className="text-xs ml-0.5">{nutzapTotal}</span> : null}
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -103,11 +103,11 @@ export function ReplyForm({
   const profileImage = metadata?.picture;
   
   return (
-    <div className={`flex gap-3 ${isNested ? 'pl-6' : ''}`}>
-      <Link to={`/profile/${user.pubkey}`}>
-        <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
+    <div className={`flex gap-2.5 ${isNested ? 'pl-2' : ''}`}>
+      <Link to={`/profile/${user.pubkey}`} className="flex-shrink-0">
+        <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
           <AvatarImage src={profileImage} />
-          <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+          <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
         </Avatar>
       </Link>
       
@@ -122,7 +122,7 @@ export function ReplyForm({
         {!isUserApproved && (
           <div className="text-xs flex items-center text-amber-600 dark:text-amber-400 mb-1">
             <AlertTriangle className="h-3 w-3 mr-1" />
-            Your reply will require moderator approval before appearing in the main feed
+            Your reply will require moderator approval
           </div>
         )}
         
@@ -131,15 +131,16 @@ export function ReplyForm({
             size="sm"
             onClick={handleSubmit}
             disabled={isPublishing || !content.trim()}
+            className="h-8"
           >
             {isPublishing ? (
               <>
-                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 Posting...
               </>
             ) : (
               <>
-                <Send className="h-3 w-3 mr-2" />
+                <Send className="h-3.5 w-3.5 mr-1.5" />
                 Reply
               </>
             )}

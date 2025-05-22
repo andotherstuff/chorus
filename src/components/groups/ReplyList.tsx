@@ -13,11 +13,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NoteContent } from "../NoteContent";
 import { ReplyForm } from "./ReplyForm";
 import { Link } from "react-router-dom";
-import { MessageSquare, CheckCircle, AlertTriangle, Shield } from "lucide-react";
+import { MessageSquare, CheckCircle, AlertTriangle, Shield, MoreVertical, Flag, Share2 } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
+import { NutzapButton } from "@/components/groups/NutzapButton";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { formatRelativeTime } from "@/lib/utils";
+import { nip19 } from 'nostr-tools';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ReplyListProps {
   postId: string;
@@ -56,14 +72,16 @@ export function ReplyList({ postId, communityId, postAuthorPubkey }: ReplyListPr
   
   if (!replies || replies.length === 0) {
     return (
-      <div className="mt-4">
-        <div className="text-sm font-medium text-muted-foreground mb-4">No replies yet</div>
-        <ReplyForm 
-          postId={postId} 
-          communityId={communityId} 
-          postAuthorPubkey={postAuthorPubkey}
-          onReplySubmitted={() => refetch()}
-        />
+      <div className="mt-2">
+        <div className="text-sm text-muted-foreground mb-3">No replies yet</div>
+        <div className="pl-2">
+          <ReplyForm 
+            postId={postId} 
+            communityId={communityId} 
+            postAuthorPubkey={postAuthorPubkey}
+            onReplySubmitted={() => refetch()}
+          />
+        </div>
       </div>
     );
   }
@@ -97,12 +115,12 @@ export function ReplyList({ postId, communityId, postAuthorPubkey }: ReplyListPr
   const pendingCount = processedReplies.length - approvedCount;
   
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-2 space-y-0">
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-medium text-muted-foreground">
           {filteredReplies.length} {filteredReplies.length === 1 ? 'reply' : 'replies'}
           {pendingCount > 0 && isUserModerator && (
-            <span className="ml-2 text-amber-600">({pendingCount} pending approval)</span>
+            <span className="ml-2 text-amber-600">({pendingCount} pending)</span>
           )}
         </div>
         
@@ -114,25 +132,27 @@ export function ReplyList({ postId, communityId, postAuthorPubkey }: ReplyListPr
               onCheckedChange={(checked) => setShowOnlyApproved(!checked)}
             />
             <Label htmlFor="show-pending" className="text-xs">
-              Show pending replies
+              Show pending
             </Label>
           </div>
         )}
       </div>
       
-      {filteredReplies.map((reply) => (
-        <ReplyItem 
-          key={reply.id} 
-          reply={reply} 
-          communityId={communityId}
-          postId={postId}
-          postAuthorPubkey={postAuthorPubkey}
-          onReplySubmitted={() => refetch()}
-          isUserModerator={isUserModerator}
-        />
-      ))}
+      <div>
+        {filteredReplies.map((reply, index) => (
+          <ReplyItem 
+            key={reply.id} 
+            reply={reply} 
+            communityId={communityId}
+            postId={postId}
+            postAuthorPubkey={postAuthorPubkey}
+            onReplySubmitted={() => refetch()}
+            isUserModerator={isUserModerator}
+          />
+        ))}
+      </div>
       
-      <div className="mt-4">
+      <div className="mt-3 pl-2">
         <ReplyForm 
           postId={postId} 
           communityId={communityId} 
@@ -176,6 +196,34 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
   const metadata = author.data?.metadata;
   const displayName = metadata?.name || reply.pubkey.slice(0, 8);
   const profileImage = metadata?.picture;
+  
+  // Format the author identifier (NIP-05 or npub)
+  const authorNip05 = metadata?.nip05;
+  let authorIdentifier = authorNip05 || reply.pubkey;
+  if (!authorNip05 && reply.pubkey.match(/^[0-9a-fA-F]{64}$/)) {
+    try {
+      const npub = nip19.npubEncode(reply.pubkey);
+      authorIdentifier = `${npub.slice(0,10)}...${npub.slice(-4)}`;
+    } catch (e) {
+      authorIdentifier = `${reply.pubkey.slice(0,8)}...${reply.pubkey.slice(-4)}`;
+    }
+  } else if (!authorNip05) {
+    authorIdentifier = `${reply.pubkey.slice(0,8)}...${reply.pubkey.slice(-4)}`;
+  }
+  
+  // Format the timestamp as relative time
+  const relativeTime = formatRelativeTime(reply.created_at);
+  
+  // Keep the absolute time for tooltip/title
+  const replyDate = new Date(reply.created_at * 1000);
+  const formattedAbsoluteTime = `${replyDate.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })} ${replyDate.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit'
+  })}`;
   
   const handleReplySubmitted = () => {
     setShowReplyForm(false);
@@ -235,85 +283,141 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
   };
   
   return (
-    <div className="pl-6 border-l-2 border-muted">
-      <div className="pt-2">
-        <div className="flex items-start gap-3">
-          <Link to={`/profile/${reply.pubkey}`}>
-            <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
+    <div className="pl-2">
+      <div className="py-3">
+        <div className="flex items-start gap-2.5">
+          <Link to={`/profile/${reply.pubkey}`} className="flex-shrink-0">
+            <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
               <AvatarImage src={profileImage} />
-              <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
             </Avatar>
           </Link>
           
           <div className="flex-1">
-            <div className={`${reply.isPendingApproval ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-muted/50'} rounded-lg p-3`}>
-              <div className="flex items-center justify-between mb-1">
+            <div className="flex items-start justify-between">
+              <div>
                 <Link to={`/profile/${reply.pubkey}`} className="hover:underline">
-                  <span className="font-semibold text-sm block">{displayName}</span>
+                  <span className="font-semibold text-sm leading-tight block">{displayName}</span>
                 </Link>
-                <div className="flex items-center">
-                  {reply.isApproved && (
-                    <span className="text-xs text-green-600 dark:text-green-400 flex items-center mr-2">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      {reply.isAutoApproved ? 'Auto-approved' : 'Approved'}
-                    </span>
-                  )}
-                  {reply.isPendingApproval && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center mr-2">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      Pending approval
-                    </span>
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(reply.created_at * 1000).toLocaleString()}
+                <div className="flex items-center text-xs text-muted-foreground mt-0 flex-row">
+                  <span
+                    className="mr-1.5 hover:underline truncate max-w-[12rem] overflow-hidden whitespace-nowrap"
+                    title={authorIdentifier}
+                  >
+                    {authorIdentifier}
                   </span>
+                  <span className="mr-1.5">·</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="whitespace-nowrap hover:underline">{relativeTime}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{formattedAbsoluteTime}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {reply.isPendingApproval && (
+                    <>
+                      <span className="mr-1.5 ml-1.5">·</span>
+                      <span className="text-amber-600 dark:text-amber-400 flex items-center inline-flex">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Pending
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
-              
-              <div className="text-sm">
-                <NoteContent event={reply} />
+              <div className="flex items-center gap-2 ml-1 flex-shrink-0">
+                {isUserModerator && reply.isPendingApproval && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleApproveReply}
+                    className="text-xs text-green-600 h-6 px-2 border-green-200"
+                  >
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Approve
+                  </Button>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="More options">
+                      <MoreVertical className="h-3.5 w-3.5" />
+                      <span className="sr-only">More options</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${window.location.origin}/post/${reply.id}`)} className="text-xs">
+                      <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share Reply
+                    </DropdownMenuItem>
+                    {user && user.pubkey !== reply.pubkey && (
+                      <DropdownMenuItem onClick={() => {
+                        toast.info("Report functionality for replies coming soon");
+                      }} className="text-xs">
+                        <Flag className="h-3.5 w-3.5 mr-1.5" /> Report Reply
+                      </DropdownMenuItem>
+                    )}
+                    {isUserModerator && reply.isPendingApproval && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleApproveReply} className="text-xs">
+                          <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Approve Reply
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
             
-            <div className="flex items-center gap-6 mt-1 ml-1">
-              <EmojiReactionButton postId={reply.id} />
-              
+            <div className="whitespace-pre-wrap break-words text-sm mt-1">
+              <NoteContent event={reply} />
+            </div>
+            
+            <div className="flex items-center gap-12 mt-3 ml-1.5">
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-xs text-muted-foreground h-6 px-2"
+                className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
                 onClick={() => setShowReplyForm(!showReplyForm)}
               >
-                <MessageSquare className="h-3 w-3 mr-0.5" />
-                Reply
+                {/* Check for nested replies */}
+                {(() => {
+                  // We already have the nestedReplies from parent component
+                  const nestedReplyCount = filteredNestedReplies.length || 0;
+                  
+                  return (
+                    <>
+                      <MessageSquare className={`h-3.5 w-3.5`} />
+                      {nestedReplyCount > 0 && <span className="text-xs ml-0.5">{nestedReplyCount}</span>}
+                    </>
+                  );
+                })()}
               </Button>
               
-              {isUserModerator && reply.isPendingApproval && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleApproveReply}
-                  className="text-xs text-green-600 h-6 px-2 border-green-200"
-                >
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Approve
-                </Button>
-              )}
+              <EmojiReactionButton postId={reply.id} showText={false} />
+              
+              <NutzapButton postId={reply.id} authorPubkey={reply.pubkey} showText={false} />
               
               {filteredNestedReplies.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-muted-foreground h-6 px-2"
+                  className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
                   onClick={() => setShowNestedReplies(!showNestedReplies)}
                 >
-                  {showNestedReplies ? 'Hide replies' : `Show ${filteredNestedReplies.length} replies`}
+                  {showNestedReplies ? (
+                    <>Hide replies</>
+                  ) : (
+                    <>{filteredNestedReplies.length} {filteredNestedReplies.length === 1 ? 'reply' : 'replies'}</>
+                  )}
                 </Button>
               )}
             </div>
             
             {showReplyForm && (
-              <div className="mt-2">
+              <div className="mt-3">
                 <ReplyForm 
                   postId={postId}
                   communityId={communityId}
@@ -327,7 +431,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
             )}
             
             {showNestedReplies && filteredNestedReplies.length > 0 && (
-              <div className="mt-3 space-y-3">
+              <div className="mt-3">
                 {filteredNestedReplies.map(nestedReply => (
                   <ReplyItem
                     key={nestedReply.id}
