@@ -12,8 +12,8 @@ import { useGroupStats } from "@/hooks/useGroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { GroupCard } from "@/components/groups/GroupCard";
-import { NostrEvent } from "@nostrify/nostrify";
-import { UserRole } from "@/hooks/useUserRole";
+import type { NostrEvent } from "@nostrify/nostrify";
+import type { UserRole } from "@/hooks/useUserRole";
 
 // Helper function to get community ID
 const getCommunityId = (community: NostrEvent) => {
@@ -50,23 +50,23 @@ export default function Groups() {
     const membershipMap = new Map<string, UserRole>();
 
     // Process all of user's groups
-    userGroups.allGroups.forEach(group => {
+    for (const group of userGroups.allGroups) {
       const communityId = getCommunityId(group);
-      
+
       // Determine role
       let role: UserRole = "member";
       if (group.pubkey === user.pubkey) {
         role = "owner";
-      } else if (group.tags.some(tag => 
-        tag[0] === "p" && 
-        tag[1] === user.pubkey && 
+      } else if (group.tags.some(tag =>
+        tag[0] === "p" &&
+        tag[1] === user.pubkey &&
         tag[3] === "moderator"
       )) {
         role = "moderator";
       }
-      
+
       membershipMap.set(communityId, role);
-    });
+    }
 
     return membershipMap;
   }, [userGroups, user]);
@@ -98,29 +98,29 @@ export default function Groups() {
       .sort((a, b) => {
         const aId = getCommunityId(a);
         const bId = getCommunityId(b);
-        
+
         const aIsPinned = isGroupPinned(aId);
         const bIsPinned = isGroupPinned(bId);
-        
+
         // First priority: pinned groups
         if (aIsPinned && !bIsPinned) return -1;
         if (!aIsPinned && bIsPinned) return 1;
-        
+
         const aIsMember = userMembershipMap.has(aId);
         const bIsMember = userMembershipMap.has(bId);
-        
+
         // Second priority: groups that the user is a member of
         if (aIsMember && !bIsMember) return -1;
         if (!aIsMember && bIsMember) return 1;
-        
+
         // If both are pinned or both are not pinned and both are member or both are not member,
         // sort alphabetically by name
         const aNameTag = a.tags.find(tag => tag[0] === "name");
         const bNameTag = b.tags.find(tag => tag[0] === "name");
-        
+
         const aName = aNameTag ? aNameTag[1].toLowerCase() : "";
         const bName = bNameTag ? bNameTag[1].toLowerCase() : "";
-        
+
         return aName.localeCompare(bName);
       });
   }, [allGroups, searchQuery, isGroupPinned, userMembershipMap]);

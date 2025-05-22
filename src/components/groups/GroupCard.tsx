@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { RoleBadge } from "@/components/groups/RoleBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { UserRole } from "@/hooks/useUserRole";
+import type { UserRole } from "@/hooks/useUserRole";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@nostrify/nostrify";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,10 +64,10 @@ export function GroupCard({
   );
 
   // Determine role from props or from membership data
-  const displayRole = userRole ?? 
-    (membership?.isOwner ? "owner" : 
-    membership?.isModerator ? "moderator" : 
-    membership?.isMember ? "member" : 
+  const displayRole = userRole ??
+    (membership?.isOwner ? "owner" :
+    membership?.isModerator ? "moderator" :
+    membership?.isMember ? "member" :
     null);
 
   const handleTogglePin = (e: React.MouseEvent) => {

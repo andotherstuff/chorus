@@ -97,7 +97,7 @@ export function useUserGroups() {
         const communityId = getCommunityId(community);
         const membersList = communityMembersMap.get(communityId);
 
-        if (membersList && membersList.includes(user.pubkey)) {
+        if (membersList?.includes(user.pubkey)) {
           memberCommunities.push(community);
         }
       }
