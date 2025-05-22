@@ -46,7 +46,7 @@ export function MyGroupCard({ community, role, isPinned, pinGroup, unpinGroup, i
 
   const name = nameTag ? nameTag[1] : (dTag ? dTag[1] : "Unnamed Group");
   const description = descriptionTag ? descriptionTag[1] : "No description available";
-  const image = imageTag ? imageTag[1] : "/placeholder-community.jpg";
+  const image = imageTag ? imageTag[1] : "/placeholder-community.svg";
   const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 
   // Use the reliable membership hook to determine the user's role
@@ -145,7 +145,7 @@ export function MyGroupCard({ community, role, isPinned, pinGroup, unpinGroup, i
           </div>
         </Link>
       </CardHeader>
-      
+
       <CardContent className="px-5 pb-3 pt-0">
         <div className="line-clamp-3 text-sm">{description}</div>
       </CardContent>
