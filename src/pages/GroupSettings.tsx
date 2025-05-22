@@ -14,11 +14,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthor } from "@/hooks/useAuthor";
 import { toast } from "sonner";
-import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2, FileWarning } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import type { NostrEvent } from "@nostrify/nostrify";
 import Header from "@/components/ui/Header";
 import { Separator } from "@/components/ui/separator";
+import { ReportsList } from "@/components/groups/ReportsList";
 
 
 export default function GroupSettings() {
@@ -388,174 +389,210 @@ export default function GroupSettings() {
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>
-              Update your group's basic information
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Group Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter group name"
-                required
-              />
-            </div>
+      <Tabs defaultValue="general" className="w-full space-y-6">
+        <TabsList className={isOwner || isModerator ? "grid w-full grid-cols-2" : "grid w-full grid-cols-1"}>
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            General
+          </TabsTrigger>
+          {(isOwner || isModerator) && (
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <FileWarning className="h-4 w-4" />
+              Reports
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-            <div className="space-y-2">
-              <Label htmlFor="image">Image URL</Label>
-              <Input
-                id="image"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="Enter image URL"
-              />
-
-              {imageUrl && (
-                <div className="mt-2 rounded-md overflow-hidden border w-full">
-                  <img
-                    src={imageUrl}
-                    alt="Group preview"
-                    className="w-full h-auto"
-                    onError={(e) => {
-                      e.currentTarget.src = "/placeholder-community.svg";
-                    }}
+        <TabsContent value="general" className="space-y-6 mt-6">
+          <form onSubmit={handleSubmit} className="w-full space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>General Settings</CardTitle>
+                <CardDescription>
+                  Update your group's basic information
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Group Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter group name"
+                    required
                   />
                 </div>
-              )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Enter group description"
-                rows={4}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="image">Image URL</Label>
+                  <Input
+                    id="image"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="Enter image URL"
+                  />
 
-            <div className="space-y-2">
-              <Label htmlFor="guidelines">Community Guidelines (Optional)</Label>
-              <Textarea
-                id="guidelines"
-                value={communityGuidelines}
-                onChange={(e) => setCommunityGuidelines(e.target.value)}
-                placeholder="Enter community guidelines"
-                rows={4}
-              />
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <Button type="submit">
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Moderators section - only shown to owners */}
-        {isOwner && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Shield className="h-5 w-5 mr-2" />
-                  Group Owner & Moderators
-                </CardTitle>
-                <CardDescription>
-                  As the group owner, you can manage who can moderate this group
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Always display the owner first */}
-                  {community && (
-                    <ModeratorItem
-                      key={(community as NostrEvent).pubkey}
-                      pubkey={(community as NostrEvent).pubkey}
-                      isCreator={true}
-                      onRemove={() => {}} // Owner can't be removed
-                    />
-                  )}
-
-                  {/* Then display all moderators who are not the owner */}
-                  {moderators
-                    .filter(pubkey => pubkey !== (community as NostrEvent)?.pubkey) // Filter out the owner
-                    .map((pubkey) => (
-                      <ModeratorItem
-                        key={pubkey}
-                        pubkey={pubkey}
-                        isCreator={false}
-                        onRemove={() => handleRemoveModerator(pubkey)}
+                  {imageUrl && (
+                    <div className="mt-2 rounded-md overflow-hidden border w-full">
+                      <img
+                        src={imageUrl}
+                        alt="Group preview"
+                        className="w-full h-auto"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder-community.svg";
+                        }}
                       />
-                    ))
-                  }
-
-                  {moderators.length === 0 && !community && (
-                    <p className="text-muted-foreground">No moderators yet</p>
+                    </div>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter group description"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="guidelines">Community Guidelines (Optional)</Label>
+                  <Textarea
+                    id="guidelines"
+                    value={communityGuidelines}
+                    onChange={(e) => setCommunityGuidelines(e.target.value)}
+                    placeholder="Enter community guidelines"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <Button type="submit">
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Moderators section - only shown to owners */}
+            {isOwner && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Shield className="h-5 w-5 mr-2" />
+                      Group Owner & Moderators
+                    </CardTitle>
+                    <CardDescription>
+                      As the group owner, you can manage who can moderate this group
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Always display the owner first */}
+                      {community && (
+                        <ModeratorItem
+                          key={(community as NostrEvent).pubkey}
+                          pubkey={(community as NostrEvent).pubkey}
+                          isCreator={true}
+                          onRemove={() => {}} // Owner can't be removed
+                        />
+                      )}
+
+                      {/* Then display all moderators who are not the owner */}
+                      {moderators
+                        .filter(pubkey => pubkey !== (community as NostrEvent)?.pubkey) // Filter out the owner
+                        .map((pubkey) => (
+                          <ModeratorItem
+                            key={pubkey}
+                            pubkey={pubkey}
+                            isCreator={false}
+                            onRemove={() => handleRemoveModerator(pubkey)}
+                          />
+                        ))
+                      }
+
+                      {moderators.length === 0 && !community && (
+                        <p className="text-muted-foreground">No moderators yet</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Users className="h-5 w-5 mr-2" />
+                      Group Members
+                    </CardTitle>
+                    <CardDescription>
+                      As the group owner, you can promote members to moderators
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingMembers ? (
+                      <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="flex items-center justify-between p-2 border rounded-md">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div>
+                                <Skeleton className="h-4 w-32 mb-1" />
+                              </div>
+                            </div>
+                            <Skeleton className="h-9 w-20" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : uniqueApprovedMembers.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                        <p>No approved members yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {uniqueApprovedMembers
+                          .filter(pubkey => !moderators.includes(pubkey)) // Only show non-moderators
+                          .map((pubkey) => (
+                            <MemberItem
+                              key={pubkey}
+                              pubkey={pubkey}
+                              onPromote={() => handleAddModerator(pubkey)}
+                              isOwner={isOwner}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </form>
+        </TabsContent>
+
+        {(isOwner || isModerator) && (
+          <TabsContent value="reports" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Group Members
+                  <FileWarning className="h-5 w-5 mr-2" />
+                  Reports
                 </CardTitle>
                 <CardDescription>
-                  As the group owner, you can promote members to moderators
+                  Review and manage reported content in your group
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {isLoadingMembers ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center justify-between p-2 border rounded-md">
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-10 w-10 rounded-full" />
-                          <div>
-                            <Skeleton className="h-4 w-32 mb-1" />
-                          </div>
-                        </div>
-                        <Skeleton className="h-9 w-20" />
-                      </div>
-                    ))}
-                  </div>
-                ) : uniqueApprovedMembers.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p>No approved members yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {uniqueApprovedMembers
-                      .filter(pubkey => !moderators.includes(pubkey)) // Only show non-moderators
-                      .map((pubkey) => (
-                        <MemberItem
-                          key={pubkey}
-                          pubkey={pubkey}
-                          onPromote={() => handleAddModerator(pubkey)}
-                          isOwner={isOwner}
-                        />
-                      ))}
-                  </div>
-                )}
+                <ReportsList communityId={groupId || ""} />
               </CardContent>
             </Card>
-          </div>
+          </TabsContent>
         )}
-      </form>
+      </Tabs>
 
     </div>
   );

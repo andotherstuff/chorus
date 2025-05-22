@@ -163,7 +163,7 @@ export function ReportsList({ communityId }: ReportsListProps) {
         <TabsList className="grid grid-cols-2 mb-4">
           <TabsTrigger value="open" className="flex items-center gap-2">
             <InboxIcon className="h-4 w-4" /> 
-            Open Reports
+            Open
             {openCount > 0 && (
               <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                 {openCount}
@@ -172,7 +172,7 @@ export function ReportsList({ communityId }: ReportsListProps) {
           </TabsTrigger>
           <TabsTrigger value="closed" className="flex items-center gap-2">
             <ArchiveIcon className="h-4 w-4" /> 
-            Closed Reports
+            Closed
             {closedCount > 0 && (
               <Badge variant="secondary" className="ml-1">
                 {closedCount}
@@ -373,32 +373,6 @@ const ReportItem = React.forwardRef<HTMLDivElement, ReportItemProps>(
     const reportedImage = reportedAuthor.data?.metadata?.picture;
     
     const reportTime = formatDistanceToNow(new Date(report.created_at * 1000), { addSuffix: true });
-    
-    const getReportTypeBadge = () => {
-      switch (report.reportType) {
-        case "nudity":
-          return <Badge variant="destructive">Nudity</Badge>;
-        case "malware":
-          return <Badge variant="destructive">Malware/Scam</Badge>;
-        case "profanity":
-          return <Badge variant="destructive">Profanity</Badge>;
-        case "illegal":
-          return <Badge variant="destructive">Illegal Content</Badge>;
-        case "spam":
-          return <Badge>Spam</Badge>;
-        case "impersonation":
-          return <Badge variant="destructive">Impersonation</Badge>;
-        default:
-          return <Badge variant="outline">Other</Badge>;
-      }
-    };
-    
-    const getStatusBadge = () => {
-      if (report.isClosed) {
-        return <Badge variant="outline" className="bg-muted text-muted-foreground">Closed</Badge>;
-      }
-      return <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Open</Badge>;
-    };
 
     return (
       <Card 
@@ -407,15 +381,11 @@ const ReportItem = React.forwardRef<HTMLDivElement, ReportItemProps>(
       >
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              Report {getReportTypeBadge()} {getStatusBadge()}
-            </CardTitle>
+            <CardDescription>
+              Reported by <Link to={`/profile/${report.pubkey}`} className="underline">{reporterName}</Link>
+            </CardDescription>
             <span className="text-xs text-muted-foreground">{reportTime}</span>
           </div>
-          <CardDescription>
-            Reported by <Link to={`/profile/${report.pubkey}`} className="underline">{reporterName}</Link>
-          </CardDescription>
         </CardHeader>
         
         <CardContent className="pb-2">
@@ -472,10 +442,6 @@ const ReportItem = React.forwardRef<HTMLDivElement, ReportItemProps>(
                   <p className="text-sm text-muted-foreground italic">Content not found or has been deleted</p>
                 </div>
               )}
-              <div className="text-xs text-muted-foreground">
-                <span>Content ID: </span>
-                <code className="bg-muted px-1 py-0.5 rounded">{report.reportedEventId.slice(0, 10)}...{report.reportedEventId.slice(-4)}</code>
-              </div>
             </>
           )}
         </CardContent>
