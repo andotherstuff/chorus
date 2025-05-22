@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 interface EmojiReactionButtonProps {
   postId: string;
+  showText?: boolean;
 }
 
 interface Reaction {
@@ -20,7 +21,7 @@ interface Reaction {
   hasReacted: boolean;
 }
 
-export function EmojiReactionButton({ postId }: EmojiReactionButtonProps) {
+export function EmojiReactionButton({ postId, showText = true }: EmojiReactionButtonProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish({
@@ -74,8 +75,8 @@ export function EmojiReactionButton({ postId }: EmojiReactionButtonProps) {
     return acc;
   }, {}) || {};
   
-  // Convert to array and sort by count (descending)
-  const reactionsList = Object.values(processedReactions).sort((a, b) => b.count - a.count);
+  // Calculate total reactions count
+  const totalReactionsCount = Object.values(processedReactions).reduce((sum, reaction) => sum + reaction.count, 0);
   
   // Handle emoji selection
   const handleEmojiClick = async (emojiData: EmojiClickData) => {
@@ -105,104 +106,31 @@ export function EmojiReactionButton({ postId }: EmojiReactionButtonProps) {
     }
   };
 
-  // Handle clicking on an existing reaction
-  const handleReactionClick = async (emoji: string, hasReacted: boolean) => {
-    if (!user) {
-      toast.error("You must be logged in to react to posts");
-      return;
-    }
-
-    if (hasReacted) {
-      // Find the user's reaction event with this emoji
-      const userReaction = reactions?.find(
-        reaction => reaction.pubkey === user.pubkey && reaction.content === emoji
-      );
-      
-      if (!userReaction) {
-        console.error("No reaction event found to remove");
-        return;
-      }
-      
-      try {
-        // Create a deletion event (kind 5) that references the reaction event
-        await publishEvent({
-          kind: 5,
-          tags: [
-            ["e", userReaction.id], // Reference the reaction event to delete
-          ],
-          content: "Deleted reaction",
-        });
-        
-        // Reaction will be removed automatically via query invalidation
-        
-        toast.success("Reaction removed!");
-      } catch (error) {
-        console.error("Error removing reaction:", error);
-        toast.error("Failed to remove reaction. Please try again.");
-      }
-    } else {
-      // Add the reaction
-      try {
-        await publishEvent({
-          kind: 7,
-          tags: [
-            ["e", postId],
-            ["k", "11"], // Assuming we're reacting to a kind 11 post
-          ],
-          content: emoji,
-        });
-        
-        // Reaction will be added automatically via query invalidation
-        
-        toast.success("Reaction added!");
-      } catch (error) {
-        console.error("Error adding reaction:", error);
-        toast.error("Failed to add reaction. Please try again.");
-      }
-    }
-  };
-
   return (
-    <div className="flex items-center gap-1">
-      {reactionsList.map((reaction) => (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <Button
-          key={reaction.emoji}
           variant="ghost"
           size="sm"
-          className={`${
-            reaction.hasReacted ? 'bg-muted/50' : ''
-          } flex items-center h-7 px-2 rounded-full text-sm`}
-          onClick={() => handleReactionClick(reaction.emoji, reaction.hasReacted)}
+          className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
           disabled={isLoading || !user}
         >
-          <span className="mr-1">{reaction.emoji}</span>
-          <span className="text-xs">{reaction.count}</span>
+          <SmilePlus className={`h-3.5 w-3.5`} />
+          {totalReactionsCount > 0 && (
+            <span className="text-xs ml-0.5">{totalReactionsCount}</span>
+          )}
         </Button>
-      ))}
-      
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground flex items-center h-7 px-2"
-            disabled={isLoading || !user}
-          >
-            <SmilePlus className="h-3.5 w-3.5 mr-1" />
-            <span className="text-xs">React</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-none shadow-lg" align="start">
-          <EmojiPicker
-            onEmojiClick={handleEmojiClick}
-            theme={theme === "dark" ? Theme.DARK : Theme.LIGHT}
-            width="100%"
-            height="350px"
-            searchPlaceHolder="Search emoji..."
-            previewConfig={{ showPreview: false }}
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0 border-none shadow-lg" align="start">
+        <EmojiPicker
+          onEmojiClick={handleEmojiClick}
+          theme={theme === "dark" ? Theme.DARK : Theme.LIGHT}
+          width="100%"
+          height="350px"
+          searchPlaceHolder="Search emoji..."
+          previewConfig={{ showPreview: false }}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -50,30 +50,78 @@ import {
 // Reply Count Component
 function ReplyCount({ postId }: { postId: string }) {
   const { nostr } = useNostr();
-
+  
   const { data: replyCount } = useQuery({
     queryKey: ["reply-count", postId],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-
+      
       // Get all kind 1111 replies that reference this post
-      const events = await nostr.query([{
+      const events = await nostr.query([{ 
         kinds: [1111],
         "#e": [postId],
         limit: 100,
       }], { signal });
-
+      
       return events?.length || 0;
     },
     enabled: !!nostr && !!postId,
   });
-
+  
   if (!replyCount || replyCount === 0) {
     return null;
   }
-
-  return <span className="text-xs ml-0.5">{replyCount}</span>;
+  
+  return <span className="text-xs ml-1">{replyCount}</span>;
 }
+
+// Reply Count Component
+function ReplyCount({ postId }: { postId: string }) {
+  const { nostr } = useNostr();
+  
+  const { data: replyCount } = useQuery({
+    queryKey: ["reply-count", postId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      
+      // Get all kind 1111 replies that reference this post
+      const events = await nostr.query([{ 
+        kinds: [1111],
+        "#e": [postId],
+        limit: 100,
+      }], { signal });
+      
+      return events?.length || 0;
+    },
+    enabled: !!nostr && !!postId,
+  });
+  
+  if (!replyCount || replyCount === 0) {
+    return null;
+  }
+  
+  return <span className="text-xs ml-1">{replyCount}</span>;
+}
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PostListProps {
   communityId: string;
@@ -721,37 +769,16 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
       {/* Footer Section - aligned with author info and content */}
       <div className="flex-col pt-1.5 pl-[2.875rem] pr-3">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-12 ml-1.5">
+          <div className="flex items-center gap-4 ml-1.5">
             <Button
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
               onClick={() => setShowReplies(!showReplies)}
             >
-              {/* Get replies count */}
-              {(() => {
-                const { nostr: postNostr } = useNostr();
-                const { data: replyCount = 0 } = useQuery({
-                  queryKey: ["reply-count", post.id],
-                  queryFn: async (c) => {
-                    const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-                    const events = await postNostr.query([{
-                      kinds: [1111],
-                      "#e": [post.id],
-                      limit: 100,
-                    }], { signal });
-                    return events?.length || 0;
-                  },
-                  enabled: !!postNostr && !!post.id,
-                });
-                
-                return (
-                  <>
-                    <MessageSquare className={`h-3.5 w-3.5 ${showReplies ? 'text-primary fill-primary' : ''}`} />
-                    {replyCount > 0 && <span className="text-xs ml-0.5">{replyCount}</span>}
-                  </>
-                );
-              })()}
+              <MessageSquare className={`h-3.5 w-3.5 ${showReplies ? 'text-primary fill-primary' : ''}`} />
+              {/* Query for reply count */}
+              <ReplyCount postId={post.id} />
             </Button>
             <EmojiReactionButton postId={post.id} showText={false} />
             <NutzapButton postId={post.id} authorPubkey={post.pubkey} showText={false} />

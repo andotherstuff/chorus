@@ -275,7 +275,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
               </div>
             </div>
             
-            <div className="flex items-center gap-2 mt-1 ml-1">
+            <div className="flex items-center gap-6 mt-1 ml-1">
               <EmojiReactionButton postId={reply.id} />
               
               <Button 
@@ -284,7 +284,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
                 className="text-xs text-muted-foreground h-6 px-2"
                 onClick={() => setShowReplyForm(!showReplyForm)}
               >
-                <MessageSquare className="h-3 w-3 mr-1" />
+                <MessageSquare className="h-3 w-3 mr-0.5" />
                 Reply
               </Button>
               

@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatDistanceToNow } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -68,5 +69,63 @@ export function getPostExpirationTimestamp(): number | null {
       return null;
   }
   return now + seconds;
+}
+
+/**
+ * Formats a timestamp as a relative time string (e.g., "5m", "2h", "3d")
+ * Falls back to absolute date for older timestamps (more than 30 days)
+ * @param timestamp Unix timestamp in seconds
+ * @param includeAbbreviation Whether to add 'ago' suffix for timestamps > 1 day
+ * @returns Formatted relative time string
+ */
+export function formatRelativeTime(timestamp: number, includeAbbreviation = false): string {
+  const now = new Date();
+  const date = new Date(timestamp * 1000);
+  const differenceInSeconds = Math.floor((date.getTime() - now.getTime()) / 1000);
+  const isPast = differenceInSeconds < 0;
+  
+  // Work with absolute difference for calculations
+  const absDifferenceInSeconds = Math.abs(differenceInSeconds);
+  
+  // For very recent timestamps (less than 5 seconds)
+  if (absDifferenceInSeconds < 5) {
+    return "now";
+  }
+  
+  // For times less than a minute ago/from now
+  if (absDifferenceInSeconds < 60) {
+    return `${absDifferenceInSeconds}s`;
+  }
+  
+  // For times less than an hour ago/from now
+  if (absDifferenceInSeconds < 3600) {
+    const minutes = Math.floor(absDifferenceInSeconds / 60);
+    return `${minutes}m`;
+  }
+  
+  // For times less than a day ago/from now
+  if (absDifferenceInSeconds < 86400) {
+    const hours = Math.floor(absDifferenceInSeconds / 3600);
+    return `${hours}h`;
+  }
+  
+  // For times less than 7 days ago/from now
+  if (absDifferenceInSeconds < 604800) {
+    const days = Math.floor(absDifferenceInSeconds / 86400);
+    return `${days}d`;
+  }
+  
+  // For times less than 30 days ago/from now
+  if (absDifferenceInSeconds < 2592000) {
+    const days = Math.floor(absDifferenceInSeconds / 86400);
+    return `${days}d`;
+  }
+  
+  // For older timestamps, use a more readable format
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: now.getFullYear() !== date.getFullYear() ? 'numeric' : undefined,
+  });
 }
 

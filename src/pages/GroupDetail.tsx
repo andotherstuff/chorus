@@ -7,16 +7,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Separator } from "@/components/ui/separator"; // Removed
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuthor } from "@/hooks/useAuthor";
 import { CreatePostForm } from "@/components/groups/CreatePostForm";
 import { PostList } from "@/components/groups/PostList";
-import { PendingPostsList } from "@/components/groups/PendingPostsList";
-import { ReportsList } from "@/components/groups/ReportsList";
 import { JoinRequestButton } from "@/components/groups/JoinRequestButton";
 import { MemberManagement } from "@/components/groups/MemberManagement";
 import { ApprovedMembersList } from "@/components/groups/ApprovedMembersList";
@@ -28,7 +25,7 @@ import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator"; // Added Separator import
+import { Separator } from "@/components/ui/separator";
 
 export default function GroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -80,17 +77,6 @@ export default function GroupDetail() {
   // Query for pending replies
   const { data: pendingReplies = [] } = usePendingReplies(groupId || '');
 
-  // Calculate total pending items (posts + replies)
-  const totalPendingCount = (pendingPostsCount || 0) + pendingReplies.length;
-
-  // Set active tab to "pending" if there are pending posts/replies and user is a moderator
-  useEffect(() => {
-    // Only change tab if we have pending items and user is a moderator
-    if (isModerator && totalPendingCount > 0) {
-      setActiveTab("pending");
-    }
-  }, [isModerator, totalPendingCount]);
-
   const nameTag = community?.tags.find(tag => tag[0] === "name");
   const descriptionTag = community?.tags.find(tag => tag[0] === "description");
   const imageTag = community?.tags.find(tag => tag[0] === "image");
@@ -140,53 +126,37 @@ export default function GroupDetail() {
       <Header />
       <Separator className="my-4" />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <div className="md:col-span-2">
-          <div className="h-48 rounded-lg overflow-hidden mb-4 relative group"> {/* Added relative and group */}
-            <img
-              src={image}
-              alt={name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = "/placeholder-community.svg";
-              }}
-            />
+      <div className="relative mb-6">
+        <div className="h-36 rounded-lg overflow-hidden mb-2 relative group">
+          <img
+            src={image}
+            alt={name}
+            className="w-full h-full object-cover object-center"
+            onError={(e) => {
+              e.currentTarget.src = "/placeholder-community.svg";
+            }}
+          />
+        </div>
 
-            {/* Pin/Unpin Button */}
-            {user && (
+        <div className="flex flex-row items-start justify-between gap-4 mb-2">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold">{name}</h1>
+            <p className="text-base mb-4">{description}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isModerator && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="absolute top-3 right-3 h-9 w-9 rounded-full bg-background/80 shadow-md"
-                      onClick={() => {
-                        const communityId = `34550:${parsedId?.pubkey}:${parsedId?.identifier}`; // Keep communityId for protocol consistency
-                        if (isGroupPinned(communityId)) {
-                          unpinGroup(communityId);
-                        } else {
-                          pinGroup(communityId);
-                        }
-                      }}
-                      disabled={isUpdating}
-                    >
-                      {isGroupPinned(`34550:${parsedId?.pubkey}:${parsedId?.identifier}`) ? (
-                        <PinOff className="h-5 w-5" />
-                      ) : (
-                        <Pin className="h-5 w-5" />
-                      )}
-                      <span className="sr-only">
-                        {isGroupPinned(`34550:${parsedId?.pubkey}:${parsedId?.identifier}`)
-                          ? "Unpin from My Groups"
-                          : "Pin to My Groups"}
-                      </span>
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/group/${encodeURIComponent(groupId || '')}/settings`} className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Manage Group
+                      </Link>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {isGroupPinned(`34550:${parsedId?.pubkey}:${parsedId?.identifier}`)
-                      ? "Unpin from My Groups"
-                      : "Pin to My Groups"}
+                    {isOwner ? "Owner settings" : "Moderator settings"}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -197,201 +167,119 @@ export default function GroupDetail() {
             <div className="flex items-center gap-3">
               <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
               {user && community && (
-                <GroupNutzapButton 
-                  groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} 
+                <GroupNutzapButton
+                  groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
                   ownerPubkey={community.pubkey}
                   variant="outline"
                   size="sm"
                 />
               )}
             </div>
+            {!isModerator && (
+              <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+            )}
           </div>
-        </div>
-
-        <div>
-          {isModerator ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  {isOwner ? "Owner Controls" : "Moderator Controls"}
-                </CardTitle>
-                <CardDescription>
-                  {isOwner
-                    ? "You are the owner of this group"
-                    : "You are a moderator of this group"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center py-4">
-                <Button asChild variant="outline" className="w-full">
-                  <Link to={`/group/${encodeURIComponent(groupId || '')}/settings`} className="w-full flex items-center justify-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Manage Group
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Join this group
-                </CardTitle>
-                <CardDescription>
-                  Request to join this group to participate in discussions
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center py-4">
-                <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="posts">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Posts
-          </TabsTrigger>
-          {isModerator && (
-            <TabsTrigger value="pending" className="relative">
-              <Clock className="h-4 w-4 mr-2" />
-              Pending Approval
-              {totalPendingCount > 0 && (
-                <span className="ml-2 bg-amber-500 text-white text-xs rounded-full px-2 py-0.5">
-                  {totalPendingCount}
-                </span>
-              )}
+        <div className="md:flex md:justify-start">
+          <TabsList className="mb-4 w-full md:w-auto flex">
+            <TabsTrigger value="posts" className="flex-1 md:flex-none">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Posts
             </TabsTrigger>
-          )}
-          <TabsTrigger value="members">
-            <Users className="h-4 w-4 mr-2" />
-            Members
-          </TabsTrigger>
-          {isModerator && (
-            <TabsTrigger value="reports">
-              <Flag className="h-4 w-4 mr-2" />
-              Reports
+
+            <TabsTrigger value="members" className="flex-1 md:flex-none">
+              <Users className="h-4 w-4 mr-2" />
+              Members
             </TabsTrigger>
-          )}
-          <TabsTrigger value="nutzaps">
-            <Zap className="h-4 w-4 mr-2" />
-            Nutzaps
-          </TabsTrigger>
-          <TabsTrigger value="about">
-            <Info className="h-4 w-4 mr-2" />
-            About
-          </TabsTrigger>
-        </TabsList>
+
+            <TabsTrigger value="nutzaps">
+              <Zap className="h-4 w-4 mr-2" />
+              Nutzaps
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="posts" className="space-y-4">
+          {/* Emphasize the create post form if user is logged in */}
           {user && (
-            <CreatePostForm communityId={groupId || ''} />
+            <div className="max-w-3xl mx-auto">
+              <CreatePostForm communityId={groupId || ''} />
+            </div>
           )}
 
-          {/* Modified section for toggle only */}
-          <div className="flex items-center justify-end mb-4 gap-2">
+          {/* Move toggle to top and align to the right for easy access */}
+          <div className="flex items-center justify-end mb-4 gap-2 max-w-3xl mx-auto">
             <div className="flex items-center space-x-2">
               <Switch
                 id="approved-only"
                 checked={showOnlyApproved}
                 onCheckedChange={setShowOnlyApproved}
               />
-              <Label htmlFor="approved-only" className="flex items-center cursor-pointer">
-                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+              <Label htmlFor="approved-only" className="flex items-center cursor-pointer text-sm">
+                <CheckCircle className="h-3.5 w-3.5 mr-1.5 text-green-500" />
                 Show only approved posts
               </Label>
             </div>
           </div>
 
-          <PostList
-            communityId={groupId || ''}
-            showOnlyApproved={showOnlyApproved}
-            onPostCountChange={setCurrentPostCount} // Passed callback
-          />
-        </TabsContent>
-
-        {isModerator && (
-          <TabsContent value="pending" className="space-y-6">
-            <PendingPostsList communityId={groupId || ''} />
-          </TabsContent>
-        )}
-
-        <TabsContent value="members" className="space-y-4">
-          {isModerator && (
-            <MemberManagement communityId={groupId || ''} isModerator={isModerator} />
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Group Owner & Moderators
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {community && <ModeratorItem key={community.pubkey} pubkey={community.pubkey} isCreator />}
-                  {moderatorTags
-                    .filter(tag => tag[1] !== community?.pubkey)
-                    .map((tag) => (
-                      <ModeratorItem key={tag[1]} pubkey={tag[1]} />
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <ApprovedMembersList communityId={groupId || ''} />
+          {/* Center and limit width for better readability */}
+          <div className="max-w-3xl mx-auto">
+            <PostList
+              communityId={groupId || ''}
+              showOnlyApproved={showOnlyApproved}
+              onPostCountChange={setCurrentPostCount}
+            />
           </div>
         </TabsContent>
 
-        {isModerator && (
-          <TabsContent value="reports" className="space-y-4">
-            <ReportsList communityId={groupId || ''} />
-          </TabsContent>
-        )}
-        
         <TabsContent value="nutzaps" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Group Nutzaps</h2>
             {user && community && (
-              <GroupNutzapButton 
-                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} 
+              <GroupNutzapButton
+                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
                 ownerPubkey={community.pubkey}
               />
             )}
           </div>
           <GroupNutzapList groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
         </TabsContent>
-        
-        <TabsContent value="about">
-          <Card>
-            <CardHeader>
-              <CardTitle>About this Group</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-medium">Description</h3>
-                <p>{description}</p>
+
+
+        <TabsContent value="members" className="space-y-4">
+          <div className="max-w-3xl mx-auto">
+            {isModerator && (
+              <div className="mb-6">
+                <MemberManagement communityId={groupId || ''} isModerator={isModerator} />
               </div>
-              {community && (
-                <>
-                  <div>
-                    <h3 className="font-medium">Created by</h3>
-                    <ModeratorItem pubkey={community.pubkey} isCreator />
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    Group Owner & Moderators
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {community && <ModeratorItem key={community.pubkey} pubkey={community.pubkey} isCreator />}
+                    {moderatorTags
+                      .filter(tag => tag[1] !== community?.pubkey)
+                      .map((tag) => (
+                        <ModeratorItem key={tag[1]} pubkey={tag[1]} />
+                      ))}
                   </div>
-                  <div>
-                    <h3 className="font-medium">Created at</h3>
-                    <p>{new Date(community.created_at * 1000).toLocaleString()}</p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+
+              <ApprovedMembersList communityId={groupId || ''} />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
