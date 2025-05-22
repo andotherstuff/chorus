@@ -81,47 +81,45 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
       </div>
       <CardHeader>
         <CardTitle>{name}</CardTitle>
-        <CardDescription>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {isLoadingStats ? (
-              <>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  Loading...
-                </div>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
-                  <Activity className="h-3 w-3 mr-1" />
-                  Loading...
-                </div>
-              </>
-            ) : stats ? (
-              <>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  {stats.posts} post{stats.posts !== 1 ? 's' : ''}
-                </div>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <Activity className="h-3 w-3 mr-1" />
-                  {stats.participants.size} participant{stats.participants.size !== 1 ? 's' : ''}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  0 posts
-                </div>
-                <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
-                  <Activity className="h-3 w-3 mr-1" />
-                  0 participants
-                </div>
-              </>
-            )}
-          </div>
-        </CardDescription>
+        <div className="flex flex-wrap gap-2 mt-1 text-sm text-muted-foreground">
+          {isLoadingStats ? (
+            <>
+              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Loading...
+              </div>
+              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs opacity-70">
+                <Activity className="h-3 w-3 mr-1" />
+                Loading...
+              </div>
+            </>
+          ) : stats ? (
+            <>
+              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                {stats.posts} post{stats.posts !== 1 ? 's' : ''}
+              </div>
+              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <Activity className="h-3 w-3 mr-1" />
+                {stats.participants.size} participant{stats.participants.size !== 1 ? 's' : ''}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                0 posts
+              </div>
+              <div className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs">
+                <Activity className="h-3 w-3 mr-1" />
+                0 participants
+              </div>
+            </>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="line-clamp-3">{description}</p>
+        <div className="line-clamp-3 text-sm">{description}</div>
       </CardContent>
       <CardFooter>
         <Button asChild className="w-full">

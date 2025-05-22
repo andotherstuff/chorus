@@ -70,27 +70,22 @@ export default function GroupDetail() {
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
     .some(tag => tag[1] === user.pubkey));
 
-  console.log("Current user pubkey:", user?.pubkey);
-  console.log("Community creator pubkey:", community?.pubkey);
-  console.log("Is owner:", isOwner);
-  console.log("Is moderator:", isModerator);
-  
   // Query for pending posts count using our custom hook
   const { data: pendingPostsCount = 0 } = usePendingPostsCount(groupId || '');
-  
+
   // Query for pending replies
   const { data: pendingReplies = [] } = usePendingReplies(groupId || '');
-  
+
   // Calculate total pending items (posts + replies)
   const totalPendingCount = (pendingPostsCount || 0) + pendingReplies.length;
-  
+
   // Set active tab to "pending" if there are pending posts/replies and user is a moderator
   useEffect(() => {
     // Only change tab if we have pending items and user is a moderator
     if (isModerator && totalPendingCount > 0) {
       setActiveTab("pending");
     }
-  }, [isModerator, totalPendingCount, setActiveTab]);
+  }, [isModerator, totalPendingCount]);
 
   const nameTag = community?.tags.find(tag => tag[0] === "name");
   const descriptionTag = community?.tags.find(tag => tag[0] === "description");
@@ -140,7 +135,7 @@ export default function GroupDetail() {
     <div className="container mx-auto py-4 px-6">
       <Header />
       <Separator className="my-4" />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <div className="md:col-span-2">
           <div className="h-48 rounded-lg overflow-hidden mb-4 relative group"> {/* Added relative and group */}
@@ -152,15 +147,15 @@ export default function GroupDetail() {
                 e.currentTarget.src = "https://placehold.co/1200x400?text=Group";
               }}
             />
-            
+
             {/* Pin/Unpin Button */}
             {user && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="secondary" 
-                      size="icon" 
+                    <Button
+                      variant="secondary"
+                      size="icon"
                       className="absolute top-3 right-3 h-9 w-9 rounded-full bg-background/80 shadow-md"
                       onClick={() => {
                         const communityId = `34550:${parsedId?.pubkey}:${parsedId?.identifier}`; // Keep communityId for protocol consistency
@@ -178,15 +173,15 @@ export default function GroupDetail() {
                         <Pin className="h-5 w-5" />
                       )}
                       <span className="sr-only">
-                        {isGroupPinned(`34550:${parsedId?.pubkey}:${parsedId?.identifier}`) 
-                          ? "Unpin from My Groups" 
+                        {isGroupPinned(`34550:${parsedId?.pubkey}:${parsedId?.identifier}`)
+                          ? "Unpin from My Groups"
                           : "Pin to My Groups"}
                       </span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {isGroupPinned(`34550:${parsedId?.pubkey}:${parsedId?.identifier}`) 
-                      ? "Unpin from My Groups" 
+                    {isGroupPinned(`34550:${parsedId?.pubkey}:${parsedId?.identifier}`)
+                      ? "Unpin from My Groups"
                       : "Pin to My Groups"}
                   </TooltipContent>
                 </Tooltip>
@@ -285,13 +280,13 @@ export default function GroupDetail() {
             </div>
           </div>
 
-          <PostList 
-            communityId={groupId || ''} 
-            showOnlyApproved={showOnlyApproved} 
+          <PostList
+            communityId={groupId || ''}
+            showOnlyApproved={showOnlyApproved}
             onPostCountChange={setCurrentPostCount} // Passed callback
           />
         </TabsContent>
-        
+
         {isModerator && (
           <TabsContent value="pending" className="space-y-6">
             <PendingPostsList communityId={groupId || ''} />
@@ -315,7 +310,7 @@ export default function GroupDetail() {
                 <div className="space-y-4">
                   {community && <ModeratorItem key={community.pubkey} pubkey={community.pubkey} isCreator />}
                   {moderatorTags
-                    .filter(tag => tag[1] !== community?.pubkey) 
+                    .filter(tag => tag[1] !== community?.pubkey)
                     .map((tag) => (
                       <ModeratorItem key={tag[1]} pubkey={tag[1]} />
                     ))}
