@@ -26,6 +26,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent",
+      "md:px-2 md:py-1.5 px-3 py-2.5", // Larger padding on mobile
       inset && "pl-8",
       className
     )}
@@ -46,6 +47,7 @@ const DropdownMenuSubContent = React.forwardRef<
     ref={ref}
     className={cn(
       "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+      "md:p-1 p-2", // Larger padding on mobile
       className
     )}
     {...props}
@@ -64,6 +66,7 @@ const DropdownMenuContent = React.forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "md:p-1 p-2 md:min-w-[8rem] min-w-[12rem]", // Larger padding and min-width on mobile
         className
       )}
       {...props}
@@ -82,6 +85,7 @@ const DropdownMenuItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "md:px-2 md:py-1.5 px-3 py-3 md:text-sm text-base min-h-[44px] md:min-h-0", // Larger padding, font size and min-height on mobile (44px is recommended touch target)
       inset && "pl-8",
       className
     )}
@@ -98,14 +102,15 @@ const DropdownMenuCheckboxItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "md:py-1.5 md:pl-8 md:pr-2 py-3 pl-10 pr-3 md:text-sm text-base min-h-[44px] md:min-h-0", // Larger padding and min-height on mobile
       className
     )}
     checked={checked}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center md:left-2 left-3">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check className="h-4 w-4 md:h-4 md:w-4 h-5 w-5" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -122,13 +127,14 @@ const DropdownMenuRadioItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "md:py-1.5 md:pl-8 md:pr-2 py-3 pl-10 pr-3 md:text-sm text-base min-h-[44px] md:min-h-0", // Larger padding and min-height on mobile
       className
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center md:left-2 left-3">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Circle className="h-2 w-2 fill-current" />
+        <Circle className="h-2 w-2 fill-current md:h-2 md:w-2 h-2.5 w-2.5" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -146,6 +152,7 @@ const DropdownMenuLabel = React.forwardRef<
     ref={ref}
     className={cn(
       "px-2 py-1.5 text-sm font-semibold",
+      "md:px-2 md:py-1.5 px-3 py-2 md:text-sm text-base", // Larger padding and font size on mobile
       inset && "pl-8",
       className
     )}

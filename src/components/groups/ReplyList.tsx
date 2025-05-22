@@ -349,20 +349,20 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${window.location.origin}/post/${reply.id}`)} className="text-xs">
-                      <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share Reply
+                      <Share2 className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Share Reply
                     </DropdownMenuItem>
                     {user && user.pubkey !== reply.pubkey && (
                       <DropdownMenuItem onClick={() => {
                         toast.info("Report functionality for replies coming soon");
                       }} className="text-xs">
-                        <Flag className="h-3.5 w-3.5 mr-1.5" /> Report Reply
+                        <Flag className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Report Reply
                       </DropdownMenuItem>
                     )}
                     {isUserModerator && reply.isPendingApproval && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleApproveReply} className="text-xs">
-                          <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Approve Reply
+                          <CheckCircle className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Approve Reply
                         </DropdownMenuItem>
                       </>
                     )}

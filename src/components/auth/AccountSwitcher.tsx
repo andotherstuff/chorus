@@ -76,48 +76,48 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
       <DropdownMenuContent className="w-52 p-1.5 animate-scale-in">
         <DropdownMenuItem
           asChild
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md font-bold text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md font-bold text-sm md:gap-2 gap-3"
         >
           <a href="/create-group">
-            <Plus className="w-3.5 h-3.5 font-bold" />
+            <Plus className="w-3.5 h-3.5 font-bold md:w-3.5 md:h-3.5 w-4 h-4" />
             <span>Create Group</span>
           </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
           asChild
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
         >
           <a href={`/profile/${currentUser.pubkey}`}>
-            <User className="w-3.5 h-3.5" />
+            <User className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
             <span>View Profile</span>
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem
           asChild
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
         >
           <a href="/settings/profile">
-            <Edit className="w-3.5 h-3.5" />
+            <Edit className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
             <span>Edit Profile</span>
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem
           asChild
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
         >
           <a href="/wallet">
-            <Wallet className="w-3.5 h-3.5" />
+            <Wallet className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
             <span>Wallet</span>
           </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
           asChild
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
         >
           <a href="/settings/notifications">
-            <Bell className="w-3.5 h-3.5" />
+            <Bell className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
             <span>Notifications</span>
             {unreadCount > 0 && (
               <span className="ml-auto bg-primary text-primary-foreground text-xs font-medium px-1.5 py-0.5 rounded-full">
@@ -128,20 +128,20 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         </DropdownMenuItem>
         <DropdownMenuItem
           asChild
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
         >
           <a href="/settings">
-            <Settings className="w-3.5 h-3.5" />
+            <Settings className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
             <span>Settings</span>
           </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
           asChild
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
         >
           <a href="/about">
-            <Info className="w-3.5 h-3.5" />
+            <Info className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
             <span>About +chorus</span>
           </a>
         </DropdownMenuItem>
@@ -155,9 +155,9 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
             localStorage.clear();
             cashuStore.clearStore();
           }}
-          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-red-500 text-sm"
+          className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-red-500 text-sm md:gap-2 gap-3"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
