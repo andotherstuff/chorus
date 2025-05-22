@@ -1,11 +1,13 @@
 import { useGroupNutzaps } from "@/hooks/useGroupNutzaps";
 import { useAuthor } from "@/hooks/useAuthor";
 import { formatBalance } from "@/lib/cashu";
+import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Zap, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 
 interface GroupNutzapListProps {
   groupId: string;
@@ -13,6 +15,8 @@ interface GroupNutzapListProps {
 
 export function GroupNutzapList({ groupId }: GroupNutzapListProps) {
   const { data: nutzaps, isLoading, error } = useGroupNutzaps(groupId);
+  const { data: btcPrice } = useBitcoinPrice();
+  const [showSats, setShowSats] = useState(false);
 
   if (isLoading) {
     return (
@@ -53,18 +57,28 @@ export function GroupNutzapList({ groupId }: GroupNutzapListProps) {
 
   return (
     <div className="space-y-4">
+      <div className="text-right">
+        <button
+          onClick={() => setShowSats(!showSats)}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Show in {showSats ? 'USD' : 'sats'}
+        </button>
+      </div>
       {nutzaps.map((event) => (
-        <NutzapItem key={event.id} event={event} />
+        <NutzapItem key={event.id} event={event} btcPrice={btcPrice?.USD} showSats={showSats} />
       ))}
     </div>
   );
 }
 
-function NutzapItem({ event }: { event: any }) {
+function NutzapItem({ event, btcPrice, showSats }: { event: any; btcPrice?: number; showSats: boolean }) {
   const author = useAuthor(event.pubkey);
   const metadata = author.data?.metadata;
   const displayName = metadata?.name || event.pubkey.slice(0, 8);
   const profileImage = metadata?.picture;
+  const [isFlashing, setIsFlashing] = useState(false);
+  const prevValueRef = useRef<string>("");
 
   // Extract amount from proofs
   let totalAmount = 0;
@@ -83,6 +97,18 @@ function NutzapItem({ event }: { event: any }) {
   const date = new Date(event.created_at * 1000);
   const formattedDate = date.toLocaleString();
 
+  const usdAmount = btcPrice ? satsToUSD(totalAmount, btcPrice) : 0;
+  const currentValue = showSats ? formatBalance(totalAmount) : formatUSD(usdAmount);
+
+  useEffect(() => {
+    if (prevValueRef.current && prevValueRef.current !== currentValue && !showSats) {
+      setIsFlashing(true);
+      const timer = setTimeout(() => setIsFlashing(false), 300);
+      return () => clearTimeout(timer);
+    }
+    prevValueRef.current = currentValue;
+  }, [currentValue, showSats]);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -99,7 +125,9 @@ function NutzapItem({ event }: { event: any }) {
           </Link>
           <div className="flex items-center text-amber-500">
             <DollarSign className="h-4 w-4 mr-1" />
-            <span className="font-medium">{formatBalance(totalAmount)}</span>
+            <span className={`font-medium tabular-nums ${isFlashing ? 'flash-update' : ''}`}>
+              {currentValue}
+            </span>
           </div>
         </div>
       </CardHeader>

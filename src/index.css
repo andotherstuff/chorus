@@ -99,3 +99,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes flash-update {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.flash-update {
+  animation: flash-update 0.3s ease-in-out;
+}

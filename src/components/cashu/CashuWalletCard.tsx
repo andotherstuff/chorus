@@ -1,5 +1,5 @@
 import { bytesToHex } from "@noble/hashes/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { calculateBalance, defaultMints, formatBalance } from "@/lib/cashu";
+import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   AlertCircle,
@@ -35,12 +36,35 @@ export function CashuWalletCard() {
   const { wallet, isLoading, createWallet } = useCashuWallet();
   const cashuStore = useCashuStore();
   const { cleanSpentProofs } = useCashuToken();
+  const { data: btcPrice } = useBitcoinPrice();
   const [newMint, setNewMint] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [expandedMint, setExpandedMint] = useState<string | null>(null);
+  const [showSats, setShowSats] = useState(false);
+  const [flashingMints, setFlashingMints] = useState<Record<string, boolean>>({});
 
   // Calculate total balance across all mints
   const balances = calculateBalance(cashuStore.proofs);
+  const prevBalances = useRef<Record<string, string>>({});
+
+  // Track balance changes for flash effect
+  useEffect(() => {
+    if (!showSats && btcPrice) {
+      Object.keys(balances).forEach(mint => {
+        const amount = balances[mint] || 0;
+        const currentValue = formatUSD(satsToUSD(amount, btcPrice.USD));
+        
+        if (prevBalances.current[mint] && prevBalances.current[mint] !== currentValue) {
+          setFlashingMints(prev => ({ ...prev, [mint]: true }));
+          setTimeout(() => {
+            setFlashingMints(prev => ({ ...prev, [mint]: false }));
+          }, 300);
+        }
+        
+        prevBalances.current[mint] = currentValue;
+      });
+    }
+  }, [balances, btcPrice, showSats]);
 
   // Use useEffect to set active mint when wallet changes
   useEffect(() => {
@@ -184,8 +208,16 @@ export function CashuWalletCard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div>
+          <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">Mints</h3>
+            <button
+              onClick={() => setShowSats(!showSats)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Show in {showSats ? 'USD' : 'sats'}
+            </button>
+          </div>
+          <div>
             {wallet.mints && wallet.mints.length > 0 ? (
               <div className="mt-2 space-y-2">
                 {wallet.mints.map((mint) => {
@@ -213,8 +245,14 @@ export function CashuWalletCard() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {formatBalance(amount)}
+                          <span 
+                            className={`font-medium tabular-nums ${flashingMints[mint] ? 'flash-update' : ''}`}
+                          >
+                            {showSats 
+                              ? formatBalance(amount) 
+                              : btcPrice 
+                                ? formatUSD(satsToUSD(amount, btcPrice.USD)) 
+                                : formatBalance(amount)}
                           </span>
                           <Button
                             variant="ghost"
