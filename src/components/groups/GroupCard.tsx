@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { JoinRequestMenuItem } from "@/components/groups/JoinRequestDialog";
+import { JoinRequestMenuItem } from "@/components/groups/JoinRequestMenuItem";
 
 interface GroupCardProps {
   community: NostrEvent;
@@ -46,7 +46,7 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
   const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 
   // Determine user's role in this group if logged in
-  const { data: userRole } = useUserRole(communityId);
+  const { data: userRole, isLoading: isRoleLoading } = useUserRole(communityId);
 
   const handleTogglePin = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -168,7 +168,7 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
                 Pin group
               </DropdownMenuItem>
             )}
-            {!userRole && <JoinRequestMenuItem communityId={communityId} />}
+            {!isRoleLoading && !userRole && <JoinRequestMenuItem communityId={communityId} />}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

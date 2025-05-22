@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { JoinRequestMenuItem } from "@/components/groups/JoinRequestDialog";
+import { JoinRequestMenuItem } from "@/components/groups/JoinRequestMenuItem";
 
 interface MyGroupCardProps {
   community: NostrEvent;
@@ -184,7 +184,7 @@ export function MyGroupCard({ community, role, isPinned, pinGroup, unpinGroup, i
               Pin group
             </DropdownMenuItem>
           )}
-          {!membership?.isMember && !membership?.isOwner && !membership?.isModerator && (
+          {!isMembershipLoading && !membership?.isMember && !membership?.isOwner && !membership?.isModerator && (
             <JoinRequestMenuItem communityId={communityId} />
           )}
         </DropdownMenuContent>
