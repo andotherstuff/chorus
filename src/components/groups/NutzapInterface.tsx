@@ -52,7 +52,7 @@ export function NutzapInterface({ postId, authorPubkey, relayHint, onSuccess }: 
     e.preventDefault();
     
     if (!user) {
-      toast.error("You must be logged in to send Ecash");
+      toast.error("You must be logged in to send eCash");
       return;
     }
 
@@ -189,7 +189,7 @@ export function NutzapInterface({ postId, authorPubkey, relayHint, onSuccess }: 
             ) : (
               <>
                 <DollarSign className="mr-1 h-3 w-3" />
-                Send Ecash
+                Send eCash
               </>
             )}
           </Button>

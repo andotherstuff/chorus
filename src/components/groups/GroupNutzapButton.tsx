@@ -68,7 +68,7 @@ export function GroupNutzapButton({
 
   const handleOpenDialog = () => {
     if (!user) {
-      toast.error("You must be logged in to send Ecash");
+      toast.error("You must be logged in to send eCash");
       return;
     }
 
@@ -167,7 +167,7 @@ export function GroupNutzapButton({
         onClick={handleOpenDialog}
       >
         <DollarSign className="h-4 w-4 mr-2" />
-        <span>Ecash Group</span>
+        <span>eCash Group</span>
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -175,7 +175,7 @@ export function GroupNutzapButton({
           <DialogHeader>
             <DialogTitle>Support this Group</DialogTitle>
             <DialogDescription>
-              Send Ecash to the group owner to show your support.
+              Send eCash to the group owner to show your support.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -211,7 +211,7 @@ export function GroupNutzapButton({
               onClick={handleSendNutzap}
               disabled={isProcessing || isSending || isFetching || !amount}
             >
-              {isProcessing ? "Sending..." : "Send Ecash"}
+              {isProcessing ? "Sending..." : "Send eCash"}
             </Button>
           </DialogFooter>
         </DialogContent>

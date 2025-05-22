@@ -91,7 +91,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
 
   const handleZapClick = () => {
     if (!user) {
-      toast.error("You must be logged in to send Ecash");
+      toast.error("You must be logged in to send eCash");
       return;
     }
 

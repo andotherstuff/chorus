@@ -266,7 +266,7 @@ export default function GroupDetail() {
 
             <TabsTrigger value="ecash">
               <DollarSign className="h-4 w-4 mr-2" />
-              Ecash
+              eCash
             </TabsTrigger>
           </TabsList>
         </div>
@@ -303,7 +303,7 @@ export default function GroupDetail() {
 
         <TabsContent value="ecash" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Group Ecash</h2>
+            <h2 className="text-xl font-semibold">Group eCash</h2>
             {user && community && (
               <GroupNutzapButton
                 groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
