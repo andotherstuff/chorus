@@ -87,33 +87,45 @@ export default function GroupDetail() {
   // Calculate total pending items (posts + replies)
   const totalPendingCount = (pendingPostsCount || 0) + pendingReplies.length;
 
-  // Set active tab based on URL hash, parameters, or pending items
+  // Set active tab based on URL hash only
   useEffect(() => {
     // Define valid tab values
-    const validTabs = ["posts", "members", "nutzaps"];
+    const validTabs = ["posts", "members", "ecash"];
     
     // First priority: Check if there's a hash in the URL that matches a valid tab
     if (hash && validTabs.includes(hash)) {
       setActiveTab(hash);
     } 
-    // If the hash references an invalid tab, default to "posts"
+    // If the hash references an invalid tab, default to "posts" 
     else if (hash) {
-      setActiveTab("posts");
+      // Only update if not already on posts tab to avoid unnecessary re-renders
+      if (activeTab !== "posts") {
+        setActiveTab("posts");
+      }
     }
-    // For backward compatibility, try to handle old parameters
-    else if (reportId && isModerator) {
-      // Instead of "reports" tab which doesn't exist, default to "posts"
-      setActiveTab("posts");
-    }
-    else if (isModerator && totalPendingCount > 0) {
-      // Instead of "pending" tab which doesn't exist, default to "posts" 
-      setActiveTab("posts");
-    }
-    // Default case - fallback to posts tab
+    // Only set these fallbacks on initial mount to avoid constantly resetting
     else if (!activeTab || !validTabs.includes(activeTab)) {
       setActiveTab("posts");
     }
-  }, [hash, reportId, isModerator, totalPendingCount, activeTab]);
+    
+    // Deliberately not including activeTab in the dependencies to prevent loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hash]);
+
+  // Handle initial load for special cases (reports, pending items) without affecting normal tab operation
+  useEffect(() => {
+    // Only run once on mount and if hash is not already set
+    if (!hash) {
+      // For backward compatibility, try to handle old parameters
+      if (reportId && isModerator) {
+        setActiveTab("posts");
+      }
+      else if (isModerator && totalPendingCount > 0) {
+        setActiveTab("posts");
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const nameTag = community?.tags.find(tag => tag[0] === "name");
   const descriptionTag = community?.tags.find(tag => tag[0] === "description");
@@ -220,7 +232,11 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      <Tabs value={activeTab} defaultValue="posts" onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} defaultValue="posts" onValueChange={(value) => {
+        setActiveTab(value);
+        // Update URL hash without full page reload
+        window.history.pushState(null, '', `#${value}`);
+      }} className="w-full">
         <div className="md:flex md:justify-start">
           <TabsList className="mb-4 w-full md:w-auto flex">
             <TabsTrigger value="posts" className="flex-1 md:flex-none">
