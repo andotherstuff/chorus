@@ -162,23 +162,22 @@ export default function GroupDetail() {
               </TooltipProvider>
             )}
           </div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-lg">{description}</p>
-            <div className="flex items-center gap-3">
-              <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
-              {user && community && (
-                <GroupNutzapButton
-                  groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                  ownerPubkey={community.pubkey}
-                  variant="outline"
-                  size="sm"
-                />
-              )}
-            </div>
-            {!isModerator && (
-              <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+            {user && community && (
+              <GroupNutzapButton
+                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                ownerPubkey={community.pubkey}
+                variant="outline"
+                size="sm"
+              />
             )}
           </div>
+          {!isModerator && (
+            <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+          )}
         </div>
       </div>
 
