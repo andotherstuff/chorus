@@ -112,7 +112,7 @@ export default function GroupDetail() {
 
   if (isLoadingCommunity || !parsedId) {
     return (
-      <div className="container mx-auto py-4 px-6">
+      <div className="container mx-auto py-3 px-3 sm:px-4">
         <Header />
         <Separator className="my-4" />
         <h1 className="text-2xl font-bold mb-4">Loading group...</h1>
@@ -122,7 +122,7 @@ export default function GroupDetail() {
 
   if (!community) {
     return (
-      <div className="container mx-auto py-4 px-6">
+      <div className="container mx-auto py-3 px-3 sm:px-4">
         <h1 className="text-2xl font-bold mb-4">Group not found</h1>
         <p>The group you're looking for doesn't exist or has been deleted.</p>
         <Button asChild className="mt-4">
@@ -133,7 +133,7 @@ export default function GroupDetail() {
   }
 
   return (
-    <div className="container mx-auto py-4 px-6">
+    <div className="container mx-auto py-3 px-3 sm:px-4">
       <Header />
       <Separator className="my-4" />
 

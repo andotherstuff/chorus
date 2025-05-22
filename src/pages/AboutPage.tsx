@@ -6,7 +6,7 @@ export default function AboutPage() {
   const html = useMarkdownWithoutFirstHeading("/About.md");
 
   return (
-    <div className="container mx-auto py-4 px-6">
+    <div className="container mx-auto py-3 px-3 sm:px-4">
       <Header />
       
       <div className="max-w-3xl mx-auto mt-6">

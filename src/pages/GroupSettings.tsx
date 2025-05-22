@@ -288,7 +288,7 @@ export default function GroupSettings() {
 
   if (isLoadingCommunity) {
     return (
-      <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
+      <div className="container mx-auto py-3 px-3 sm:px-4">
         <h1 className="text-2xl font-bold mb-4">Loading group settings...</h1>
       </div>
     );
@@ -296,7 +296,7 @@ export default function GroupSettings() {
 
   if (!community) {
     return (
-      <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
+      <div className="container mx-auto py-3 px-3 sm:px-4">
         <h1 className="text-2xl font-bold mb-4">Group not found</h1>
         <p>The group you're looking for doesn't exist or has been deleted.</p>
         <Button asChild className="mt-4">
@@ -308,7 +308,7 @@ export default function GroupSettings() {
 
   if (!isModerator && !isOwner) {
     return (
-      <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
+      <div className="container mx-auto py-3 px-3 sm:px-4">
         <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
         <p>You must be a moderator or the group owner to access group settings.</p>
         <Button asChild className="mt-4">
@@ -319,7 +319,7 @@ export default function GroupSettings() {
   }
 
   return (
-    <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
+    <div className="container mx-auto py-3 px-3 sm:px-4">
       <div className="flex items-center mb-6">
         <Button variant="ghost" size="sm" asChild className="mr-2">
           <Link to={`/group/${encodeURIComponent(groupId || "")}`}>

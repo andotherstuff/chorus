@@ -419,7 +419,7 @@ export default function Profile() {
 
   if (author.isLoading) {
     return (
-      <div className="container mx-auto py-4 px-6">
+      <div className="container mx-auto py-3 px-3 sm:px-4">
         <Header />
         <div className="space-y-6 my-6">
           <Card className="mb-8">
@@ -554,7 +554,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="container mx-auto py-4 px-6"> {/* Changed padding */}
+    <div className="container mx-auto py-3 px-3 sm:px-4">
       <Header />
       <div className="space-y-6 my-6">
       <Card className="mb-8">

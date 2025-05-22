@@ -12,7 +12,7 @@ export function CashuWallet() {
   const { user } = useCurrentUser();
 
   return (
-    <div className="container mx-auto py-4 px-6">
+    <div className="container mx-auto py-3 px-3 sm:px-4">
       <Header />
       <Separator className="my-4" />
 
