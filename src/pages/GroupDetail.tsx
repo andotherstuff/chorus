@@ -89,19 +89,31 @@ export default function GroupDetail() {
 
   // Set active tab based on URL hash, parameters, or pending items
   useEffect(() => {
-    // First priority: Check if there's a hash in the URL that matches a tab
-    if (hash && ["posts", "pending", "members", "reports", "about"].includes(hash)) {
+    // Define valid tab values
+    const validTabs = ["posts", "members", "nutzaps"];
+    
+    // First priority: Check if there's a hash in the URL that matches a valid tab
+    if (hash && validTabs.includes(hash)) {
       setActiveTab(hash);
     } 
-    // Second priority: Check for reportId parameter
+    // If the hash references an invalid tab, default to "posts"
+    else if (hash) {
+      setActiveTab("posts");
+    }
+    // For backward compatibility, try to handle old parameters
     else if (reportId && isModerator) {
-      setActiveTab("reports");
+      // Instead of "reports" tab which doesn't exist, default to "posts"
+      setActiveTab("posts");
     }
-    // Third priority: Check for pending items
     else if (isModerator && totalPendingCount > 0) {
-      setActiveTab("pending");
+      // Instead of "pending" tab which doesn't exist, default to "posts" 
+      setActiveTab("posts");
     }
-  }, [hash, reportId, isModerator, totalPendingCount]);
+    // Default case - fallback to posts tab
+    else if (!activeTab || !validTabs.includes(activeTab)) {
+      setActiveTab("posts");
+    }
+  }, [hash, reportId, isModerator, totalPendingCount, activeTab]);
 
   const nameTag = community?.tags.find(tag => tag[0] === "name");
   const descriptionTag = community?.tags.find(tag => tag[0] === "description");
@@ -207,7 +219,7 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} defaultValue="posts" onValueChange={setActiveTab} className="w-full">
         <div className="md:flex md:justify-start">
           <TabsList className="mb-4 w-full md:w-auto flex">
             <TabsTrigger value="posts" className="flex-1 md:flex-none">
