@@ -32,6 +32,7 @@ import { useTransactionHistoryStore } from "@/stores/transactionHistoryStore";
 import { format } from "date-fns";
 import { getEncodedTokenV4 } from "@cashu/cashu-ts";
 import { useWalletUiStore } from "@/stores/walletUiStore";
+import { formatBalance } from "@/lib/cashu";
 
 export function CashuTokenCard() {
   const { user } = useCurrentUser();
@@ -96,7 +97,7 @@ export function CashuTokenCard() {
       });
 
       setGeneratedToken(token as string);
-      setSuccess(`Token generated for ${amountValue} sats`);
+      setSuccess(`Token generated for ${formatBalance(amountValue)}`);
     } catch (error) {
       console.error("Error generating token:", error);
       setError(error instanceof Error ? error.message : String(error));
@@ -117,7 +118,7 @@ export function CashuTokenCard() {
 
       const totalAmount = proofs.reduce((sum, p) => sum + p.amount, 0);
 
-      setSuccess(`Received ${totalAmount} sats successfully!`);
+      setSuccess(`Received ${formatBalance(totalAmount)} successfully!`);
       setToken("");
     } catch (error) {
       console.error("Error receiving token:", error);

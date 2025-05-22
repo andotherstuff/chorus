@@ -207,7 +207,7 @@ export function CashuHistoryCard() {
                       entry.redeemedTokens &&
                       entry.redeemedTokens.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Redeemed from eCash
+                          Redeemed from Ecash
                         </p>
                       )}
                     {isPending(entry) && (

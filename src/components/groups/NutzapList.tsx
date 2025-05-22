@@ -131,15 +131,15 @@ export function NutzapList({ postId }: NutzapListProps) {
   const displayNutzaps = showAll ? nutzaps : nutzaps.slice(0, 3);
 
   return (
-    <div className="mt-2 border-t pt-2">
-      <div className="flex items-center gap-1 mb-2">
-        <DollarSign className="h-3.5 w-3.5 text-amber-500" />
-        <span className="text-xs font-medium">
-          {formatAmount(totalAmount)} in {nutzaps.length} eCash
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1">
+        <DollarSign className="h-3 w-3 text-amber-500" />
+        <span className="text-xs text-muted-foreground">
+          {formatAmount(totalAmount)} from {nutzaps.length} {nutzaps.length === 1 ? 'person' : 'people'}
         </span>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {displayNutzaps.map((nutzap) => (
           <NutzapItem key={nutzap.id} nutzap={nutzap} formatAmount={formatAmount} />
         ))}
@@ -152,7 +152,7 @@ export function NutzapList({ postId }: NutzapListProps) {
           className="text-xs mt-1 h-6 px-2"
           onClick={() => setShowAll(!showAll)}
         >
-          {showAll ? "Show less" : `Show ${nutzaps.length - 3} more eCash`}
+          {showAll ? "Show less" : `Show ${nutzaps.length - 3} more`}
         </Button>
       )}
     </div>

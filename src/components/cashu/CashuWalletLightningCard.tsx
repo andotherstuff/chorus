@@ -41,7 +41,7 @@ import {
 } from "@/lib/cashuLightning";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { MeltQuoteResponse, MintQuoteResponse, Proof } from "@cashu/cashu-ts";
-import { CashuToken } from "@/lib/cashu";
+import { CashuToken, formatBalance } from "@/lib/cashu";
 import { NostrEvent } from "nostr-tools";
 import QRCode from "react-qr-code";
 import {
@@ -189,7 +189,7 @@ export function CashuWalletLightningCard() {
         transactionHistoryStore.removePendingTransaction(pendingTxId);
         setPendingTransactionId(null);
 
-        setSuccess(`Received ${amount} sats via Lightning!`);
+        setSuccess(`Received ${formatBalance(amount)}!`);
         setInvoice("");
         setcurrentMeltQuoteId("");
         setTimeout(() => setSuccess(null), 5000);
@@ -311,9 +311,9 @@ export function CashuWalletLightningCard() {
 
       if (totalProofsAmount < invoiceAmount + (invoiceFeeReserve || 0)) {
         setError(
-          `Insufficient balance: have ${totalProofsAmount} sats, need ${
+          `Insufficient balance: have ${formatBalance(totalProofsAmount)}, need ${formatBalance(
             invoiceAmount + (invoiceFeeReserve || 0)
-          } sats`
+          )}`
         );
         setIsProcessing(false);
         return;
@@ -345,7 +345,7 @@ export function CashuWalletLightningCard() {
           amount: invoiceAmount.toString(),
         });
 
-        setSuccess(`Paid ${invoiceAmount} sats via Lightning!`);
+        setSuccess(`Paid ${formatBalance(invoiceAmount)}!`);
         setSendInvoice("");
         setInvoiceAmount(null);
         setTimeout(() => setSuccess(null), 5000);
@@ -532,11 +532,11 @@ export function CashuWalletLightningCard() {
                 <div className="rounded-md border p-4">
                   <p className="text-sm font-medium">Invoice Amount</p>
                   <p className="text-2xl font-bold">
-                    {invoiceAmount} sats
+                    {formatBalance(invoiceAmount)}
                     {invoiceFeeReserve && (
                       <>
                         <span className="text-xs font-bold pl-2 text-muted-foreground">
-                          + max {invoiceFeeReserve} sats fee
+                          + max {formatBalance(invoiceFeeReserve)} fee
                         </span>
                       </>
                     )}

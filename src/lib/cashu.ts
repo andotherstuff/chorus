@@ -63,14 +63,19 @@ export function calculateBalance(proofs: Proof[]): Record<string, number> {
   return balances;
 }
 
+// Helper function to add thousands separator to a number
+function addThousandsSeparator(num: number): string {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 // Helper function to format balance with appropriate units
 export function formatBalance(sats: number): string {
   if (sats >= 1000000) {
-    return `${(sats / 1000000).toFixed(2)}M sats`;
-  } else if (sats >= 1000) {
-    return `${(sats / 1000).toFixed(2)}k sats`;
+    return `${(sats / 1000000).toFixed(1)}M sats`;
+  } else if (sats >= 100000) {
+    return `${(sats / 1000).toFixed(1)}k sats`;
   } else {
-    return `${sats} sats`;
+    return `${addThousandsSeparator(sats)} sats`;
   }
 }
 

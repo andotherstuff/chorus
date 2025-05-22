@@ -39,5 +39,8 @@ export function formatUSD(amount: number): string {
     maximumFractionDigits: 2,
   }).format(amount);
   
-  return `${formatted} USD`;
+  // Remove the $ symbol from the formatted string
+  const withoutDollar = formatted.replace('$', '');
+  
+  return `${withoutDollar} usd`;
 }

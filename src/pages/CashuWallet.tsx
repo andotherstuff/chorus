@@ -12,6 +12,7 @@ import { useCashuToken } from "@/hooks/useCashuToken";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { useToast } from "@/hooks/useToast";
 import { Loader2 } from "lucide-react";
+import { formatBalance } from "@/lib/cashu";
 
 export function CashuWallet() {
   const { user } = useCurrentUser();
@@ -50,7 +51,7 @@ export function CashuWallet() {
         // Show success toast
         toast({
           title: "Token Redeemed Successfully!",
-          description: `You've received ${totalAmount} sats`,
+          description: `You've received ${formatBalance(totalAmount)}`,
         });
       } catch (error) {
         console.error("Error receiving token from URL:", error);

@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
-import { NutzapList } from "@/components/groups/NutzapList";
+import { NutzapInterface } from "@/components/groups/NutzapInterface";
 import { NostrEvent } from "@nostrify/nostrify";
 import { nip19 } from 'nostr-tools';
 import { NoteContent } from "../NoteContent";
@@ -421,8 +421,25 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
+  const [showZaps, setShowZaps] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
+
+  // Handle toggle between replies and zaps
+  const handleShowReplies = () => {
+    const newState = !showReplies;
+    setShowReplies(newState);
+    if (newState) {
+      setShowZaps(false); // Close zaps if opening replies
+    }
+  };
+
+  const handleZapToggle = (isOpen: boolean) => {
+    setShowZaps(isOpen);
+    if (isOpen) {
+      setShowReplies(false); // Close replies if opening zaps
+    }
+  };
 
   // Extract expiration timestamp from post tags
   const expirationTag = post.tags.find(tag => tag[0] === "expiration");
@@ -726,7 +743,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
-              onClick={() => setShowReplies(!showReplies)}
+              onClick={handleShowReplies}
             >
               {/* Get replies count */}
               {(() => {
@@ -754,7 +771,13 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
               })()}
             </Button>
             <EmojiReactionButton postId={post.id} showText={false} />
-            <NutzapButton postId={post.id} authorPubkey={post.pubkey} showText={false} />
+            <NutzapButton 
+              postId={post.id} 
+              authorPubkey={post.pubkey} 
+              showText={true} 
+              onToggle={handleZapToggle}
+              isOpen={showZaps}
+            />
           </div>
           {timeRemaining && (
             <TooltipProvider>
@@ -773,15 +796,27 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
           )}
         </div>
 
-        {/* Display nutzaps for this post */}
-        <NutzapList postId={post.id} />
-
         {showReplies && (
           <div className="w-full mt-2.5">
             <ReplyList
               postId={post.id}
               communityId={communityId}
               postAuthorPubkey={post.pubkey}
+            />
+          </div>
+        )}
+
+        {showZaps && (
+          <div className="w-full mt-2.5">
+            <NutzapInterface
+              postId={post.id}
+              authorPubkey={post.pubkey}
+              relayHint={undefined}
+              onSuccess={() => {
+                // Call the refetch function if available
+                const refetchFn = (window as any)[`zapRefetch_${post.id}`];
+                if (refetchFn) refetchFn();
+              }}
             />
           </div>
         )}

@@ -50,7 +50,7 @@ export function GroupNutzapList({ groupId }: GroupNutzapListProps) {
     return (
       <Card>
         <CardContent className="pt-6 text-center text-muted-foreground">
-          No eCash for this group yet.
+          No Ecash for this group yet.
         </CardContent>
       </Card>
     );

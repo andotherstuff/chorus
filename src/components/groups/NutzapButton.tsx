@@ -1,26 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, DollarSign } from "lucide-react";
-import {
-  useSendNutzap,
-  useFetchNutzapInfo,
-  useVerifyMintCompatibility,
-} from "@/hooks/useSendNutzap";
-import { useCashuWallet } from "@/hooks/useCashuWallet";
-import { useCashuStore } from "@/stores/cashuStore";
-import { useCashuToken } from "@/hooks/useCashuToken";
-import { Proof } from "@cashu/cashu-ts";
+import { DollarSign } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
@@ -28,33 +9,29 @@ import { CASHU_EVENT_KINDS } from "@/lib/cashu";
 import { formatBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
+import { useCashuWallet } from "@/hooks/useCashuWallet";
+import { useCashuStore } from "@/stores/cashuStore";
 
 interface NutzapButtonProps {
   postId: string;
   authorPubkey: string;
   relayHint?: string;
   showText?: boolean;
+  onToggle?: (isOpen: boolean) => void;
+  isOpen?: boolean;
+  refetchZaps?: () => void;
 }
 
-export function NutzapButton({ postId, authorPubkey, relayHint, showText = true }: NutzapButtonProps) {
+export function NutzapButton({ postId, authorPubkey, relayHint, showText = true, onToggle, isOpen = false, refetchZaps }: NutzapButtonProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { wallet } = useCashuWallet();
   const cashuStore = useCashuStore();
-  const { sendToken } = useCashuToken();
-  const { sendNutzap, isSending } = useSendNutzap();
-  const { fetchNutzapInfo, isFetching } = useFetchNutzapInfo();
-  const { verifyMintCompatibility } = useVerifyMintCompatibility();
   const { showSats } = useCurrencyDisplayStore();
   const { data: btcPrice } = useBitcoinPrice();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [comment, setComment] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-
   // Query to get all nutzaps for this post
-  const { data: nutzapTotal } = useQuery({
+  const { data: nutzapData, refetch } = useQuery({
     queryKey: ["nutzap-total", postId],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
@@ -66,6 +43,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true 
       }], { signal });
 
       let totalAmount = 0;
+      let zapCount = 0;
 
       for (const event of events) {
         try {
@@ -87,12 +65,16 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true 
           for (const proof of proofs) {
             totalAmount += proof.amount;
           }
+          
+          if (proofs.length > 0) {
+            zapCount++;
+          }
         } catch (error) {
           console.error("Error processing nutzap:", error);
         }
       }
 
-      return totalAmount;
+      return { totalAmount, zapCount };
     },
     enabled: !!nostr && !!postId,
   });
@@ -107,9 +89,9 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true 
     return formatBalance(sats);
   };
 
-  const handleOpenDialog = () => {
+  const handleZapClick = () => {
     if (!user) {
-      toast.error("You must be logged in to send eCash");
+      toast.error("You must be logged in to send Ecash");
       return;
     }
 
@@ -119,141 +101,33 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true 
     }
 
     if (!cashuStore.activeMintUrl) {
-      toast.error(
-        "No active mint selected. Please select a mint in your wallet settings."
-      );
+      toast.error("No active mint selected. Please select a mint in your wallet settings.");
       return;
     }
 
-    setIsDialogOpen(true);
+    // Notify parent component if callback provided
+    if (onToggle) {
+      onToggle(!isOpen);
+    }
   };
 
-  const handleSendNutzap = async () => {
-    if (!user || !wallet || !cashuStore.activeMintUrl) {
-      return;
-    }
+  const nutzapTotal = nutzapData?.totalAmount || 0;
 
-    if (!amount || isNaN(parseFloat(amount))) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-
-      // Fetch recipient's nutzap info
-      const recipientInfo = await fetchNutzapInfo(authorPubkey);
-
-      // Convert amount based on currency preference
-      let amountValue: number;
-      
-      if (showSats) {
-        amountValue = parseInt(amount);
-      } else {
-        // Convert USD to sats
-        if (!btcPrice) {
-          toast.error("Bitcoin price not available");
-          return;
-        }
-        const usdAmount = parseFloat(amount);
-        amountValue = Math.round(usdAmount / btcPrice.USD * 100000000); // Convert USD to sats
-      }
-
-      if (amountValue < 1) {
-        toast.error("Amount must be at least 1 sat");
-        return;
-      }
-
-      // Verify mint compatibility and get a compatible mint URL
-      const compatibleMintUrl = verifyMintCompatibility(recipientInfo);
-
-      // Send token using p2pk pubkey from recipient info
-      const proofs = (await sendToken(
-        compatibleMintUrl,
-        amountValue,
-        recipientInfo.p2pkPubkey
-      )) as Proof[];
-
-      // Send nutzap using recipient info
-      await sendNutzap({
-        recipientInfo,
-        comment,
-        proofs,
-        mintUrl: compatibleMintUrl,
-        eventId: postId,
-        relayHint,
-      });
-
-      toast.success(`Successfully sent ${formatAmount(amountValue)}`);
-      setAmount("");
-      setComment("");
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error("Error sending nutzap:", error);
-      toast.error(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  // Pass refetch to parent if needed
+  if (refetchZaps && refetch) {
+    // Store reference for parent to use
+    (window as any)[`zapRefetch_${postId}`] = refetch;
+  }
 
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
-        onClick={handleOpenDialog}
-      >
-        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal && nutzapTotal > 0 ? 'text-orange-500' : ''}`} />
-        {nutzapTotal && nutzapTotal > 0 ? <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span> : null}
-      </Button>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Send Cash</DialogTitle>
-            <DialogDescription>
-              Send Cash to the author of this post.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                Amount {showSats ? "(sats)" : "(USD)"}
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder={showSats ? "100" : "0.10"}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="comment" className="text-right">
-                Comment
-              </Label>
-              <Input
-                id="comment"
-                placeholder="Thanks for the post!"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={handleSendNutzap}
-              disabled={isProcessing || isSending || isFetching || !amount}
-            >
-              {isProcessing ? "Sending..." : "Send Cash"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
+      onClick={handleZapClick}
+    >
+      <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-orange-500' : ''}`} />
+      {showText && <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span>}
+    </Button>
   );
 }
