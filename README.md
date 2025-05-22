@@ -33,43 +33,34 @@
 - **Instant Transfers**: Fast, lightweight transactions
 - **Multiple Mints**: Support for various Cashu mints
 
-## Supported NIPs
+## Supported Nostr Event Kinds
 
-Chorus implements several Nostr Improvement Proposals (NIPs) to provide a rich feature set:
+### Content
+- Kind 11: Post in a group
+- Kind 1111: Reply to posts
+- Kind 7: React to posts
+- Kind 1984: Report content
 
-### Core NIPs
-- **NIP-01**: Basic protocol flow
-- **NIP-05**: Mapping Nostr keys to DNS-based internet identifiers
-- **NIP-07**: Browser extension for signing events
-- **NIP-19**: bech32-encoded entities
-- **NIP-44**: Encrypted payloads (versioned)
-
-### Group Features
-- **NIP-72**: Moderated communities
+### Groups
   - Kind 34550: Community definition
   - Kind 4550: Post approval
   - Kind 4551: Post removal
   - Kind 4552: Join request
   - Kind 4553: Leave request
+  - Kind 4554: Close report
   - Kind 14550: Approved members list
   - Kind 14551: Declined members list
   - Kind 14552: Banned users list
   - Kind 14553: Pinned groups
 
-### Content & Interaction
-- **NIP-11**: Text notes (posts)
-- **NIP-25**: Reactions
-- **NIP-94**: File attachments
-
 ### Payments & Tips
-- **NIP-57**: Lightning zaps
-- **NIP-60**: Cashu wallet integration
+  - Kind 9321: Nutzaps
   - Kind 17375: Wallet info (replaceable event for wallet configuration)
   - Kind 7375: Token events (unspent proofs)
   - Kind 7376: Spending history (encrypted transaction records)
   - Kind 7374: Quote events (optional payment references)
   - Kind 10019: Zap info (payment configuration)
-  - Kind 9321: Zap events (actual payments)
+
 
 ## Getting Started
 
