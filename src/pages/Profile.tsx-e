@@ -746,7 +746,7 @@ export default function Profile() {
               {posts.map((post) => (
                 <Card key={post.id}>
                   <CardHeader className="flex flex-row items-start gap-4 pb-2">
-                    <Avatar className="rounded-md">
+                    <Avatar>
                       <AvatarImage src={profileImage} />
                       <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>

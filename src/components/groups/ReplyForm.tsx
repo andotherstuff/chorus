@@ -105,7 +105,7 @@ export function ReplyForm({
   return (
     <div className={`flex gap-3 ${isNested ? 'pl-6' : ''}`}>
       <Link to={`/profile/${user.pubkey}`}>
-        <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
+        <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
           <AvatarImage src={profileImage} />
           <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>

@@ -362,7 +362,7 @@ function ModeratorItem({ pubkey, isCreator = false }: { pubkey: string; isCreato
   return (
     <Link to={`/profile/${pubkey}`} className="block hover:bg-muted rounded-md transition-colors">
       <div className="flex items-center space-x-3 p-2">
-        <Avatar>
+        <Avatar className="rounded-md">
           <AvatarImage src={profileImage} />
           <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>

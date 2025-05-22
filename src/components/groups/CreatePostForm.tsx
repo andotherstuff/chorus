@@ -98,7 +98,7 @@ ${imageUrl}`;
       <CardContent className="p-3">
         <div className="flex gap-2">
           <Link to={`/profile/${user.pubkey}`}>
-            <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+            <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
               <AvatarImage src={profileImage} />
               <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>

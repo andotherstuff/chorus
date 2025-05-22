@@ -461,7 +461,7 @@ function PostItem({ post, communityId, isApproved, isModerator }: PostItemProps)
     <div className="py-2.5 px-3 hover:bg-muted/10 transition-colors rounded-md border border-transparent hover:border-border/30">
       <div className="flex flex-row items-start gap-2.5"> 
         <Link to={`/profile/${post.pubkey}`} className="flex-shrink-0">
-          <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity">
+          <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
             <AvatarImage src={profileImage} alt={displayName} />
             <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
           </Avatar>

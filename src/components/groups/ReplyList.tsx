@@ -239,7 +239,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
       <div className="pt-2">
         <div className="flex items-start gap-3">
           <Link to={`/profile/${reply.pubkey}`}>
-            <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
+            <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
               <AvatarImage src={profileImage} />
               <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
