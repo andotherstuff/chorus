@@ -12,6 +12,8 @@ import { useBannedUsers } from "@/hooks/useBannedUsers";
 import { toast } from "sonner";
 import { MessageSquare, Share2, CheckCircle, XCircle, Shield, MoreHorizontal, Ban, ChevronDown, ChevronUp } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
+import { NutzapButton } from "@/components/groups/NutzapButton";
+import { NutzapList } from "@/components/groups/NutzapList";
 import { NostrEvent } from "@nostrify/nostrify";
 import { nip19 } from 'nostr-tools';
 import { NoteContent } from "../NoteContent";
@@ -558,11 +560,15 @@ function PostItem({ post, communityId, isApproved, isModerator }: PostItemProps)
             {showReplies ? <ChevronUp className="h-3 w-3 ml-0.5" /> : <ChevronDown className="h-3 w-3 ml-0.5" />}
           </Button>
           <EmojiReactionButton postId={post.id} /> 
+          <NutzapButton postId={post.id} authorPubkey={post.pubkey} />
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5">
             <Share2 className="h-3.5 w-3.5 mr-1" />
             <span className="text-xs">Share</span>
           </Button>
         </div>
+        
+        {/* Display nutzaps for this post */}
+        <NutzapList postId={post.id} />
         
         {showReplies && (
           <div className="w-full mt-2.5">

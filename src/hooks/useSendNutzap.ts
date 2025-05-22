@@ -1,11 +1,9 @@
 import { useNostr } from '@/hooks/useNostr';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CASHU_EVENT_KINDS } from '@/lib/cashu';
-import { NostrEvent } from 'nostr-tools';
 import { Proof } from '@cashu/cashu-ts';
 import { useNutzapStore, NutzapInformationalEvent } from '@/stores/nutzapStore';
-import { useCashuStore } from '@/stores/cashuStore';
 
 /**
  * Hook to fetch a recipient's nutzap information
@@ -81,7 +79,7 @@ export function useFetchNutzapInfo() {
 export function useSendNutzap() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const cashuStore = useCashuStore();
+  const queryClient = useQueryClient();
 
   // Mutation to create and send a nutzap event
   const sendNutzapMutation = useMutation({
@@ -135,6 +133,10 @@ export function useSendNutzap() {
 
       // Publish the event to the recipient's relays
       await nostr.event(event);
+
+      if (eventId) {
+        queryClient.invalidateQueries({ queryKey: ['nutzaps', eventId] });
+      }
 
       // Return the event
       return {

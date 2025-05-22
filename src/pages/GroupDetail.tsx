@@ -94,7 +94,7 @@ export default function GroupDetail() {
 
   const name = nameTag ? nameTag[1] : (parsedId?.identifier || "Unnamed Group");
   const description = descriptionTag ? descriptionTag[1] : "No description available";
-  const image = imageTag ? imageTag[1] : "/placeholder-community.jpg"; // Placeholder image path, might not need changing
+  const image = imageTag ? imageTag[1] : "/placeholder-community.svg"; // Placeholder image path, might not need changing
 
   useEffect(() => {
     if (name && name !== "Unnamed Group") { // Adjusted check
@@ -144,7 +144,7 @@ export default function GroupDetail() {
               alt={name}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.currentTarget.src = "https://placehold.co/1200x400?text=Group";
+                e.currentTarget.src = "/placeholder-community.svg";
               }}
             />
 

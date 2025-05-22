@@ -386,7 +386,7 @@ export default function GroupSettings() {
                         alt="Group preview"
                         className="w-full h-auto"
                         onError={(e) => {
-                          e.currentTarget.src = "https://placehold.co/400x200?text=Invalid+Image";
+                          e.currentTarget.src = "/placeholder-community.svg";
                         }}
                       />
                     </div>

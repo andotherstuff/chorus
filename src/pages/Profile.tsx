@@ -141,7 +141,7 @@ function UserGroupsList({
                   alt={group.name}
                   className="h-full w-full object-cover"
                   onError={(e) => {
-                    e.currentTarget.src = "https://placehold.co/100x100?text=Group";
+                    e.currentTarget.src = "/placeholder-community.svg";
                   }}
                 />
               </div>

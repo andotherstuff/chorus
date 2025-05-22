@@ -36,7 +36,6 @@ export function GroupSearch({ onSearch, className }: GroupSearchProps) {
     >
       <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
       <Input
-        type="search"
         placeholder="Search groups..."
         value={searchQuery}
         onChange={handleSearch}
