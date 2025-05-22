@@ -5,7 +5,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { MyGroupCard } from "./MyGroupCard";
 import { useGroupStats } from "@/hooks/useGroupStats";
-import { Avatar } from "@/components/ui/avatar";
 
 export function MyGroupsList() {
   const { user } = useCurrentUser();
