@@ -12,14 +12,23 @@ import { UserPlus, CheckCircle, Clock, XCircle } from "lucide-react";
 interface JoinRequestButtonProps {
   communityId: string;
   isModerator?: boolean;
+  initialOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function JoinRequestButton({ communityId, isModerator = false }: JoinRequestButtonProps) {
-  const [open, setOpen] = useState(false);
+export function JoinRequestButton({ communityId, isModerator = false, initialOpen = false, onOpenChange }: JoinRequestButtonProps) {
+  const [open, setOpen] = useState(initialOpen);
   const [joinReason, setJoinReason] = useState("");
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
   const { mutateAsync: publishEvent, isPending } = useNostrPublish();
+  
+  const handleOpenChange = (newState: boolean) => {
+    setOpen(newState);
+    if (onOpenChange) {
+      onOpenChange(newState);
+    }
+  };
 
   // Check if user has already requested to join
   const { data: existingRequest, isLoading: isCheckingRequest } = useQuery({
@@ -94,7 +103,7 @@ export function JoinRequestButton({ communityId, isModerator = false }: JoinRequ
       });
 
       toast.success("Join request sent successfully!");
-      setOpen(false);
+      handleOpenChange(false);
     } catch (error) {
       console.error("Error sending join request:", error);
       toast.error("Failed to send join request. Please try again.");
@@ -153,7 +162,7 @@ export function JoinRequestButton({ communityId, isModerator = false }: JoinRequ
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
           <UserPlus className="h-4 w-4 mr-2" />
@@ -185,7 +194,7 @@ export function JoinRequestButton({ communityId, isModerator = false }: JoinRequ
           <Button onClick={handleRequestJoin} disabled={isPending}>
             {isPending ? "Sending..." : "Send request"}
           </Button>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

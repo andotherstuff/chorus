@@ -78,7 +78,6 @@ export default function Groups() {
   return (
     <div className="container mx-auto py-3 px-3 sm:px-4">
       <Header />
-      <MyGroupsList />
 
       <div className="flex flex-col mt-4">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
@@ -89,8 +88,9 @@ export default function Groups() {
             />
           </div>
         </div>
+      <MyGroupsList />
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           {isLoading ? (
             Array.from({ length: 12 }).map((_, index) => (
               <Card key={`skeleton-group-${index}-${Date.now()}`} className="overflow-hidden flex flex-col h-[140px]">

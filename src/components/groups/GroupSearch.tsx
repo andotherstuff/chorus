@@ -40,7 +40,7 @@ export function GroupSearch({ onSearch, className }: GroupSearchProps) {
         placeholder="Search groups..."
         value={searchQuery}
         onChange={handleSearch}
-        className="pl-9 pr-10 h-10 md:h-9 w-full focus-visible:ring-0 rounded-full shadow-sm"
+        className="pl-9 pr-10 h-10 md:h-9 w-full focus-visible:ring-0 rounded-md shadow-sm"
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         autoComplete="off"
