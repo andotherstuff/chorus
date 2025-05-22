@@ -4,12 +4,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Pin, PinOff, MessageSquare, Activity, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RoleBadge } from "@/components/groups/RoleBadge";
-import { useUserRole } from "@/hooks/useUserRole";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { UserRole } from "@/hooks/useUserRole";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import type { NostrEvent } from "@nostrify/nostrify";
+import { toast } from "sonner";
+import { NostrEvent } from "@nostrify/nostrify";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { JoinRequestMenuItem } from "@/components/groups/JoinRequestMenuItem";
+import { useReliableGroupMembership } from "@/hooks/useReliableGroupMembership";
 
 interface GroupCardProps {
   community: NostrEvent;
@@ -24,6 +25,8 @@ interface GroupCardProps {
   pinGroup: (communityId: string) => void;
   unpinGroup: (communityId: string) => void;
   isUpdating: boolean;
+  isMember?: boolean;
+  userRole?: UserRole;
   stats?: {
     posts: number;
     participants: Set<string>;
@@ -31,29 +34,50 @@ interface GroupCardProps {
   isLoadingStats?: boolean;
 }
 
-export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdating, stats, isLoadingStats }: GroupCardProps) {
+export function GroupCard({
+  community,
+  isPinned,
+  pinGroup,
+  unpinGroup,
+  isUpdating,
+  isMember,
+  userRole,
+  stats,
+  isLoadingStats,
+}: GroupCardProps) {
   const { user } = useCurrentUser();
 
   // Extract community data from tags
-  const nameTag = community.tags.find(tag => tag[0] === "name");
-  const descriptionTag = community.tags.find(tag => tag[0] === "description");
-  const imageTag = community.tags.find(tag => tag[0] === "image");
-  const dTag = community.tags.find(tag => tag[0] === "d");
+  const nameTag = community.tags.find((tag) => tag[0] === "name");
+  const descriptionTag = community.tags.find((tag) => tag[0] === "description");
+  const imageTag = community.tags.find((tag) => tag[0] === "image");
+  const dTag = community.tags.find((tag) => tag[0] === "d");
 
-  const name = nameTag ? nameTag[1] : (dTag ? dTag[1] : "Unnamed Group");
+  const name = nameTag ? nameTag[1] : dTag ? dTag[1] : "Unnamed Group";
   const description = descriptionTag ? descriptionTag[1] : "No description available";
   const image = imageTag ? imageTag[1] : "/placeholder-community.svg";
   const communityId = `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 
-  // Determine user's role in this group if logged in
-  const { data: userRole, isLoading: isRoleLoading } = useUserRole(communityId);
+  // Use the reliable membership hook to determine the user's role if not passed directly
+  const { data: membership } = useReliableGroupMembership(
+    user != null && userRole === undefined ? communityId : undefined
+  );
+
+  // Determine role from props or from membership data
+  const displayRole = userRole ?? 
+    (membership?.isOwner ? "owner" : 
+    membership?.isModerator ? "moderator" : 
+    membership?.isMember ? "member" : 
+    null);
 
   const handleTogglePin = (e: React.MouseEvent) => {
     e.stopPropagation();
+
     if (!user) {
       toast.error("Please log in to pin/unpin groups.");
       return;
     }
+
     if (isPinned) {
       unpinGroup(communityId);
     } else {
@@ -66,16 +90,21 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
     return name.charAt(0).toUpperCase();
   };
 
+  // Determine if user is a member or owner of this group
+  const isUserMember = isMember ?? (displayRole !== null);
+
+  // Style adjustments based on membership
+  const cardStyle = cn(
+    "overflow-hidden flex flex-col relative group h-full",
+    isPinned && "ring-1 ring-primary/20",
+    isUserMember && "bg-primary/5" // Subtle highlight for groups the user is a member of
+  );
+
   return (
-    <Card
-      className={cn(
-        "overflow-hidden flex flex-col relative group h-full",
-        isPinned && "ring-1 ring-primary/20"
-      )}
-    >
-      {userRole && (
+    <Card className={cardStyle}>
+      {displayRole && (
         <div className="absolute top-2 right-10 z-10">
-          <RoleBadge role={userRole} />
+          <RoleBadge role={displayRole} />
         </div>
       )}
 
@@ -128,7 +157,7 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
           </div>
         </Link>
       </CardHeader>
-      
+
       <CardContent className="px-3 pb-3 pt-0">
         <div className="line-clamp-2 text-xs">{description}</div>
       </CardContent>
@@ -168,7 +197,7 @@ export function GroupCard({ community, isPinned, pinGroup, unpinGroup, isUpdatin
                 Pin group
               </DropdownMenuItem>
             )}
-            {!isRoleLoading && !userRole && <JoinRequestMenuItem communityId={communityId} />}
+            {!isUserMember && <JoinRequestMenuItem communityId={communityId} />}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
