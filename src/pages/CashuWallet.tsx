@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { LoginArea } from "@/components/auth/LoginArea";
 import { CashuHistoryCard } from "@/components/cashu/CashuHistoryCard";
 import { CashuTokenCard } from "@/components/cashu/CashuTokenCard";
@@ -13,11 +13,22 @@ import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { useCashuStore } from "@/stores/cashuStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useToast } from "@/hooks/useToast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bitcoin, DollarSign, ArrowLeftRight } from "lucide-react";
 // import { formatUSD, satoshisToUSD } from "@/lib/bitcoinUtils";
 import { formatBalance, calculateBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info, HelpCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export function CashuWallet() {
   const { user } = useCurrentUser();
@@ -37,14 +48,17 @@ export function CashuWallet() {
   );
 
   // Helper function to format amount based on user preference
-  const formatAmount = (sats: number): string => {
-    if (showSats) {
-      return `${sats.toLocaleString()} sats`;
-    } else {
-      const usd = satsToUSD(sats, btcPrice?.USD || null);
-      return usd !== null ? formatUSD(usd) : `${sats.toLocaleString()} sats`;
-    }
-  };
+  const formatAmount = useCallback(
+    (sats: number): string => {
+      if (showSats) {
+        return `${sats.toLocaleString()} sats`;
+      } else {
+        const usd = satsToUSD(sats, btcPrice?.USD || null);
+        return usd !== null ? formatUSD(usd) : `${sats.toLocaleString()} sats`;
+      }
+    },
+    [showSats, btcPrice]
+  );
 
   // Handle pending onboarding token
   useEffect(() => {
@@ -107,6 +121,7 @@ export function CashuWallet() {
   }, [
     user,
     wallet,
+    isProcessingToken,
     cashuStore,
     onboardingStore,
     receiveToken,
@@ -165,16 +180,63 @@ export function CashuWallet() {
     };
 
     processToken();
-  }, [user, wallet]); // Depend on both user and wallet being loaded
+  }, [user, wallet, isProcessingToken, receiveToken, toast, formatAmount]); // Depend on all necessary values
 
   return (
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
       <Separator className="my-2" />
 
+      {/* Wallet Info Modal - Upper Left */}
+      <div className="mb-4">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <HelpCircle className="h-4 w-4" />
+              What is this?
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="text-xl">💸</span>
+                Understanding Your eCash Wallet
+              </DialogTitle>
+              <DialogDescription className="text-left space-y-3 pt-3">
+                <p>
+                  <strong>Your Cashu Wallet</strong> uses ecash tokens for private, 
+                  instant payments. It's like having digital cash in your pocket!
+                </p>
+                <p>
+                  <strong>Cashu</strong> is a privacy-preserving digital cash system 
+                  built on cryptographic proofs. Your transactions are private by default, 
+                  and no one can track your spending.
+                </p>
+                <p>
+                  <strong>Lightning Network</strong> enables fast Bitcoin transactions, 
+                  and this wallet seamlessly bridges both systems. You can send and receive 
+                  Lightning payments while maintaining privacy through Cashu's blind signatures.
+                </p>
+                <p>
+                  <strong>Use your eCash in the real world!</strong> Through Lightning, you can:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Get a private SIM card at <a href="http://silent.link" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Silent.link</a></li>
+                  <li>Order a private Visa card from <a href="https://paywithmoon.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PayWithMoon</a></li>
+                  <li>Buy gift cards at <a href="https://www.bitrefill.com/us/en/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Bitrefill</a> for everyday shopping</li>
+                </ul>
+                <p className="text-sm font-medium">
+                  Think of it as digital cash that moves at the speed of Lightning! ⚡
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {/* Total Balance Display */}
       {user && wallet && (
-        <div className="text-center py-6">
+        <div className="text-center py-2">
           <div className="text-5xl font-bold tabular-nums">
             {showSats
               ? formatBalance(totalBalance)
@@ -185,9 +247,21 @@ export function CashuWallet() {
           <p className="text-sm text-muted-foreground mt-1">Total Balance</p>
           <button
             onClick={() => toggleCurrency()}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 mx-auto"
           >
-            Show in {showSats ? "USD" : "sats"}
+            {showSats ? (
+              <>
+                <DollarSign className="h-3.5 w-3.5" />
+                <span>Show in USD</span>
+                <ArrowLeftRight className="h-3 w-3" />
+              </>
+            ) : (
+              <>
+                <Bitcoin className="h-3.5 w-3.5" />
+                <span>Show in sats</span>
+                <ArrowLeftRight className="h-3 w-3" />
+              </>
+            )}
           </button>
         </div>
       )}

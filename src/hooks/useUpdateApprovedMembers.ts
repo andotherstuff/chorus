@@ -3,6 +3,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { NostrEvent } from "@nostrify/nostrify";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to update the approved members list for a community
@@ -21,8 +22,8 @@ export function useUpdateApprovedMembers() {
   const fetchApprovedMembers = async (communityId: string): Promise<string[]> => {
     try {
       const events = await nostr.query([{ 
-        kinds: [14550],
-        "#a": [communityId],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+        "#d": [communityId],
         limit: 10,
       }], { signal: AbortSignal.timeout(5000) });
       
@@ -69,13 +70,13 @@ export function useUpdateApprovedMembers() {
       
       // Create tags for the updated list
       const tags = [
-        ["a", communityId],
+        ["d", communityId],
         ...updatedApprovedMembers.map(p => ["p", p])
       ];
       
       // Publish the updated list
       await publishEvent({
-        kind: 14550,
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
         tags,
         content: "",
       });

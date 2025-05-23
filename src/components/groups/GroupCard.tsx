@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Globe, Lock } from "lucide-react";
+import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Globe, Lock, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/groups/RoleBadge";
@@ -31,6 +31,7 @@ interface GroupCardProps {
   isUpdating: boolean;
   isMember?: boolean;
   userRole?: UserRole;
+  hasPendingRequest?: boolean;
   stats?: {
     posts: number;
     participants: Set<string>;
@@ -46,6 +47,7 @@ export function GroupCard({
   isUpdating,
   isMember,
   userRole,
+  hasPendingRequest,
   stats,
   isLoadingStats,
 }: GroupCardProps) {
@@ -83,6 +85,7 @@ export function GroupCard({
 
   const handleTogglePin = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
 
     if (!user) {
       toast.error("Please log in to pin groups");
@@ -105,129 +108,182 @@ export function GroupCard({
   const showReportsIndicator = community.type === "nip72" && openReportsCount > 0;
   const showJoinRequestsIndicator = community.type === "nip72" && pendingRequestsCount > 0;
 
+  // Determine if user is a member or owner of this group
+  const isUserMember = isMember ?? Boolean(userRole);
+
+  // Style adjustments based on membership and group type
+  const cardStyle = cn(
+    "overflow-hidden flex flex-col relative group h-full transition-colors hover:bg-accent/5",
+    isPinned && "ring-1 ring-primary/20",
+    isUserMember && "bg-primary/5", // Subtle highlight for groups the user is a member of
+    hasPendingRequest && !isUserMember && "bg-gray-50/50" // Different background for pending requests
+  );
+
   return (
-    <Card 
-      className={cn(
-        "transition-colors group",
-        isPinned && "border-primary/50 bg-primary/5"
-      )}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <Link 
-            to={`/group/${routeId}`} 
-            className="flex-1 min-w-0 hover:opacity-80 transition-opacity"
-          >
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={image} alt={name} />
-                <AvatarFallback className="bg-muted">
-                  {community.type === "nip29" ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-base leading-tight truncate">
-                    {name}
-                  </CardTitle>
-                  {community.type === "nip29" ? (
-                    <Badge variant="secondary" className="text-xs">Private Group</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs">Public Community</Badge>
+    <Card className={cardStyle}>
+      <Link to={`/group/${routeId}`} className="flex-1 flex flex-col">
+        {/* Role badge for user's groups */}
+        {displayRole && (
+          <div className="absolute top-2 right-10 z-10">
+            <RoleBadge role={displayRole} />
+          </div>
+        )}
+
+        {/* Pending request badge */}
+        {hasPendingRequest && !displayRole && (
+          <div className="absolute top-2 right-10 z-10">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+              <Clock className="h-3 w-3" />
+              <span>Pending</span>
+            </div>
+          </div>
+        )}
+
+        {/* Notification badges for owners/moderators */}
+        {isOwnerOrModerator && (openReportsCount > 0 || pendingRequestsCount > 0) && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="absolute bottom-2 right-2 z-10 flex gap-1">
+                  {openReportsCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="h-6 w-auto px-1.5 py-0 flex items-center justify-center text-xs gap-1"
+                    >
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                      {openReportsCount > 99 ? '99+' : openReportsCount}
+                    </Badge>
                   )}
-                  {displayRole && <RoleBadge role={displayRole} />}
+                  {pendingRequestsCount > 0 && (
+                    <Badge 
+                      className="h-6 w-auto px-1.5 py-0 flex items-center justify-center text-xs gap-1 bg-blue-500 hover:bg-blue-600"
+                    >
+                      <UserPlus className="h-2.5 w-2.5" />
+                      {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                    </Badge>
+                  )}
                 </div>
-                {description && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {description}
-                  </p>
-                )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {openReportsCount > 0 && `${openReportsCount} open report${openReportsCount !== 1 ? 's' : ''}`}
+                  {openReportsCount > 0 && pendingRequestsCount > 0 && ', '}
+                  {pendingRequestsCount > 0 && `${pendingRequestsCount} join request${pendingRequestsCount !== 1 ? 's' : ''}`}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={image} alt={name} />
+                  <AvatarFallback className="bg-muted">
+                    {community.type === "nip29" ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base leading-tight truncate">
+                      {name}
+                    </CardTitle>
+                    {community.type === "nip29" ? (
+                      <Badge variant="secondary" className="text-xs">Private</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">Public</Badge>
+                    )}
+                  </div>
+                  {description && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {description}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </Link>
-          
-          <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleTogglePin}
-                    disabled={isUpdating}
-                    className="h-8 w-8 p-0"
-                  >
-                    {isPinned ? (
-                      <PinOff className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Pin className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isPinned ? "Unpin group" : "Pin group"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {(showReportsIndicator || showJoinRequestsIndicator || displayRole === "owner" || displayRole === "moderator") && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <MoreVertical className="h-4 w-4" />
-                    {(showReportsIndicator || showJoinRequestsIndicator) && (
-                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {showJoinRequestsIndicator && (
-                    <DropdownMenuItem asChild>
-                      <Link to={`/group/${routeId}/settings`} className="flex items-center gap-2">
-                        <UserPlus className="h-4 w-4" />
-                        Join Requests ({pendingRequestsCount})
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {showReportsIndicator && (
-                    <DropdownMenuItem asChild>
-                      <Link to={`/group/${routeId}/settings`} className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-red-500" />
-                        Reports ({openReportsCount})
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  {community.type === "nip72" && <JoinRequestMenuItem communityId={communityId} />}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" />
-            <span>
-              {isLoadingStats ? "..." : displayPosts} post{displayPosts !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Activity className="h-4 w-4" />
-            <span>
-              {isLoadingStats ? "..." : displayParticipants} participant{displayParticipants !== 1 ? "s" : ""}
-            </span>
-          </div>
-          {community.type === "nip29" && (
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
-              <Badge variant="outline" className="text-xs">
-                NIP-29
-              </Badge>
+              <MessageSquare className="h-4 w-4" />
+              <span>
+                {isLoadingStats ? "..." : displayPosts} post{displayPosts !== 1 ? "s" : ""}
+              </span>
             </div>
-          )}
-        </div>
-      </CardContent>
+            <div className="flex items-center gap-1">
+              <Activity className="h-4 w-4" />
+              <span>
+                {isLoadingStats ? "..." : displayParticipants} participant{displayParticipants !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Link>
+
+      {/* Pin/More actions buttons */}
+      <div className="absolute top-2 right-2 flex items-center gap-1">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleTogglePin}
+                disabled={isUpdating}
+                className="h-8 w-8 p-0"
+              >
+                {isPinned ? (
+                  <PinOff className="h-4 w-4 text-primary" />
+                ) : (
+                  <Pin className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isPinned ? "Unpin group" : "Pin group"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Dropdown menu for additional actions */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <MoreVertical className="h-4 w-4" />
+              {(showReportsIndicator || showJoinRequestsIndicator) && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+            {showJoinRequestsIndicator && (
+              <DropdownMenuItem asChild>
+                <Link to={`/group/${routeId}/settings`} className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Join Requests ({pendingRequestsCount})
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {showReportsIndicator && (
+              <DropdownMenuItem asChild>
+                <Link to={`/group/${routeId}/settings`} className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  Reports ({openReportsCount})
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {/* Join request menu item for non-members */}
+            {!isUserMember && community.type === "nip72" && (
+              <JoinRequestMenuItem communityId={communityId} hasPendingRequest={hasPendingRequest} />
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </Card>
   );
 }

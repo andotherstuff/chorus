@@ -1,5 +1,5 @@
 {
-  "name": "mkstack",
+  "name": "chorus",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     "dev": "npm i && vite",
     "build": "npm i && vite build && cp dist/index.html dist/404.html",
     "build:dev": "npm i && vite build --mode development",
-    "ci": "npm i && tsc -p tsconfig.app.json --noEmit && vite build",
+    "ci": "npm i && tsc -p tsconfig.app.json --noEmit && eslint && vite build",
     "lint": "npm i && eslint .",
     "preview": "npm i && vite preview",
     "deploy": "npm run build && npx -y surge@latest dist"
@@ -46,6 +46,8 @@
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.4",
     "@tanstack/react-query": "^5.56.2",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -79,7 +81,7 @@
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.22",
     "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react-swc": "^3.5.0",
+    "@vitejs/plugin-react-swc": "^3.10.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
@@ -89,6 +91,6 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^6.3.5"
   }
 }

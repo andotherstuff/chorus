@@ -261,8 +261,13 @@ export function useCashuWallet() {
           tags: [],
           created_at: Math.floor(Date.now() / 1000)
         });
+
         // publish token event
-        await nostr.event(newTokenEvent);
+        try {
+          await nostr.event(newTokenEvent);
+        } catch (error) {
+          console.error('Failed to publish token event:', error);
+        }
 
         // update local event IDs on all newProofs
         newProofs.forEach(proof => {

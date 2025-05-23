@@ -8,6 +8,7 @@ import { PostImage } from '@/components/PostImage';
 import { DebugImageDisplay } from '@/components/DebugImageDisplay';
 import { DirectImageDisplay } from '@/components/DirectImageDisplay';
 import { LinkPreview } from '@/components/LinkPreview';
+import { MediaPlayer } from '@/components/MediaPlayer';
 import { useExtractUrls } from '@/hooks/useExtractUrls';
 import { DEBUG_IMAGES } from '@/lib/debug';
 
@@ -22,11 +23,13 @@ export function NoteContent({
 }: NoteContentProps) {
   const [processedContent, setProcessedContent] = useState<React.ReactNode[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [audioUrls, setAudioUrls] = useState<string[]>([]);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const { getFirstUrl } = useExtractUrls();
 
   // Process text content with links, mentions, etc. - memoized with useCallback
-  const processTextContent = useCallback((text: string, currentImageUrls: string[]) => {
+  const processTextContent = useCallback((text: string, currentImageUrls: string[], currentVideoUrls: string[], currentAudioUrls: string[]) => {
     // Regular expressions for different patterns
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const nostrRegex = /nostr:(npub1|note1|nprofile1|nevent1)([a-z0-9]+)/g;
@@ -72,9 +75,15 @@ export function NoteContent({
 
       // Check if this URL is an image URL that will be displayed separately
       const isImageUrl = currentImageUrls.includes(url);
+      
+      // Check if this URL is a video URL that will be displayed separately
+      const isVideoUrl = currentVideoUrls.includes(url);
+      
+      // Check if this URL is an audio URL that will be displayed separately
+      const isAudioUrl = currentAudioUrls.includes(url);
 
-      if (isImageUrl) {
-        // Return null for image URLs - they'll be displayed as images below
+      if (isImageUrl || isVideoUrl || isAudioUrl) {
+        // Return null for image/video/audio URLs - they'll be displayed as media below
         return null;
       }
 
@@ -179,12 +188,39 @@ export function NoteContent({
     return parts;
   }, []);
 
-  // Process the content to extract text, images, and links
+  // Process the content to extract text, images, videos, and links
   useEffect(() => {
     if (!event) return;
 
-    // Extract images from content
+    // Extract images, videos, and audio from content
     const extractedImages: string[] = [];
+    const extractedVideos: string[] = [];
+    const extractedAudios: string[] = [];
+
+    // Create a map of URLs to their MIME types from tags
+    const urlMimeTypes: Record<string, string> = {};
+    
+    // First, find all URLs in tags
+    const urlsInTags: string[] = [];
+    event.tags.forEach(tag => {
+      if (tag[0] === 'url' && tag[1]) {
+        urlsInTags.push(tag[1]);
+      }
+    });
+    
+    // Then find 'm' tags and associate them with URLs
+    event.tags.forEach(tag => {
+      if (tag[0] === 'm' && tag[1]) {
+        // The 'm' tag should be associated with URL tags in the same event
+        // Since there's typically one media file per post, we can associate the mime type with all URLs
+        urlsInTags.forEach(url => {
+          urlMimeTypes[url] = tag[1];
+        });
+      }
+    });
+    
+    // Debug logging
+    console.log('URL MIME Types mapping:', urlMimeTypes);
 
     // 1. Extract images from tags
     const tagImages = event.tags
@@ -199,14 +235,51 @@ export function NoteContent({
     // Add all tag-based images
     extractedImages.push(...tagImages, ...imetaImages);
 
-    // 3. Extract images from content
+    // 3. Extract images and videos from content
     if (event.content) {
-      // Match image URLs with common extensions
-      const imageExtensionRegex = /https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp|tiff|avif|heic)(\?\S*)?/gi;
+      // Extract all URLs from content
+      const urlRegex = /https?:\/\/[^\s]+/gi;
       let match;
-      while ((match = imageExtensionRegex.exec(event.content)) !== null) {
-        extractedImages.push(match[0]);
+      const contentUrls: string[] = [];
+      
+      while ((match = urlRegex.exec(event.content)) !== null) {
+        contentUrls.push(match[0]);
       }
+      
+      // Process each URL
+      contentUrls.forEach(url => {
+        // Check if we have a MIME type from the 'm' tag
+        const mimeType = urlMimeTypes[url];
+        
+        console.log(`Processing URL: ${url}, MIME type: ${mimeType}`);
+        
+        if (mimeType) {
+          // Use the mime type from the tag
+          if (mimeType.startsWith('audio/')) {
+            console.log('Adding to audio URLs:', url);
+            extractedAudios.push(url);
+          } else if (mimeType.startsWith('video/')) {
+            console.log('Adding to video URLs:', url);
+            extractedVideos.push(url);
+          } else if (mimeType.startsWith('image/')) {
+            if (!extractedImages.includes(url)) {
+              extractedImages.push(url);
+            }
+          }
+        } else {
+          // Fall back to file extension matching
+          if (/\.(jpg|jpeg|png|gif|webp|bmp|tiff|avif|heic)(\?\S*)?$/i.test(url)) {
+            if (!extractedImages.includes(url)) {
+              extractedImages.push(url);
+            }
+          } else if (/\.(mp4|webm|ogg|mov|avi|mkv|m4v|3gp)(\?\S*)?$/i.test(url)) {
+            console.log('Fall back - adding to video URLs based on extension:', url);
+            extractedVideos.push(url);
+          } else if (/\.(mp3|wav|flac|m4a|aac|opus|oga|wma)(\?\S*)?$/i.test(url)) {
+            extractedAudios.push(url);
+          }
+        }
+      });
 
       // Match URLs from common image hosting services
       const imageHostRegex = /https?:\/\/(i\.imgur\.com|imgur\.com\/[a-zA-Z0-9]+|pbs\.twimg\.com|i\.ibb\.co|nostr\.build|void\.cat\/d\/|imgproxy\.snort\.social|image\.nostr\.build|media\.tenor\.com|cloudflare-ipfs\.com\/ipfs\/|ipfs\.io\/ipfs\/|files\.zaps\.lol|img\.zaps\.lol|primal\.b-cdn\.net|cdn\.nostr\.build|nitter\.net\/pic|postimages\.org|ibb\.co|cdn\.discordapp\.com\/attachments)\S+/gi;
@@ -219,32 +292,78 @@ export function NoteContent({
         }
       }
 
-      // Extract the first non-image URL for link preview
+      // Extract the first non-image/video/audio URL for link preview
+      const allMediaUrls = [...extractedImages, ...extractedVideos, ...extractedAudios];
       const firstUrl = getFirstUrl(event.content);
-      setLinkUrl(firstUrl);
+      if (firstUrl && !allMediaUrls.includes(firstUrl)) {
+        setLinkUrl(firstUrl);
+      } else {
+        setLinkUrl(null);
+      }
     }
 
-    // Set the extracted image URLs
+    // Set the extracted URLs
     setImageUrls(extractedImages);
+    setVideoUrls(extractedVideos);
+    setAudioUrls(extractedAudios);
+    
+    console.log('Final extracted URLs:', {
+      images: extractedImages,
+      videos: extractedVideos,
+      audios: extractedAudios
+    });
 
     // Process the text content
     if (event.content) {
       // Process the content and update state in one go to prevent multiple renders
-      const processed = processTextContent(event.content, extractedImages);
+      const processed = processTextContent(event.content, extractedImages, extractedVideos, extractedAudios);
       setProcessedContent(processed);
     }
   }, [event, getFirstUrl, processTextContent]);
 
+  // Filter out empty strings from processed content
+  const hasTextContent = processedContent.some(part => 
+    typeof part === 'string' ? part.trim().length > 0 : true
+  );
+
   return (
     <div className={cn("whitespace-pre-wrap break-words", className)}>
       {/* Text content */}
-      <div>
-        {processedContent.length > 0 ? processedContent : event.content}
-      </div>
+      {hasTextContent && (
+        <div>
+          {processedContent.length > 0 ? processedContent : event.content}
+        </div>
+      )}
 
       {/* Link Preview */}
       {linkUrl && (
         <LinkPreview url={linkUrl} />
+      )}
+
+      {/* Videos */}
+      {videoUrls.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {videoUrls.map((url, index) => (
+            <MediaPlayer
+              key={`video-${index}`}
+              url={url}
+              type="video"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Audio */}
+      {audioUrls.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {audioUrls.map((url, index) => (
+            <MediaPlayer
+              key={`audio-${index}`}
+              url={url}
+              type="audio"
+            />
+          ))}
+        </div>
       )}
 
       {/* Images */}

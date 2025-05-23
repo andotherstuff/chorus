@@ -34,24 +34,21 @@ export function GroupNutzapTotal({ groupId, className = "" }: GroupNutzapTotalPr
     return <Skeleton className={`h-6 w-24 ${className}`} />;
   }
 
-  if (total === 0) {
-    return null; // Don't show anything if there are no nutzaps
-  }
-
+  // Always show even when total is 0, displaying "0 sats" or "$0.00"
   return (
     <button
       type="button"
       onClick={() => toggleCurrency()}
-      className={`flex items-center w-full h-full text-amber-500 hover:text-amber-600 transition-colors cursor-pointer border border-input rounded-md pl-3 pr-3 py-1.5 bg-transparent hover:bg-accent/50 text-xs ${className}`}
+      className={`flex items-center w-full h-full transition-colors cursor-pointer border border-input rounded-md pl-3 pr-3 py-1.5 bg-transparent hover:bg-accent/50 text-xs ${className}`}
       title="Click to toggle between USD and sats"
     >
       <div className="flex items-center">
         {showSats ? (
-          <Bitcoin className="h-4 w-4 mr-1" />
+          <Bitcoin className="h-4 w-4 mr-1 text-amber-500" />
         ) : (
-          <DollarSign className="h-4 w-4 mr-1" />
+          <DollarSign className="h-4 w-4 mr-1 text-green-500" />
         )}
-        <span className={`text-xs tabular-nums ${isFlashing ? 'flash-update' : ''}`}>
+        <span className={`text-xs tabular-nums ${isFlashing ? 'flash-update' : ''} ${showSats ? 'text-amber-500' : 'text-green-500'}`}>
           {currentValue}
         </span>
       </div>

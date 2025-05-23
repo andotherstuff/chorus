@@ -4,6 +4,7 @@ import { NostrEvent } from "@nostrify/nostrify";
 import { useApprovedMembers } from "./useApprovedMembers";
 import { useReplyApprovals } from "./useReplyApprovals";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to fetch all pending replies in a community
@@ -21,7 +22,7 @@ export function usePendingReplies(communityId: string) {
       
       // Get all replies in the community (kind 1111 with the community tag)
       const replies = await nostr.query([{ 
-        kinds: [1111],
+        kinds: [KINDS.GROUP_POST_REPLY],
         "#a": [communityId],
         limit: 100,
       }], { signal });
@@ -35,7 +36,7 @@ export function usePendingReplies(communityId: string) {
       let communityOwnerPubkey = "";
       if (parsedId) {
         const communityEvent = await nostr.query([{ 
-          kinds: [34550],
+          kinds: [KINDS.GROUP],
           authors: [parsedId.pubkey],
           "#d": [parsedId.identifier],
         }], { signal });

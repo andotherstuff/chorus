@@ -93,6 +93,20 @@ function useCustomHook() {
 }
 ```
 
+### Nostr Event Kinds Constants
+
+**Always use the centralized constants from `@/lib/nostr-kinds` instead of hardcoded literals when referencing Nostr event kinds.** This ensures consistency, maintainability, and prevents typos.
+
+```typescript
+import { KINDS } from '@/lib/nostr-kinds';
+
+// ✅ Correct: Use constants
+const events = await nostr.query([{ kinds: [KINDS.TEXT_NOTE], limit: 20 }], { signal });
+
+// ❌ Wrong: Don't use hardcoded literals
+const events = await nostr.query([{ kinds: [1], limit: 20 }], { signal });
+```
+
 ### Query Nostr Data with `useNostr` and Tanstack Query
 
 When querying Nostr, the best practice is to create custom hooks that combine `useNostr` and `useQuery` to get the required data.
@@ -100,6 +114,7 @@ When querying Nostr, the best practice is to create custom hooks that combine `u
 ```typescript
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/query';
+import { KINDS } from '@/lib/nostr-kinds';
 
 function usePosts() {
   const { nostr } = useNostr();
@@ -108,7 +123,7 @@ function usePosts() {
     queryKey: ['posts'],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(1500)]);
-      const events = await nostr.query([{ kinds: [1], limit: 20 }], { signal });
+      const events = await nostr.query([{ kinds: [KINDS.TEXT_NOTE], limit: 20 }], { signal });
       return events; // these events could be transformed into another format
     },
   });
@@ -170,9 +185,9 @@ To publish events, use the `useNostrPublish` hook in this project.
 
 ```tsx
 import { useState } from 'react';
-
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { KINDS } from '@/lib/nostr-kinds';
 
 export function MyComponent() {
   const [ data, setData] = useState<Record<string, string>>({});
@@ -181,7 +196,7 @@ export function MyComponent() {
   const { mutate: createEvent } = useNostrPublish();
 
   const handleSubmit = () => {
-    createEvent({ kind: 1, content: data.content });
+    createEvent({ kind: KINDS.TEXT_NOTE, content: data.content });
   };
 
   if (!user) {
@@ -401,66 +416,6 @@ NostrGroups implements [NIP-72](https://github.com/nostr-protocol/nips/blob/mast
 - **PostList.tsx**: Component for displaying posts with approval status
 - **ApprovedUsersList.tsx**: Component for managing approved users in a community
 
-## Data Models
-
-### Community (Kind 34550)
-
-```json
-{
-  "kind": 34550,
-  "tags": [
-    ["d", "<community-identifier>"],
-    ["name", "<Community name>"],
-    ["description", "<Community description>"],
-    ["image", "<Community image url>"],
-    ["p", "<moderator-pubkey>", "", "moderator"]
-  ],
-  "content": ""
-}
-```
-
-### Post Approval (Kind 4550)
-
-```json
-{
-  "kind": 4550,
-  "tags": [
-    ["a", "34550:<community-pubkey>:<community-identifier>"],
-    ["e", "<post-id>"],
-    ["p", "<post-author-pubkey>"],
-    ["k", "1"]
-  ],
-  "content": "<JSON-encoded post event>"
-}
-```
-
-### Approved Users List (Kind 30000)
-
-```json
-{
-  "kind": 30000,
-  "tags": [
-    ["d", "approved-users"],
-    ["a", "34550:<community-pubkey>:<community-identifier>"],
-    ["p", "<approved-user-pubkey-1>"],
-    ["p", "<approved-user-pubkey-2>"]
-  ],
-  "content": "Approved users for community"
-}
-```
-
-### Post (Kind 1)
-
-```json
-{
-  "kind": 1,
-  "tags": [
-    ["a", "34550:<community-pubkey>:<community-identifier>"]
-  ],
-  "content": "Post content"
-}
-```
-
 ## Post Approval Flow
 
 1. User creates a post in a community (kind 1 with community "a" tag)
@@ -495,3 +450,4 @@ When extending the NostrGroups platform:
 5. Keep the UI consistent with the existing design language
 6. Test all changes with `npm run ci` before considering them complete
 7. Always use `for...of` instead of `forEach` in loops
+8. **Always use constants from `@/lib/nostr-kinds` instead of hardcoded event kind literals**

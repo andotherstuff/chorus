@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "sonner";
 import { UserPlus, CheckCircle, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface JoinRequestButtonProps {
   communityId: string;
@@ -40,7 +41,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [4552],
+        kinds: [KINDS.GROUP_JOIN_REQUEST],
         authors: [user.pubkey],
         "#a": [communityId]
       }], { signal });
@@ -58,7 +59,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId]
       }], { signal });
 
@@ -78,7 +79,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
       
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{ 
-        kinds: [14551], 
+        kinds: [KINDS.GROUP_DECLINED_MEMBERS_LIST], 
         "#a": [communityId],
         "#p": [user.pubkey]
       }], { signal });
@@ -97,7 +98,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
     try {
       // Create join request event (kind 4552)
       await publishEvent({
-        kind: 4552,
+        kind: KINDS.GROUP_JOIN_REQUEST,
         tags: [
           ["a", communityId],
         ],

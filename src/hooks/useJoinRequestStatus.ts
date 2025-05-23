@@ -1,6 +1,7 @@
 import { useNostr } from "./useNostr";
 import { useCurrentUser } from "./useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to check the status of a user's join request for a community
@@ -19,7 +20,7 @@ export function useJoinRequestStatus(communityId?: string) {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [4552],
+        kinds: [KINDS.GROUP_JOIN_REQUEST],
         authors: [user.pubkey],
         "#a": [communityId]
       }], { signal });
@@ -37,8 +38,8 @@ export function useJoinRequestStatus(communityId?: string) {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [14550],
-        "#a": [communityId]
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+        "#d": [communityId]
       }], { signal });
 
       // Check if any of the approval lists include the user's pubkey
@@ -57,8 +58,8 @@ export function useJoinRequestStatus(communityId?: string) {
       
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{ 
-        kinds: [14551], 
-        "#a": [communityId],
+        kinds: [KINDS.GROUP_DECLINED_MEMBERS_LIST], 
+        "#d": [communityId],
         "#p": [user.pubkey]
       }], { signal });
       

@@ -185,6 +185,8 @@ export function useSendNutzap() {
       // Invalidate relevant queries
       if (eventId) {
         queryClient.invalidateQueries({ queryKey: ['nutzaps', eventId] });
+        // Also invalidate the nutzap-total query used by NutzapButton
+        queryClient.invalidateQueries({ queryKey: ['nutzap-total', eventId] });
       }
 
       // Also invalidate recipient's received nutzaps

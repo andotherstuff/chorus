@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { KINDS } from "@/lib/nostr-kinds";
 import {
   Tooltip,
   TooltipContent,
@@ -193,14 +194,34 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
   const { data: nestedReplies, isLoading: isLoadingNested, refetch: refetchNested } = useNestedReplies(reply.id);
 
   const handleShareReply = async () => {
-    // Share the group URL with a hash to the reply
-    const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${reply.id}`;
-    
-    await shareContent({
-      title: "Check out this reply",
-      text: reply.content.slice(0, 100) + (reply.content.length > 100 ? "..." : ""),
-      url: shareUrl
-    });
+    try {
+      // Create nevent identifier for the reply with relay hint
+      const nevent = nip19.neventEncode({
+        id: reply.id,
+        author: reply.pubkey,
+        kind: reply.kind,
+        relays: ["wss://relay.chorus.community"],
+      });
+      
+      // Create njump.me URL
+      const shareUrl = `https://njump.me/${nevent}`;
+      
+      await shareContent({
+        title: "Check out this reply",
+        text: reply.content.slice(0, 100) + (reply.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    } catch (error) {
+      console.error("Error creating share URL:", error);
+      // Fallback to the original URL format
+      const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${reply.id}`;
+      
+      await shareContent({
+        title: "Check out this reply",
+        text: reply.content.slice(0, 100) + (reply.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    }
   };
   const [showNestedReplies, setShowNestedReplies] = useState(true);
   const { approvedMembers, isApprovedMember } = useApprovedMembers(communityId);
@@ -277,7 +298,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
     try {
       // Create approval event (kind 4550)
       await publishEvent({
-        kind: 4550,
+        kind: KINDS.GROUP_POST_APPROVAL,
         tags: [
           ["a", communityId],
           ["e", reply.id],

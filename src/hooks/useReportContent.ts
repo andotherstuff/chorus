@@ -1,5 +1,6 @@
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { KINDS } from "@/lib/nostr-kinds";
 import { toast } from "sonner";
 
 export type ReportType = "nudity" | "malware" | "profanity" | "illegal" | "spam" | "impersonation" | "other";
@@ -38,7 +39,7 @@ export function useReportContent() {
 
     try {
       await publishEvent({
-        kind: 1984,
+        kind: KINDS.REPORT,
         tags,
         content: reason || "",
       });

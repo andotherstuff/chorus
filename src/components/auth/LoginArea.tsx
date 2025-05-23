@@ -23,7 +23,7 @@ export function LoginArea() {
       ) : (
         <Button
           onClick={() => setLoginDialogOpen(true)}
-          className='flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground w-full font-medium transition-all hover:bg-primary/90 animate-scale-in'
+          className='flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground w-full font-medium transition-all hover:bg-primary/90 animate-scale-in'
         >
           <User className='w-3.5 h-3.5' />
           <span>Log in</span>

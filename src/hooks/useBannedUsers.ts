@@ -2,6 +2,8 @@ import { useNostr } from "@/hooks/useNostr";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { KINDS } from "@/lib/nostr-kinds";
+import { NostrFilter } from "@nostrify/nostrify";
 
 /**
  * Hook to manage banned users for a community
@@ -23,14 +25,14 @@ export function useBannedUsers(communityId?: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       // Create the filter object
-      const filter: Record<string, any> = {
-        kinds: [14552],
+      const filter: NostrFilter = {
+        kinds: [KINDS.GROUP_BANNED_MEMBERS_LIST],
         limit: 50,
       };
       
       // Only add the community filter if communityId is defined
       if (communityId) {
-        filter["#a"] = [communityId];
+        filter["#d"] = [communityId];
       }
       
       const events = await nostr.query([filter], { signal });
@@ -63,14 +65,14 @@ export function useBannedUsers(communityId?: string) {
     try {
       // Create a new list with the user added to banned list
       const tags = [
-        ["a", effectiveCommunityId],
+        ["d", effectiveCommunityId],
         ...uniqueBannedUsers.map(pk => ["p", pk]),
         ["p", pubkey] // Add the new banned user
       ];
 
       // Create banned users event (kind 14552)
       await publishEvent({
-        kind: 14552,
+        kind: KINDS.GROUP_BANNED_MEMBERS_LIST,
         tags,
         content: "",
       });
@@ -105,13 +107,13 @@ export function useBannedUsers(communityId?: string) {
       
       // Create a new list with the user removed
       const tags = [
-        ["a", effectiveCommunityId],
+        ["d", effectiveCommunityId],
         ...updatedBannedUsers.map(pk => ["p", pk])
       ];
 
       // Create updated banned users event (kind 14552)
       await publishEvent({
-        kind: 14552,
+        kind: KINDS.GROUP_BANNED_MEMBERS_LIST,
         tags,
         content: "",
       });

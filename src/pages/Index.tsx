@@ -10,6 +10,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { generateSecretKey, nip19 } from "nostr-tools";
 import { toast } from "@/hooks/useToast";
 import { useCreateCashuWallet } from "@/hooks/useCreateCashuWallet";
+import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { Smartphone } from "lucide-react";
 import { useCashuStore } from "@/stores/cashuStore";
@@ -18,13 +19,7 @@ import { getTokenAmount } from "@/lib/cashu";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { usePWA } from "@/hooks/usePWA";
-
-// Create context for storing generated name during onboarding
-export const OnboardingContext = React.createContext<{
-  generatedName: string | null;
-}>({
-  generatedName: null,
-});
+import { OnboardingContext } from "@/contexts/OnboardingContext";
 
 const Index = () => {
   const { currentUser } = useLoggedInAccounts();
@@ -35,6 +30,8 @@ const Index = () => {
   const { mutateAsync: publishEvent } = useNostrPublish();
   const [newUser, setNewUser] = useState(false);
   const { mutateAsync: createCashuWallet } = useCreateCashuWallet();
+  const { wallet, isLoading } = useCashuWallet();
+
   const [generatedName, setGeneratedName] = useState<string | null>(null);
   const cashuStore = useCashuStore();
   const onboardingStore = useOnboardingStore();
@@ -113,9 +110,28 @@ const Index = () => {
   // Redirect to /groups after user is logged in
   useEffect(() => {
     if (currentUser && !newUser) {
-      navigate("/groups", { replace: true });
+      // Query the wallet when user logs in
+      if (wallet) {
+        console.log("User wallet found:", wallet);
+        // Wallet exists, redirect to groups
+        navigate("/groups", { replace: true });
+      } else if (isLoading) {
+        // Wait for wallet query to complete
+        console.log("Fetching wallet data...");
+      } else {
+        // Wallet query completed but no wallet found
+        console.log("No wallet found for user");
+        createCashuWallet()
+          .then(() => {
+            navigate("/groups", { replace: true });
+          })
+          .catch((error) => {
+            console.error("Failed to create wallet:", error);
+            navigate("/groups", { replace: true });
+          });
+      }
     }
-  }, [newUser, currentUser, navigate]);
+  }, [newUser, currentUser, navigate, wallet, isLoading, createCashuWallet]);
 
   // Handle account creation inline
   const handleCreateAccount = async () => {
@@ -145,10 +161,6 @@ const Index = () => {
           // fallthrough
         }
       }, 100);
-      toast({
-        title: "Account created",
-        description: "You are now logged in.",
-      });
       setNewUser(true); // Mark as new user
     } catch (e) {
       toast({
@@ -228,6 +240,21 @@ const Index = () => {
               />
             </div>
           )}
+
+          {/* Footer attribution */}
+          <div className="absolute bottom-4 left-0 right-0 text-center">
+            <p className="text-xs text-muted-foreground">
+              vibed by{" "}
+              <a
+                href="https://andotherstuff.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                AOS
+              </a>
+            </p>
+          </div>
         </div>
         <LoginDialog
           isOpen={loginOpen}
@@ -243,13 +270,12 @@ const Index = () => {
     return (
       <OnboardingContext.Provider value={{ generatedName }}>
         <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background">
-          <div className="w-full max-w-lg mx-auto p-8 bg-card dark:bg-dark-card rounded-2xl shadow-lg">
+          <div className="w-full max-w-lg mx-auto p-8">
             <h2 className="text-2xl font-bold mb-4 text-center">
-              Set up your profile
+              Set your name and pic
             </h2>
             <p className="text-gray-600 mb-6 text-center">
-              Add your display name and picture. You can always update them
-              later.
+              You can always update them later.
             </p>
             <EditProfileForm showSkipLink={true} initialName={generatedName} />
           </div>
@@ -261,7 +287,7 @@ const Index = () => {
   // Fallback (should redirect to /groups in most cases)
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
-      <div>Redirecting to groups...</div>
+      <div>Loading groups...</div>
     </div>
   );
 };

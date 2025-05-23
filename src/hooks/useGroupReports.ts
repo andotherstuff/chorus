@@ -1,6 +1,7 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
 import { NostrEvent } from "@nostrify/nostrify";
+import { KINDS } from "@/lib/nostr-kinds";
 
 export interface Report extends NostrEvent {
   reportType: string;
@@ -24,7 +25,7 @@ export function useGroupReports(communityId: string) {
       
       // Query for reports that have the community's a-tag
       const reports = await nostr.query([{
-        kinds: [1984],
+        kinds: [KINDS.REPORT],
         "#a": [communityId],
         limit: 100,
       }], { signal });
@@ -32,7 +33,7 @@ export function useGroupReports(communityId: string) {
       // Query for resolution events (Kind 4554) that reference reports
       const reportIds = reports.map(report => report.id);
       const resolutionEvents = reportIds.length > 0 ? await nostr.query([{
-        kinds: [4554],
+        kinds: [KINDS.GROUP_CLOSE_REPORT],
         "#e": reportIds,
         "#a": [communityId],
       }], { signal }) : [];

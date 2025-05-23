@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle, AlertCircle, MessageSquare, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { NostrEvent } from "@nostrify/nostrify";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface PendingRepliesListProps {
   communityId: string;
@@ -113,7 +114,7 @@ function PendingReplyItem({ reply, communityId, onApproved }: PendingReplyItemPr
     try {
       // Create approval event (kind 4550)
       await publishEvent({
-        kind: 4550,
+        kind: KINDS.GROUP_POST_APPROVAL,
         tags: [
           ["a", communityId],
           ["e", reply.id],

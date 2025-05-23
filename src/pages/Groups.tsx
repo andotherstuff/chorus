@@ -4,9 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { GroupSearch } from "@/components/groups/GroupSearch";
 import { useState, useMemo, useEffect } from "react";
+import { TrendingUp } from "lucide-react";
 import { useGroupStats } from "@/hooks/useGroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { useUnifiedGroups } from "@/hooks/useUnifiedGroups";
+import { useUserPendingJoinRequests } from "@/hooks/useUserPendingJoinRequests";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
@@ -15,12 +17,36 @@ import type { UserRole } from "@/hooks/useUserRole";
 import type { Group } from "@/types/groups";
 import { getCommunityId } from "@/lib/group-utils";
 import { Badge } from "@/components/ui/badge";
+import { useCashuWallet } from "@/hooks/useCashuWallet";
 
 export default function Groups() {
   const { user } = useCurrentUser();
   const { pinGroup, unpinGroup, isGroupPinned, isUpdating } = usePinnedGroups();
   const [searchQuery, setSearchQuery] = useState("");
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
+  const { wallet, isLoading: isWalletLoading } = useCashuWallet();
+
+  // Log wallet data when it loads
+  useEffect(() => {
+    if (wallet) {
+      console.log("Wallet loaded in Groups page:", wallet);
+    }
+  }, [wallet]);
+
+  // Listen for PWA instructions event from banner
+  useEffect(() => {
+    const handleOpenPWAInstructions = () => {
+      setShowPWAInstructions(true);
+    };
+
+    window.addEventListener("open-pwa-instructions", handleOpenPWAInstructions);
+    return () => {
+      window.removeEventListener(
+        "open-pwa-instructions",
+        handleOpenPWAInstructions
+      );
+    };
+  }, []);
 
   // Fetch unified groups (both NIP-72 and NIP-29)
   const {
@@ -58,61 +84,124 @@ export default function Groups() {
     }));
   }, [unifiedGroupsData]);
 
-  // Filter groups based on search
-  const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return allGroups;
+  // Get user's pending join requests
+  const {
+    data: pendingJoinRequests = [],
+    isLoading: isPendingRequestsLoading,
+  } = useUserPendingJoinRequests();
+
+  // Create a map to track user's membership in groups
+  const userMembershipMap = useMemo(() => {
+    if (!userGroups || !user) return new Map<string, UserRole>();
+
+    const membershipMap = new Map<string, UserRole>();
+
+    // Process all of user's groups from unified data
+    if (unifiedGroupsData) {
+      // Add owned groups
+      for (const group of unifiedGroupsData.owned) {
+        membershipMap.set(getCommunityId(group), "owner");
+      }
+      
+      // Add moderated groups
+      for (const group of unifiedGroupsData.moderated) {
+        membershipMap.set(getCommunityId(group), "moderator");
+      }
+      
+      // Add member groups
+      for (const group of unifiedGroupsData.member) {
+        const communityId = getCommunityId(group);
+        if (!membershipMap.has(communityId)) {
+          membershipMap.set(communityId, "member");
+        }
+      }
     }
 
-    const query = searchQuery.toLowerCase();
-    return allGroups.filter(group => {
+    return membershipMap;
+  }, [unifiedGroupsData, user]);
+
+  // Create a set of pending join request community IDs for quick lookup
+  const pendingJoinRequestsSet = useMemo(() => {
+    return new Set(pendingJoinRequests);
+  }, [pendingJoinRequests]);
+
+  // Filter and sort all groups
+  const sortedAndFilteredGroups = useMemo(() => {
+    if (!allGroups || allGroups.length === 0) return [];
+
+    // Function to check if a group matches the search query
+    const matchesSearch = (group: Group) => {
+      if (!searchQuery) return true;
+
+      const searchLower = searchQuery.toLowerCase();
       return (
-        group.name?.toLowerCase().includes(query) ||
-        group.description?.toLowerCase().includes(query) ||
-        group.id.toLowerCase().includes(query)
+        group.name?.toLowerCase().includes(searchLower) ||
+        group.description?.toLowerCase().includes(searchLower) ||
+        group.id.toLowerCase().includes(searchLower)
       );
-    });
-  }, [allGroups, searchQuery]);
+    };
 
-  // Categorize groups
-  const { pinnedGroups, memberGroups, allOtherGroups } = useMemo(() => {
-    const pinned: Group[] = [];
-    const member: Group[] = [];
-    const other: Group[] = [];
+    // Create a stable copy of the array to avoid mutation issues
+    const stableGroups = [...allGroups];
 
-    const userGroupIds = new Set(userGroups.map(ug => ug.id));
+    return stableGroups.filter(matchesSearch).sort((a, b) => {
+      // Ensure both a and b are valid objects
+      if (!a || !b) return 0;
 
-    filteredGroups.forEach(group => {
-      const communityId = getCommunityId(group);
-      const isPinned = isGroupPinned(communityId);
-      const isMember = userGroupIds.has(communityId);
+      try {
+        const aId = getCommunityId(a);
+        const bId = getCommunityId(b);
 
-      if (isPinned) {
-        pinned.push(group);
-      } else if (isMember) {
-        member.push(group);
-      } else {
-        other.push(group);
+        const aIsPinned = isGroupPinned(aId);
+        const bIsPinned = isGroupPinned(bId);
+
+        // First priority: pinned groups
+        if (aIsPinned && !bIsPinned) return -1;
+        if (!aIsPinned && bIsPinned) return 1;
+
+        // Get user roles and pending status
+        const aUserRole = userMembershipMap.get(aId);
+        const bUserRole = userMembershipMap.get(bId);
+        const aHasPendingRequest = pendingJoinRequestsSet.has(aId);
+        const bHasPendingRequest = pendingJoinRequestsSet.has(bId);
+
+        // Define role priority (lower number = higher priority)
+        const getRolePriority = (
+          role: UserRole | undefined,
+          hasPending: boolean
+        ) => {
+          if (role === "owner") return 1;
+          if (role === "moderator") return 2;
+          if (role === "member") return 3;
+          if (hasPending) return 4;
+          return 5; // Not a member and no pending request
+        };
+
+        const aPriority = getRolePriority(aUserRole, aHasPendingRequest);
+        const bPriority = getRolePriority(bUserRole, bHasPendingRequest);
+
+        // Second priority: user's relationship to the group (owner > mod > member > pending > other)
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+
+        // If same priority, sort alphabetically by name
+        const aName = a.name?.toLowerCase() || "";
+        const bName = b.name?.toLowerCase() || "";
+
+        return aName.localeCompare(bName);
+      } catch (error) {
+        console.error("Error sorting groups:", error);
+        return 0;
       }
     });
-
-    // Sort by recent activity
-    const sortByActivity = (a: Group, b: Group) => {
-      const aId = getCommunityId(a);
-      const bId = getCommunityId(b);
-      const aStats = groupStatsResults[aId];
-      const bStats = groupStatsResults[bId];
-      const aPosts = aStats?.posts || 0;
-      const bPosts = bStats?.posts || 0;
-      return bPosts - aPosts;
-    };
-
-    return {
-      pinnedGroups: pinned.sort(sortByActivity),
-      memberGroups: member.sort(sortByActivity),
-      allOtherGroups: other.sort(sortByActivity),
-    };
-  }, [filteredGroups, userGroups, groupStatsResults, isGroupPinned]);
+  }, [
+    allGroups,
+    searchQuery,
+    isGroupPinned,
+    userMembershipMap,
+    pendingJoinRequestsSet,
+  ]);
 
   // Auto-refresh stats periodically
   useEffect(() => {
@@ -125,128 +214,154 @@ export default function Groups() {
     }
   }, [allGroups.length, refetchStats]);
 
-  const isLoading = isLoadingGroups;
+  const isLoading = isLoadingGroups || isPendingRequestsLoading;
   const error = groupsError;
 
   if (error) {
     console.error("Error fetching groups:", error);
   }
 
-  const renderGroupSection = (title: string, groups: Group[], showCount = true) => {
-    if (groups.length === 0) return null;
+  // Loading state skeleton with stable keys
+  const skeletonKeys = useMemo(
+    () =>
+      Array.from({ length: 12 }).map((_, index) => `skeleton-group-${index}`),
+    []
+  );
 
-    return (
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          {title}
-          {showCount && (
-            <Badge variant="secondary" className="text-xs">
-              {groups.length}
-            </Badge>
-          )}
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {groups.map(group => {
-            const communityId = getCommunityId(group);
-            const userGroup = userGroups.find(ug => ug.id === communityId);
-            const stats = groupStatsResults[communityId];
-
-            return (
-              <GroupCard
-                key={communityId}
-                community={group}
-                isPinned={isGroupPinned(communityId)}
-                pinGroup={pinGroup}
-                unpinGroup={unpinGroup}
-                isUpdating={isUpdating}
-                isMember={!!userGroup}
-                userRole={userGroup?.role}
-                stats={stats}
-                isLoadingStats={isLoadingStats}
-              />
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const renderLoadingCard = () => (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center space-x-4">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-48" />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-4">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-20" />
-        </div>
-      </CardContent>
-    </Card>
+  const renderSkeletons = () => (
+    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+      {skeletonKeys.map((key) => (
+        <Card key={key} className="overflow-hidden flex flex-col h-[140px]">
+          <CardHeader className="flex flex-row items-center space-y-0 gap-3 pt-4 pb-2 px-3">
+            <Skeleton className="h-12 w-12 rounded-md" />
+            <div className="space-y-1 flex-1">
+              <Skeleton className="h-4 w-3/4" />
+              <div className="flex gap-1">
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-3 w-8" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 pb-3 pt-0">
+            <Skeleton className="h-3 w-full mb-1" />
+            <Skeleton className="h-3 w-2/3" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 
   return (
     <div className="container mx-auto py-3 px-3 sm:px-4">
       <Header />
-      <PWAInstallBanner />
-      <PWAInstallInstructions 
-        isOpen={showPWAInstructions} 
-        onClose={() => setShowPWAInstructions(false)} 
-      />
 
-      <div className="space-y-6 mt-6">
-        <div>
-          <h1 className="text-3xl font-bold">Groups</h1>
-          <p className="text-muted-foreground mt-2">
-            Discover and join communities. Now supports both public communities (NIP-72) and private groups (NIP-29)!
-          </p>
-        </div>
-
-        <GroupSearch onSearch={setSearchQuery} />
-
-        {isLoading ? (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Loading Groups...</h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i}>{renderLoadingCard()}</div>
-                ))}
-              </div>
+      <div className="flex flex-col mt-2">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-3 gap-2">
+          <div className="w-full md:w-64 lg:w-72">
+            <GroupSearch
+              onSearch={setSearchQuery}
+              className="sticky top-0 z-10"
+            />
+            <div className="mt-2 flex justify-end md:hidden">
+              <a
+                href="/trending"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                Trending Hashtags
+              </a>
             </div>
           </div>
-        ) : (
-          <div>
-            {renderGroupSection("📌 Pinned Groups", pinnedGroups)}
-            {renderGroupSection("✅ Your Groups", memberGroups)}
-            {renderGroupSection("🌍 All Groups", allOtherGroups)}
-
-            {filteredGroups.length === 0 && !isLoading && (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground text-lg">
-                    {searchQuery.trim() 
-                      ? `No groups found matching "${searchQuery}"`
-                      : "No groups available"
-                    }
-                  </p>
-                  {!searchQuery.trim() && (
-                    <p className="text-muted-foreground mt-2">
-                      Create your first group to get started!
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+          <div className="hidden md:flex">
+            <a
+              href="/trending"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              Trending Hashtags
+            </a>
           </div>
-        )}
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Groups</h1>
+            <p className="text-muted-foreground mt-2">
+              Discover and join communities. Now supports both public communities (NIP-72) and private groups (NIP-29)!
+            </p>
+          </div>
+
+          {isLoading ? (
+            renderSkeletons()
+          ) : allGroups &&
+            sortedAndFilteredGroups &&
+            sortedAndFilteredGroups.length > 0 ? (
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+              {sortedAndFilteredGroups.map((community) => {
+                if (!community) return null;
+                try {
+                  const communityId = getCommunityId(community);
+                  const isPinned = isGroupPinned(communityId);
+                  const userRole = userMembershipMap.get(communityId);
+                  const isMember = userMembershipMap.has(communityId);
+                  const hasPendingRequest =
+                    pendingJoinRequestsSet.has(communityId);
+                  const stats = groupStatsResults
+                    ? groupStatsResults[communityId]
+                    : undefined;
+
+                  return (
+                    <GroupCard
+                      key={`${community.id}-${communityId}`}
+                      community={community}
+                      isPinned={isPinned}
+                      pinGroup={pinGroup}
+                      unpinGroup={unpinGroup}
+                      isUpdating={isUpdating}
+                      stats={stats}
+                      isLoadingStats={isLoadingStats}
+                      isMember={isMember}
+                      userRole={userRole}
+                      hasPendingRequest={hasPendingRequest}
+                    />
+                  );
+                } catch (error) {
+                  console.error("Error rendering group card:", error);
+                  return null;
+                }
+              })}
+            </div>
+          ) : searchQuery ? (
+            <div className="col-span-full text-center py-10">
+              <h2 className="text-xl font-semibold mb-2">
+                No matching groups found
+              </h2>
+              <p className="text-muted-foreground">
+                Try a different search term or browse all groups
+              </p>
+            </div>
+          ) : (
+            <div className="col-span-full text-center py-10">
+              <h2 className="text-xl font-semibold mb-2">No groups found</h2>
+              <p className="text-muted-foreground mb-4">
+                Be the first to create a group on this platform!
+              </p>
+              {!user && (
+                <p className="text-sm text-muted-foreground">
+                  Please log in to create a group
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
+      <PWAInstallInstructions
+        isOpen={showPWAInstructions}
+        onClose={() => setShowPWAInstructions(false)}
+      />
     </div>
   );
 }

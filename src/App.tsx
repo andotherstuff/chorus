@@ -10,7 +10,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NostrLoginProvider } from '@nostrify/react/login';
 import AppRouter from './AppRouter';
 import { useSystemTheme } from '@/hooks/useSystemTheme';
-import { JoinDialogProvider } from '@/components/groups/JoinDialogContext';
+import { JoinDialogProvider } from '@/components/groups/JoinDialogProvider';
+import { WalletLoader } from '@/components/WalletLoader';
 import { ReactNode } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -62,6 +63,7 @@ export function App() {
           <TooltipProvider>
             <JoinDialogProvider>
               <AppWithEnhancedNostr>
+                <WalletLoader />
                 <Toaster />
                 <Sonner />
                 <AppRouter />

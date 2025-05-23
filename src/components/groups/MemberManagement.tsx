@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { UserPlus, Users, CheckCircle, XCircle, UserX, Ban } from "lucide-react";
 import { NostrEvent } from "@nostrify/nostrify";
 import { Link, useLocation } from "react-router-dom";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface MemberManagementProps {
   communityId: string;
@@ -51,7 +52,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [4552],
+        kinds: [KINDS.GROUP_JOIN_REQUEST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -68,7 +69,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });
@@ -85,7 +86,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14551],
+        kinds: [KINDS.GROUP_DECLINED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -137,7 +138,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
 
       // Create approved members event (kind 14550)
       await publishEvent({
-        kind: 14550,
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
         tags,
         content: "",
       });
@@ -160,7 +161,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
             // Create a new declined event that doesn't include this pubkey
             // This effectively "removes" the user from the declined list
             await publishEvent({
-              kind: 14551,
+              kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
               tags: [
                 ["a", communityId],
                 ["e", eventIdTag[1]],
@@ -206,7 +207,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
 
       // Create updated approved members event (kind 14550)
       await publishEvent({
-        kind: 14550,
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
         tags,
         content: "",
       });
@@ -216,12 +217,12 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       const removalEventId = `removal:${pubkey}:${Date.now()}`;
       
       await publishEvent({
-        kind: 14551,
+        kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
         tags: [
           ["a", communityId],
           ["e", removalEventId], // Using a generated event ID
           ["p", pubkey], // The pubkey of the removed user
-          ["k", "14550"] // Indicating this was a removal from the approved list
+          ["k", String(KINDS.GROUP_APPROVED_MEMBERS_LIST)] // Indicating this was a removal from the approved list
         ],
         content: JSON.stringify({
           reason: "Removed from group by moderator",
@@ -274,12 +275,12 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     try {
       // Create decline event (kind 14551)
       await publishEvent({
-        kind: 14551,
+        kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
         tags: [
           ["a", communityId],
           ["e", request.id],
           ["p", request.pubkey],
-          ["k", "4552"] // The kind of the request event
+          ["k", String(KINDS.GROUP_JOIN_REQUEST)] // The kind of the request event
         ],
         content: JSON.stringify(request), // Store the full request event
       });
@@ -317,7 +318,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
           // Create a new declined event that doesn't include this pubkey
           // This effectively "removes" the user from the declined list
           await publishEvent({
-            kind: 14551,
+            kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
             tags: [
               ["a", communityId],
               ["e", eventIdTag[1]],
@@ -338,7 +339,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
 
       // Create approved members event (kind 14550)
       await publishEvent({
-        kind: 14550,
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
         tags,
         content: "",
       });

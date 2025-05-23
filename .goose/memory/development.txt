@@ -1,0 +1,30 @@
+# hashtags nostr react ui complete
+Hashtag functionality implementation completed in Chorus Nostr client:
+
+1. ✅ NoteContent.tsx - Hashtag rendering and clickable links
+2. ✅ CreatePostForm.tsx - Hashtag extraction and 't' tags on post creation
+3. ✅ ReplyForm.tsx - Hashtag extraction and 't' tags on replies  
+4. ✅ Hashtag.tsx page - Dedicated hashtag feed page with filtering
+5. ✅ EditProfileForm.tsx - Added 'about' field with hashtag support in bio
+
+The hashtag system now works end-to-end:
+- Users can type #hashtags in posts, replies, and profile bios
+- Hashtags are automatically extracted and stored as 't' tags in Nostr events
+- Hashtags are rendered as clickable links in content
+- Clicking hashtags navigates to dedicated hashtag feed pages
+- Hashtag feeds show all posts containing that specific hashtag
+- Profile bios support hashtags for discoverability
+
+All components compile successfully and the implementation follows Nostr protocol standards.
+
+# workflow git shorthand process
+User workflow shorthand: When user says "you know what to do" or "ykwtd" it means:
+1. Create a new branch
+2. Commit the changes  
+3. Create a pull request
+
+This is the standard workflow for completing feature implementation.
+
+# trending hashtags feature-request discovery
+User wants trending hashtag functionality added to the Chorus Nostr client. This would show popular/frequently used hashtags to help users discover what's trending in the network.
+

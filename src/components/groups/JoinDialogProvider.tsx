@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,18 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-
-// Define types for our context
-interface JoinDialogContextType {
-  openJoinDialog: (communityId: string) => void;
-  isDialogOpen: boolean;
-}
-
-// Create the context with a default value
-const JoinDialogContext = createContext<JoinDialogContextType>({
-  openJoinDialog: () => {},
-  isDialogOpen: false,
-});
+import { JoinDialogContext } from "./JoinDialogContext";
+import { KINDS } from "@/lib/nostr-kinds";
 
 // Create a provider component
 export function JoinDialogProvider({ children }: { children: React.ReactNode }) {
@@ -44,7 +34,7 @@ export function JoinDialogProvider({ children }: { children: React.ReactNode }) 
     try {
       // Create join request event (kind 4552)
       await publishEvent({
-        kind: 4552,
+        kind: KINDS.GROUP_JOIN_REQUEST,
         tags: [
           ["a", currentCommunityId],
         ],
@@ -99,9 +89,4 @@ export function JoinDialogProvider({ children }: { children: React.ReactNode }) 
       )}
     </JoinDialogContext.Provider>
   );
-}
-
-// Custom hook to use the join dialog context
-export function useJoinDialog() {
-  return useContext(JoinDialogContext);
 }

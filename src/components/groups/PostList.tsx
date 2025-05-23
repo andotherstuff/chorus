@@ -1,5 +1,5 @@
 import { useNostr } from "@/hooks/useNostr";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,8 +9,9 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useBannedUsers } from "@/hooks/useBannedUsers";
+import { usePinnedPosts } from "@/hooks/usePinnedPosts";
 import { toast } from "sonner";
-import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer } from "lucide-react";
+import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer, Pin } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { NutzapInterface } from "@/components/groups/NutzapInterface";
@@ -23,6 +24,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { ReplyList } from "./ReplyList";
 import { ReportDialog } from "./ReportDialog";
 import { shareContent } from "@/lib/share";
+import { KINDS } from "@/lib/nostr-kinds";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,7 +61,7 @@ function ReplyCount({ postId }: { postId: string }) {
 
       // Get all kind 1111 replies that reference this post
       const events = await nostr.query([{
-        kinds: [1111],
+        kinds: [KINDS.GROUP_POST_REPLY],
         "#e": [postId],
         limit: 100,
       }], { signal });
@@ -87,6 +89,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { bannedUsers } = useBannedUsers(communityId);
+  const { pinnedPostIds, isLoading: isLoadingPinnedPostIds } = usePinnedPosts(communityId);
 
   // Query for approved posts
   const { data: approvedPosts, isLoading: isLoadingApproved } = useQuery({
@@ -95,7 +98,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       const approvals = await nostr.query([{
-        kinds: [4550],
+        kinds: [KINDS.GROUP_POST_APPROVAL],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -108,14 +111,14 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           const kind = kindTag ? Number.parseInt(kindTag[1]) : null;
 
           // Skip this approval if it's for a reply (kind 1111)
-          if (kind === 1111) {
+          if (kind === KINDS.GROUP_POST_REPLY) {
             return null;
           }
 
           const approvedPost = JSON.parse(approval.content) as NostrEvent;
 
           // Skip if the post itself is a reply
-          if (approvedPost.kind === 1111) {
+          if (approvedPost.kind === KINDS.GROUP_POST_REPLY) {
             return null;
           }
 
@@ -154,7 +157,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       const removals = await nostr.query([{
-        kinds: [4551],
+        kinds: [KINDS.GROUP_POST_REMOVAL],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -173,7 +176,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const posts = await nostr.query([{
-        kinds: [11],
+        kinds: [KINDS.GROUP_POST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -181,7 +184,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       // Filter out replies (kind 1111) and any posts with a parent reference
       const filteredPosts = posts.filter(post => {
         // Exclude posts with kind 1111 (replies)
-        if (post.kind === 1111) {
+        if (post.kind === KINDS.GROUP_POST_REPLY) {
           return false;
         }
 
@@ -212,7 +215,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });
@@ -231,7 +234,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         : null;
       if (!parsedId) return null;
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier],
       }], { signal });
@@ -240,13 +243,37 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     enabled: !!nostr && !!communityId,
   });
 
-  const approvedMembers = approvedMembersEvents?.flatMap(event =>
-    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
-  ) || [];
+  // Query for pinned posts content
+  const { data: pinnedPosts, isLoading: isLoadingPinnedPosts } = useQuery({
+    queryKey: ["pinned-posts-content", communityId, pinnedPostIds],
+    queryFn: async (c) => {
+      if (!pinnedPostIds || pinnedPostIds.length === 0) return [];
+      
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      // Fetch the actual pinned posts
+      const posts = await nostr.query([{
+        kinds: [1, KINDS.GROUP_POST],
+        ids: pinnedPostIds,
+      }], { signal });
 
-  const moderators = communityEvent?.tags
-    .filter(tag => tag[0] === "p" && tag[3] === "moderator")
-    .map(tag => tag[1]) || [];
+      return posts;
+    },
+    enabled: !!nostr && !!communityId,
+    // Ensure the query refetches when pinnedPostIds changes
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+  });
+
+  const approvedMembers = useMemo(() => 
+    approvedMembersEvents?.flatMap(event =>
+      event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
+    ) || [], [approvedMembersEvents]);
+
+  const moderators = useMemo(() => 
+    communityEvent?.tags
+      .filter(tag => tag[0] === "p" && tag[3] === "moderator")
+      .map(tag => tag[1]) || [], [communityEvent]);
 
   const isUserModerator = Boolean(user && moderators.includes(user.pubkey));
 
@@ -256,7 +283,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     index === self.findIndex(p => p.id === post.id)
   );
 
-  const removedPostIds = removedPosts || [];
+  const removedPostIds = useMemo(() => removedPosts || [], [removedPosts]);
   const postsWithoutRemoved = uniquePosts.filter(post =>
     !removedPostIds.includes(post.id) &&
     !bannedUsers.includes(post.pubkey)
@@ -267,7 +294,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     if ('approval' in post) return post;
 
     // Check if this is a reply by looking at the kind or tags
-    const isReply = post.kind === 1111 || post.tags.some(tag =>
+    const isReply = post.kind === KINDS.GROUP_POST_REPLY || post.tags.some(tag =>
       tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
     );
 
@@ -313,7 +340,72 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     });
   }
 
-  const sortedPosts = filteredPosts.sort((a, b) => b.created_at - a.created_at);
+  // Memoize the sorted posts to avoid unnecessary re-renders
+  const sortedPosts = useMemo(() => {
+    // Process pinned posts through the same approval logic
+    const pinnedPostsProcessed = (pinnedPosts || [])
+      .filter(post => 
+        !removedPostIds.includes(post.id) && 
+        !bannedUsers.includes(post.pubkey)
+      )
+      .map(post => {
+        // Check if this pinned post is already in the approved posts
+        const existingApproval = (approvedPosts || []).find(ap => ap.id === post.id);
+        if (existingApproval) {
+          return existingApproval;
+        }
+
+        // Auto-approve for approved members and moderators
+        const isApprovedMember = approvedMembers.includes(post.pubkey);
+        const isModerator = moderators.includes(post.pubkey);
+        if (isApprovedMember || isModerator) {
+          return {
+            ...post,
+            approval: {
+              id: `auto-approved-${post.id}`,
+              pubkey: post.pubkey,
+              created_at: post.created_at,
+              autoApproved: true,
+              kind: post.kind
+            }
+          };
+        }
+        return post;
+      });
+
+    // Filter pinned posts based on approval status
+    let filteredPinnedPosts = pinnedPostsProcessed;
+    if (showOnlyApproved) {
+      filteredPinnedPosts = pinnedPostsProcessed.filter(post => 'approval' in post);
+    } else if (pendingOnly) {
+      filteredPinnedPosts = pinnedPostsProcessed.filter(post => !('approval' in post));
+    }
+
+    // Separate regular posts (excluding pinned ones)
+    const regularPosts = filteredPosts.filter(post => 
+      !pinnedPostIds.includes(post.id)
+    );
+
+    // Sort regular posts by creation time
+    const sortedRegularPosts = regularPosts.sort((a, b) => b.created_at - a.created_at);
+    
+    // Sort pinned posts by creation time (most recent pins first)
+    const sortedPinnedPosts = filteredPinnedPosts.sort((a, b) => b.created_at - a.created_at);
+
+    // Combine pinned posts first, then regular posts
+    return [...sortedPinnedPosts, ...sortedRegularPosts];
+  }, [
+    pinnedPosts, 
+    removedPostIds, 
+    bannedUsers, 
+    approvedPosts, 
+    approvedMembers, 
+    moderators, 
+    showOnlyApproved, 
+    pendingOnly, 
+    filteredPosts, 
+    pinnedPostIds
+  ]);
 
   useEffect(() => {
     if (onPostCountChange) {
@@ -321,7 +413,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     }
   }, [sortedPosts, onPostCountChange]);
 
-  if (isLoadingApproved || isLoadingPending) {
+  if (isLoadingApproved || isLoadingPending || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
     return (
       <div className="space-y-0">
         {[1, 2, 3].map((i) => (
@@ -384,6 +476,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           isApproved={'approval' in post}
           isModerator={isUserModerator}
           isLastItem={index === sortedPosts.length - 1}
+          isPinned={pinnedPostIds.includes(post.id)}
         />
       ))}
     </div>
@@ -406,19 +499,23 @@ interface PostItemProps {
   isApproved: boolean;
   isModerator: boolean;
   isLastItem?: boolean;
+  isPinned?: boolean;
 }
 
-function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false }: PostItemProps) {
+function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false, isPinned = false }: PostItemProps) {
   const author = useAuthor(post.pubkey);
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish({
     invalidateQueries: [
       { queryKey: ["approved-posts", communityId] },
       { queryKey: ["pending-posts", communityId] },
-      { queryKey: ["pending-posts-count", communityId] }
+      { queryKey: ["pending-posts-count", communityId] },
+      { queryKey: ["pinned-posts", communityId] },
+      { queryKey: ["pinned-posts-content", communityId] }
     ]
   });
   const { banUser } = useBannedUsers(communityId);
+  const { pinPost, unpinPost, isPinning, isUnpinning } = usePinnedPosts(communityId);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
@@ -509,7 +606,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
     }
     try {
       await publishEvent({
-        kind: 4550,
+        kind: KINDS.GROUP_POST_APPROVAL,
         tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", String(post.kind)]],
         content: JSON.stringify(post),
       });
@@ -527,7 +624,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
     }
     try {
       await publishEvent({
-        kind: 4551,
+        kind: KINDS.GROUP_POST_REMOVAL,
         tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", String(post.kind)]],
         content: JSON.stringify({ reason: "Removed by moderator", timestamp: Date.now(), post: post }),
       });
@@ -555,15 +652,62 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
   };
 
   const handleSharePost = async () => {
-    // For now, share the group URL with a hash to the post
-    // In the future, we could add a dedicated post view
-    const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${post.id}`;
-    
-    await shareContent({
-      title: "Check out this post",
-      text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
-      url: shareUrl
-    });
+    try {
+      // Create nevent identifier for the post with relay hint
+      const nevent = nip19.neventEncode({
+        id: post.id,
+        author: post.pubkey,
+        kind: post.kind,
+        relays: ["wss://relay.chorus.community"],
+      });
+      
+      // Create njump.me URL
+      const shareUrl = `https://njump.me/${nevent}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    } catch (error) {
+      console.error("Error creating share URL:", error);
+      // Fallback to the original URL format
+      const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${post.id}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    }
+  };
+
+  const handlePinPost = async () => {
+    if (!user) {
+      toast.error("You must be logged in to pin posts");
+      return;
+    }
+    try {
+      await pinPost(post.id);
+      toast.success("Post pinned successfully!");
+    } catch (error) {
+      console.error("Error pinning post:", error);
+      toast.error("Failed to pin post. Please try again.");
+    }
+  };
+
+  const handleUnpinPost = async () => {
+    if (!user) {
+      toast.error("You must be logged in to unpin posts");
+      return;
+    }
+    try {
+      await unpinPost(post.id);
+      toast.success("Post unpinned successfully!");
+    } catch (error) {
+      console.error("Error unpinning post:", error);
+      toast.error("Failed to unpin post. Please try again.");
+    }
   };
 
   return (
@@ -579,9 +723,23 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
-              <Link to={`/profile/${post.pubkey}`} className="hover:underline">
-                <span className="font-semibold text-sm leading-tight block">{displayName}</span>
-              </Link>
+              <div className="flex items-center gap-1.5">
+                <Link to={`/profile/${post.pubkey}`} className="hover:underline">
+                  <span className="font-semibold text-sm leading-tight block">{displayName}</span>
+                </Link>
+                {isPinned && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Pin className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Pinned post</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <div className="flex items-center text-xs text-muted-foreground mt-0 flex-row">
                 <span
                   className="mr-1.5 hover:underline truncate max-w-[12rem] overflow-hidden whitespace-nowrap"
@@ -668,6 +826,23 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                         {!isApproved && (
                           <DropdownMenuItem onClick={handleApprovePost} className="text-xs">
                             <CheckCircle className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Approve Post
+                          </DropdownMenuItem>
+                        )}
+                        {isPinned ? (
+                          <DropdownMenuItem 
+                            onClick={handleUnpinPost} 
+                            className="text-xs"
+                            disabled={isUnpinning}
+                          >
+                            <Pin className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Unpin Post
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem 
+                            onClick={handlePinPost} 
+                            className="text-xs"
+                            disabled={isPinning}
+                          >
+                            <Pin className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Pin Post
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => setIsRemoveDialogOpen(true)} className="text-red-600 text-xs">
@@ -758,30 +933,8 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
               className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
               onClick={handleShowReplies}
             >
-              {/* Get replies count */}
-              {(() => {
-                const { nostr: postNostr } = useNostr();
-                const { data: replyCount = 0 } = useQuery({
-                  queryKey: ["reply-count", post.id],
-                  queryFn: async (c) => {
-                    const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-                    const events = await postNostr.query([{
-                      kinds: [1111],
-                      "#e": [post.id],
-                      limit: 100,
-                    }], { signal });
-                    return events?.length || 0;
-                  },
-                  enabled: !!postNostr && !!post.id,
-                });
-                
-                return (
-                  <>
-                    <MessageSquare className={`h-3.5 w-3.5`} />
-                    {replyCount > 0 && <span className="text-xs ml-0.5">{replyCount}</span>}
-                  </>
-                );
-              })()}
+              <MessageSquare className={`h-3.5 w-3.5`} />
+              <ReplyCount postId={post.id} />
             </Button>
             <EmojiReactionButton postId={post.id} showText={false} />
             <NutzapButton 
@@ -827,7 +980,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
               relayHint={undefined}
               onSuccess={() => {
                 // Call the refetch function if available
-                const refetchFn = (window as any)[`zapRefetch_${post.id}`];
+                const refetchFn = window[`zapRefetch_${post.id}`];
                 if (refetchFn) refetchFn();
               }}
             />

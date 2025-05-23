@@ -28,11 +28,6 @@ export default function Settings() {
   // Get pubkey in npub format
   const npub = user ? nip19.npubEncode(user.pubkey) : '';
 
-  // Redirect to home if user is not logged in
-  if (!user) {
-    return <Navigate to="/" />;
-  }
-
   // Load settings and private key from localStorage on component mount
   useEffect(() => {
     // Load settings
@@ -105,6 +100,11 @@ export default function Settings() {
     };
     localStorage.setItem("settings", JSON.stringify(settings));
   }, [postExpiration]);
+
+  // Redirect to home if user is not logged in
+  if (!user) {
+    return <Navigate to="/" />;
+  }
 
   // Function to handle deletion of all events
   const handleDeleteAll = async () => {
