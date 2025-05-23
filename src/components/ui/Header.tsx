@@ -24,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
 
   return (
     <div className={`flex justify-between items-center ${className || ""}`}>
-      <div className="flex items-end gap-1.5">
+      <div className="flex items-center gap-1.5">
         <Link to="/" className="contents">
           <h1 className="text-2xl font-bold flex flex-row items-center leading-none">
             <span className="text-red-500 font-extrabold text-3xl">+</span>
@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           </h1>
         </Link>
         {user && (
-          <Link to="/" className="text-gray-500/60 hover:text-gray-700 dark:text-gray-400/60 dark:hover:text-gray-200 transition-all pb-[2px]">
+          <Link to="/" className="text-gray-500/60 hover:text-gray-700 dark:text-gray-400/60 dark:hover:text-gray-200 transition-all">
             <Home className="w-5 h-5" />
           </Link>
         )}
