@@ -635,7 +635,7 @@ export default function GroupSettings() {
 
         {(isOwner || isModerator) && (
           <TabsContent value="members" className="mt-3">
-            <MemberManagement communityId={groupId || ""} isModerator={isModerator} />
+            <MemberManagement communityId={groupId || ""} isModerator={isModerator || false} />
           </TabsContent>
         )}
 

@@ -1,5 +1,5 @@
 import { useNostr } from "@/hooks/useNostr";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,8 +9,9 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useBannedUsers } from "@/hooks/useBannedUsers";
+import { usePinnedPosts } from "@/hooks/usePinnedPosts";
 import { toast } from "sonner";
-import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer } from "lucide-react";
+import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer, Pin } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { NutzapInterface } from "@/components/groups/NutzapInterface";
@@ -87,6 +88,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { bannedUsers } = useBannedUsers(communityId);
+  const { pinnedPostIds, isLoading: isLoadingPinnedPostIds } = usePinnedPosts(communityId);
 
   // Query for approved posts
   const { data: approvedPosts, isLoading: isLoadingApproved } = useQuery({
@@ -240,13 +242,37 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     enabled: !!nostr && !!communityId,
   });
 
-  const approvedMembers = approvedMembersEvents?.flatMap(event =>
-    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
-  ) || [];
+  // Query for pinned posts content
+  const { data: pinnedPosts, isLoading: isLoadingPinnedPosts } = useQuery({
+    queryKey: ["pinned-posts-content", communityId, pinnedPostIds],
+    queryFn: async (c) => {
+      if (!pinnedPostIds || pinnedPostIds.length === 0) return [];
+      
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      // Fetch the actual pinned posts
+      const posts = await nostr.query([{
+        kinds: [1, 11],
+        ids: pinnedPostIds,
+      }], { signal });
 
-  const moderators = communityEvent?.tags
-    .filter(tag => tag[0] === "p" && tag[3] === "moderator")
-    .map(tag => tag[1]) || [];
+      return posts;
+    },
+    enabled: !!nostr && !!communityId,
+    // Ensure the query refetches when pinnedPostIds changes
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+  });
+
+  const approvedMembers = useMemo(() => 
+    approvedMembersEvents?.flatMap(event =>
+      event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
+    ) || [], [approvedMembersEvents]);
+
+  const moderators = useMemo(() => 
+    communityEvent?.tags
+      .filter(tag => tag[0] === "p" && tag[3] === "moderator")
+      .map(tag => tag[1]) || [], [communityEvent]);
 
   const isUserModerator = Boolean(user && moderators.includes(user.pubkey));
 
@@ -256,7 +282,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     index === self.findIndex(p => p.id === post.id)
   );
 
-  const removedPostIds = removedPosts || [];
+  const removedPostIds = useMemo(() => removedPosts || [], [removedPosts]);
   const postsWithoutRemoved = uniquePosts.filter(post =>
     !removedPostIds.includes(post.id) &&
     !bannedUsers.includes(post.pubkey)
@@ -313,7 +339,72 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     });
   }
 
-  const sortedPosts = filteredPosts.sort((a, b) => b.created_at - a.created_at);
+  // Memoize the sorted posts to avoid unnecessary re-renders
+  const sortedPosts = useMemo(() => {
+    // Process pinned posts through the same approval logic
+    const pinnedPostsProcessed = (pinnedPosts || [])
+      .filter(post => 
+        !removedPostIds.includes(post.id) && 
+        !bannedUsers.includes(post.pubkey)
+      )
+      .map(post => {
+        // Check if this pinned post is already in the approved posts
+        const existingApproval = (approvedPosts || []).find(ap => ap.id === post.id);
+        if (existingApproval) {
+          return existingApproval;
+        }
+
+        // Auto-approve for approved members and moderators
+        const isApprovedMember = approvedMembers.includes(post.pubkey);
+        const isModerator = moderators.includes(post.pubkey);
+        if (isApprovedMember || isModerator) {
+          return {
+            ...post,
+            approval: {
+              id: `auto-approved-${post.id}`,
+              pubkey: post.pubkey,
+              created_at: post.created_at,
+              autoApproved: true,
+              kind: post.kind
+            }
+          };
+        }
+        return post;
+      });
+
+    // Filter pinned posts based on approval status
+    let filteredPinnedPosts = pinnedPostsProcessed;
+    if (showOnlyApproved) {
+      filteredPinnedPosts = pinnedPostsProcessed.filter(post => 'approval' in post);
+    } else if (pendingOnly) {
+      filteredPinnedPosts = pinnedPostsProcessed.filter(post => !('approval' in post));
+    }
+
+    // Separate regular posts (excluding pinned ones)
+    const regularPosts = filteredPosts.filter(post => 
+      !pinnedPostIds.includes(post.id)
+    );
+
+    // Sort regular posts by creation time
+    const sortedRegularPosts = regularPosts.sort((a, b) => b.created_at - a.created_at);
+    
+    // Sort pinned posts by creation time (most recent pins first)
+    const sortedPinnedPosts = filteredPinnedPosts.sort((a, b) => b.created_at - a.created_at);
+
+    // Combine pinned posts first, then regular posts
+    return [...sortedPinnedPosts, ...sortedRegularPosts];
+  }, [
+    pinnedPosts, 
+    removedPostIds, 
+    bannedUsers, 
+    approvedPosts, 
+    approvedMembers, 
+    moderators, 
+    showOnlyApproved, 
+    pendingOnly, 
+    filteredPosts, 
+    pinnedPostIds
+  ]);
 
   useEffect(() => {
     if (onPostCountChange) {
@@ -321,7 +412,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     }
   }, [sortedPosts, onPostCountChange]);
 
-  if (isLoadingApproved || isLoadingPending) {
+  if (isLoadingApproved || isLoadingPending || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
     return (
       <div className="space-y-0">
         {[1, 2, 3].map((i) => (
@@ -384,6 +475,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           isApproved={'approval' in post}
           isModerator={isUserModerator}
           isLastItem={index === sortedPosts.length - 1}
+          isPinned={pinnedPostIds.includes(post.id)}
         />
       ))}
     </div>
@@ -406,19 +498,23 @@ interface PostItemProps {
   isApproved: boolean;
   isModerator: boolean;
   isLastItem?: boolean;
+  isPinned?: boolean;
 }
 
-function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false }: PostItemProps) {
+function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false, isPinned = false }: PostItemProps) {
   const author = useAuthor(post.pubkey);
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish({
     invalidateQueries: [
       { queryKey: ["approved-posts", communityId] },
       { queryKey: ["pending-posts", communityId] },
-      { queryKey: ["pending-posts-count", communityId] }
+      { queryKey: ["pending-posts-count", communityId] },
+      { queryKey: ["pinned-posts", communityId] },
+      { queryKey: ["pinned-posts-content", communityId] }
     ]
   });
   const { banUser } = useBannedUsers(communityId);
+  const { pinPost, unpinPost, isPinning, isUnpinning } = usePinnedPosts(communityId);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
@@ -566,6 +662,34 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
     });
   };
 
+  const handlePinPost = async () => {
+    if (!user) {
+      toast.error("You must be logged in to pin posts");
+      return;
+    }
+    try {
+      await pinPost(post.id);
+      toast.success("Post pinned successfully!");
+    } catch (error) {
+      console.error("Error pinning post:", error);
+      toast.error("Failed to pin post. Please try again.");
+    }
+  };
+
+  const handleUnpinPost = async () => {
+    if (!user) {
+      toast.error("You must be logged in to unpin posts");
+      return;
+    }
+    try {
+      await unpinPost(post.id);
+      toast.success("Post unpinned successfully!");
+    } catch (error) {
+      console.error("Error unpinning post:", error);
+      toast.error("Failed to unpin post. Please try again.");
+    }
+  };
+
   return (
     <div className={`py-4 hover:bg-muted/5 transition-colors ${!isLastItem ? 'border-b-2 border-border/70' : ''}`}>
       <div className="flex flex-row items-start px-3">
@@ -579,9 +703,23 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
-              <Link to={`/profile/${post.pubkey}`} className="hover:underline">
-                <span className="font-semibold text-sm leading-tight block">{displayName}</span>
-              </Link>
+              <div className="flex items-center gap-1.5">
+                <Link to={`/profile/${post.pubkey}`} className="hover:underline">
+                  <span className="font-semibold text-sm leading-tight block">{displayName}</span>
+                </Link>
+                {isPinned && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Pin className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Pinned post</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <div className="flex items-center text-xs text-muted-foreground mt-0 flex-row">
                 <span
                   className="mr-1.5 hover:underline truncate max-w-[12rem] overflow-hidden whitespace-nowrap"
@@ -668,6 +806,23 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                         {!isApproved && (
                           <DropdownMenuItem onClick={handleApprovePost} className="text-xs">
                             <CheckCircle className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Approve Post
+                          </DropdownMenuItem>
+                        )}
+                        {isPinned ? (
+                          <DropdownMenuItem 
+                            onClick={handleUnpinPost} 
+                            className="text-xs"
+                            disabled={isUnpinning}
+                          >
+                            <Pin className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Unpin Post
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem 
+                            onClick={handlePinPost} 
+                            className="text-xs"
+                            disabled={isPinning}
+                          >
+                            <Pin className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Pin Post
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem onClick={() => setIsRemoveDialogOpen(true)} className="text-red-600 text-xs">
@@ -758,30 +913,8 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
               className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
               onClick={handleShowReplies}
             >
-              {/* Get replies count */}
-              {(() => {
-                const { nostr: postNostr } = useNostr();
-                const { data: replyCount = 0 } = useQuery({
-                  queryKey: ["reply-count", post.id],
-                  queryFn: async (c) => {
-                    const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-                    const events = await postNostr.query([{
-                      kinds: [1111],
-                      "#e": [post.id],
-                      limit: 100,
-                    }], { signal });
-                    return events?.length || 0;
-                  },
-                  enabled: !!postNostr && !!post.id,
-                });
-                
-                return (
-                  <>
-                    <MessageSquare className={`h-3.5 w-3.5`} />
-                    {replyCount > 0 && <span className="text-xs ml-0.5">{replyCount}</span>}
-                  </>
-                );
-              })()}
+              <MessageSquare className={`h-3.5 w-3.5`} />
+              <ReplyCount postId={post.id} />
             </Button>
             <EmojiReactionButton postId={post.id} showText={false} />
             <NutzapButton 
@@ -827,7 +960,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
               relayHint={undefined}
               onSuccess={() => {
                 // Call the refetch function if available
-                const refetchFn = (window as any)[`zapRefetch_${post.id}`];
+                const refetchFn = window[`zapRefetch_${post.id}`];
                 if (refetchFn) refetchFn();
               }}
             />

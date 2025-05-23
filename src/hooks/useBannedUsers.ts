@@ -23,7 +23,11 @@ export function useBannedUsers(communityId?: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       // Create the filter object
-      const filter: Record<string, any> = {
+      const filter: {
+        kinds: number[];
+        limit: number;
+        "#a"?: string[];
+      } = {
         kinds: [14552],
         limit: 50,
       };

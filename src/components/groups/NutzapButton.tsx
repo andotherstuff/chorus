@@ -12,6 +12,13 @@ import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { useCashuStore } from "@/stores/cashuStore";
 
+// Type augmentation for window object
+declare global {
+  interface Window {
+    [key: `zapRefetch_${string}`]: () => void;
+  }
+}
+
 interface NutzapButtonProps {
   postId: string;
   authorPubkey: string;
@@ -116,7 +123,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
   // Pass refetch to parent if needed
   if (refetchZaps && refetch) {
     // Store reference for parent to use
-    (window as any)[`zapRefetch_${postId}`] = refetch;
+    window[`zapRefetch_${postId}`] = refetch;
   }
 
   return (
@@ -129,7 +136,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
       {showSats ? (
         <Bitcoin className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
       ) : (
-        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
+        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-green-500' : ''}`} />
       )}
       {showText && nutzapTotal > 0 && <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span>}
     </Button>

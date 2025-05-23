@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, Loader2 } from "lucide-react";
+import { DollarSign, Loader2, Bitcoin } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
@@ -188,7 +188,11 @@ export function NutzapInterface({ postId, authorPubkey, relayHint, onSuccess }: 
               </>
             ) : (
               <>
-                <DollarSign className="mr-1 h-3 w-3" />
+                {showSats ? (
+                  <Bitcoin className="mr-1 h-3 w-3" />
+                ) : (
+                  <DollarSign className="mr-1 h-3 w-3" />
+                )}
                 Send eCash
               </>
             )}

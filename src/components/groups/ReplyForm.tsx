@@ -41,6 +41,12 @@ export function ReplyForm({
   });
   const { isApprovedMember } = useApprovedMembers(communityId);
   
+  // Move useAuthor hook before any conditional returns
+  const author = useAuthor(user?.pubkey || '');
+  const metadata = author.data?.metadata;
+  const displayName = metadata?.name || user?.pubkey.slice(0, 8) || '';
+  const profileImage = metadata?.picture;
+  
   const [content, setContent] = useState("");
   
   if (!user) return null;
@@ -95,12 +101,6 @@ export function ReplyForm({
       toast.error("Failed to post reply. Please try again.");
     }
   };
-  
-  // Get user metadata using the useAuthor hook
-  const author = useAuthor(user.pubkey);
-  const metadata = author.data?.metadata;
-  const displayName = metadata?.name || user.pubkey.slice(0, 8);
-  const profileImage = metadata?.picture;
   
   return (
     <div className={`flex gap-2.5 ${isNested ? 'pl-2' : ''}`}>

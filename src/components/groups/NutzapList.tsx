@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Zap, DollarSign } from "lucide-react";
+import { Zap, DollarSign, Bitcoin } from "lucide-react";
 import { CASHU_EVENT_KINDS } from "@/lib/cashu";
 import { formatBalance } from "@/lib/cashu";
 import { Proof } from "@cashu/cashu-ts";
@@ -18,7 +18,7 @@ interface Nutzap {
   pubkey: string;
   createdAt: number;
   content: string;
-  proofs: any[];
+  proofs: Proof[];
   mintUrl: string;
   amount: number;
 }
@@ -133,7 +133,11 @@ export function NutzapList({ postId }: NutzapListProps) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1">
-        <DollarSign className="h-3 w-3 text-amber-500" />
+        {showSats ? (
+          <Bitcoin className="h-3 w-3 text-amber-500" />
+        ) : (
+          <DollarSign className="h-3 w-3 text-green-500" />
+        )}
         <span className="text-xs text-muted-foreground">
           {formatAmount(totalAmount)} from {nutzaps.length} {nutzaps.length === 1 ? 'person' : 'people'}
         </span>

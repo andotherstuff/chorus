@@ -28,6 +28,8 @@ import { QRCodeModal } from "@/components/QRCodeModal";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function GroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -40,6 +42,7 @@ export default function GroupDetail() {
   const [activeTab, setActiveTab] = useState("posts");
   const [imageLoading, setImageLoading] = useState(true);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [showGuidelines, setShowGuidelines] = useState(false);
 
 
   const searchParams = new URLSearchParams(location.search);
@@ -73,10 +76,42 @@ export default function GroupDetail() {
     enabled: !!nostr && !!parsedId,
   });
 
+  // Query for approved members list
+  const { data: approvedMembersEvents } = useQuery({
+    queryKey: ["approved-members-list", groupId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const events = await nostr.query([{
+        kinds: [14550],
+        "#a": [groupId || ''],
+        limit: 10,
+      }], { signal });
+      return events;
+    },
+    enabled: !!nostr && !!groupId,
+  });
+
+  // Get approved members' pubkeys
+  const approvedMembers = approvedMembersEvents?.flatMap(event =>
+    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
+  ) || [];
+
   const isOwner = user && community && user.pubkey === community.pubkey;
-  const isModerator = isOwner || (user && community?.tags
+  
+  // Get moderators from community event
+  const moderators = community?.tags
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
-    .some(tag => tag[1] === user.pubkey));
+    .map(tag => tag[1]) || [];
+  
+  const isModerator = isOwner || (user && moderators.includes(user.pubkey));
+
+  // Handler to ensure unapproved posts are visible when user posts
+  const handlePostSuccess = () => {
+    // If the user is not an approved member or moderator, show all posts
+    if (user && !isModerator && approvedMembers && !approvedMembers.includes(user.pubkey)) {
+      setShowOnlyApproved(false);
+    }
+  };
 
   const { data: pendingPostsCount = 0 } = usePendingPostsCount(groupId || '');
   const { data: pendingReplies = [] } = usePendingReplies(groupId || '');
@@ -193,7 +228,7 @@ export default function GroupDetail() {
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
 
-      <div className="relative mb-6 mt-4">
+      <div className="relative mb-6 mt-4 max-w-3xl mx-auto">
         <div className="flex gap-4">
           <div className="flex-1">
             <div className="h-40 rounded-lg overflow-hidden mb-2 relative">
@@ -217,7 +252,7 @@ export default function GroupDetail() {
             {!isModerator ? (
               <>
                 <div className="h-8">
-                  <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+                  <JoinRequestButton communityId={groupId || ''} isModerator={isModerator || false} />
                 </div>
                 {/* If there are more buttons than these, they will flow from top to bottom */}
                 {/* Ensure consistent height for GroupNutzapTotal */}
@@ -278,7 +313,7 @@ export default function GroupDetail() {
                       groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
                       ownerPubkey={community.pubkey}
                       variant="outline"
-                      className="w-full h-8"
+                      className="w-full h-full"
                     />
                   )}
                 </div>
@@ -294,26 +329,43 @@ export default function GroupDetail() {
         <div className="w-full mt-4">
           <div className="flex items-center mb-2">
             <h1 className="text-2xl font-bold">{name}</h1>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 ml-2"
-              onClick={() => setShowQRCode(true)}
-            >
-              <QrCode className="h-4 w-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 ml-2"
+                    onClick={() => setShowQRCode(true)}
+                  >
+                    <QrCode className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Share group QR code
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {hasGuidelines && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 ml-1"
+                      onClick={() => setShowGuidelines(true)}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Community guidelines
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
-          {hasGuidelines && (
-            <div className="mb-2">
-              <Link
-                to={`/group/${encodeURIComponent(groupId || '')}/guidelines`}
-                className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 text-xs font-medium inline-flex items-center gap-0.5"
-              >
-                <FileText className="h-4 w-4" />
-                Community Guidelines
-              </Link>
-            </div>
-          )}
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       </div>
@@ -323,7 +375,7 @@ export default function GroupDetail() {
         // Update URL hash without full page reload
         window.history.pushState(null, '', `#${value}`);
       }} className="w-full">
-        <div className="md:flex md:justify-start">
+        <div className="flex justify-center">
           <TabsList className="mb-4 w-full md:w-auto grid grid-cols-3 gap-0">
             <TabsTrigger value="posts" className="flex items-center justify-center">
               <MessageSquare className="h-4 w-4 mr-1" />
@@ -345,7 +397,7 @@ export default function GroupDetail() {
         <TabsContent value="posts" className="space-y-4">
           {user && (
             <div className="max-w-3xl mx-auto">
-              <CreatePostForm communityId={groupId || ''} />
+              <CreatePostForm communityId={groupId || ''} onPostSuccess={handlePostSuccess} />
             </div>
           )}
 
@@ -373,16 +425,21 @@ export default function GroupDetail() {
         </TabsContent>
 
         <TabsContent value="ecash" className="space-y-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Group eCash</h2>
-            {user && community && (
-              <GroupNutzapButton
-                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                ownerPubkey={community.pubkey}
-              />
-            )}
+          <div className="max-w-3xl mx-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Group eCash</h2>
+              {user && community && (
+                <div className="flex-shrink-0">
+                  <GroupNutzapButton
+                    groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                    ownerPubkey={community.pubkey}
+                    className="w-auto"
+                  />
+                </div>
+              )}
+            </div>
+            <GroupNutzapList groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
           </div>
-          <GroupNutzapList groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
@@ -399,6 +456,23 @@ export default function GroupDetail() {
         profileUrl={`${window.location.origin}/group/${encodeURIComponent(groupId || '')}`}
         displayName={name}
       />
+
+      {/* Community Guidelines Modal */}
+      <Dialog open={showGuidelines} onOpenChange={setShowGuidelines}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Community Guidelines</DialogTitle>
+            <DialogDescription>
+              Guidelines for {name}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="mt-4 max-h-[60vh] pr-4">
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <p className="whitespace-pre-wrap">{guidelinesTag?.[1] || "No guidelines available."}</p>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, DollarSign } from "lucide-react";
+import { Zap, DollarSign, Bitcoin } from "lucide-react";
 import {
   useSendNutzap,
   useFetchNutzapInfo,
@@ -164,10 +164,14 @@ export function GroupNutzapButton({
       <Button
         variant={variant}
         size={size}
-        className={cn("w-full h-full justify-start pl-3 text-xs", className)}
+        className={cn("justify-start pl-3 text-xs", className)}
         onClick={handleOpenDialog}
       >
-        <DollarSign className="h-4 w-4 mr-1" />
+        {showSats ? (
+          <Bitcoin className="h-4 w-4 mr-1" />
+        ) : (
+          <DollarSign className="h-4 w-4 mr-1" />
+        )}
         Send eCash
       </Button>
 

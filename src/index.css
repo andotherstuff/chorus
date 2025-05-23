@@ -115,3 +115,16 @@
 .flash-update {
   animation: flash-update 0.3s ease-in-out;
 }
+
+@keyframes scan {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(calc(100% - 2px));
+  }
+}
+
+.animate-scan {
+  animation: scan 2s ease-in-out infinite alternate;
+}

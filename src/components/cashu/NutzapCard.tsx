@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -85,14 +85,14 @@ export function NutzapCard() {
   const userNpub = user ? nip19.npubEncode(user.pubkey) : "";
 
   // Format amount based on user preference
-  const formatAmount = (sats: number) => {
+  const formatAmount = useCallback((sats: number) => {
     if (showSats) {
       return formatBalance(sats);
     } else if (btcPrice) {
       return formatUSD(satsToUSD(sats, btcPrice.USD));
     }
     return formatBalance(sats);
-  };
+  }, [showSats, btcPrice]);
 
   // Set up subscription for real-time nutzaps
   useEffect(() => {
@@ -247,7 +247,7 @@ export function NutzapCard() {
     return () => {
       controller.abort();
     };
-  }, [user, nutzapInfoQuery.data, fetchedNutzaps, nostr, redeemNutzap]);
+  }, [user, nutzapInfoQuery.data, fetchedNutzaps, nostr, redeemNutzap, formatAmount]);
 
   const copyToClipboard = async (text: string) => {
     try {

@@ -45,7 +45,7 @@ export function useReportActions() {
     try {
       // Take the appropriate action based on moderator decision
       switch (action) {
-        case "remove_content":
+        case "remove_content": {
           if (eventId) {
             // Fetch the post to get its kind and include it in the removal event
             try {
@@ -101,8 +101,9 @@ export function useReportActions() {
             }
           }
           break;
+        }
           
-        case "remove_user":
+        case "remove_user": {
           // Remove user from approved members list
           const result = await removeFromApprovedList(pubkey, communityId);
           
@@ -117,8 +118,9 @@ export function useReportActions() {
             throw new Error(result.message);
           }
           break;
+        }
           
-        case "ban_user":
+        case "ban_user": {
           // Ban the user with the specific communityId
           await banUser(pubkey, communityId);
           
@@ -138,6 +140,7 @@ export function useReportActions() {
             toast.warning("User was banned but could not be removed from approved members list");
           }
           break;
+        }
           
         case "no_action":
           // No additional action needed

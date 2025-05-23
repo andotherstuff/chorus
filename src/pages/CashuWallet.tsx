@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { LoginArea } from "@/components/auth/LoginArea";
 import { CashuHistoryCard } from "@/components/cashu/CashuHistoryCard";
 import { CashuTokenCard } from "@/components/cashu/CashuTokenCard";
@@ -13,7 +13,7 @@ import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { useCashuStore } from "@/stores/cashuStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useToast } from "@/hooks/useToast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bitcoin, DollarSign, ArrowLeftRight } from "lucide-react";
 // import { formatUSD, satoshisToUSD } from "@/lib/bitcoinUtils";
 import { formatBalance, calculateBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
@@ -37,14 +37,14 @@ export function CashuWallet() {
   );
 
   // Helper function to format amount based on user preference
-  const formatAmount = (sats: number): string => {
+  const formatAmount = useCallback((sats: number): string => {
     if (showSats) {
       return `${sats.toLocaleString()} sats`;
     } else {
       const usd = satsToUSD(sats, btcPrice?.USD || null);
       return usd !== null ? formatUSD(usd) : `${sats.toLocaleString()} sats`;
     }
-  };
+  }, [showSats, btcPrice]);
 
   // Handle pending onboarding token
   useEffect(() => {
@@ -107,6 +107,7 @@ export function CashuWallet() {
   }, [
     user,
     wallet,
+    isProcessingToken,
     cashuStore,
     onboardingStore,
     receiveToken,
@@ -165,7 +166,7 @@ export function CashuWallet() {
     };
 
     processToken();
-  }, [user, wallet]); // Depend on both user and wallet being loaded
+  }, [user, wallet, isProcessingToken, receiveToken, toast, formatAmount]); // Depend on all necessary values
 
   return (
     <div className="container mx-auto py-1 px-3 sm:px-4">
@@ -185,9 +186,21 @@ export function CashuWallet() {
           <p className="text-sm text-muted-foreground mt-1">Total Balance</p>
           <button
             onClick={() => toggleCurrency()}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-3 mx-auto"
           >
-            Show in {showSats ? "USD" : "sats"}
+            {showSats ? (
+              <>
+                <DollarSign className="h-3.5 w-3.5" />
+                <span>Show in USD</span>
+                <ArrowLeftRight className="h-3 w-3" />
+              </>
+            ) : (
+              <>
+                <Bitcoin className="h-3.5 w-3.5" />
+                <span>Show in sats</span>
+                <ArrowLeftRight className="h-3 w-3" />
+              </>
+            )}
           </button>
         </div>
       )}

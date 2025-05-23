@@ -148,6 +148,11 @@ export async function payMeltQuote(mintUrl: string, quoteId: string, proofs: Pro
     // Calculate total amount needed, including fee
     const amountToSend = meltQuote.amount + meltQuote.fee_reserve;
 
+    const proofsAmount = proofs.reduce((sum, p) => sum + p.amount, 0);
+    if (proofsAmount < amountToSend) {
+      throw new Error(`Not enough funds on mint ${mintUrl}`);
+    }
+
     // Perform coin selection
     const { keep, send } = await wallet.send(amountToSend, proofs, {
       includeFees: true, privkey: useCashuStore.getState().privkey

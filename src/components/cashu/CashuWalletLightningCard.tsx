@@ -50,6 +50,7 @@ import {
 } from "@/stores/transactionHistoryStore";
 import { v4 as uuidv4 } from "uuid";
 import { useWalletUiStore } from "@/stores/walletUiStore";
+import { QRScanner } from "@/components/QRScanner";
 
 interface TokenEvent {
   id: string;
@@ -85,6 +86,7 @@ export function CashuWalletLightningCard() {
   const [pendingTransactionId, setPendingTransactionId] = useState<
     string | null
   >(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Handle receive tab
   const handleCreateInvoice = async () => {
@@ -267,9 +269,31 @@ export function CashuWalletLightningCard() {
 
   // Start QR scanner
   const startQrScanner = () => {
-    // This would typically invoke a QR scanner component
-    // For now, we'll just show an alert
-    alert("QR scanner not implemented in this example");
+    setIsScannerOpen(true);
+  };
+
+  // Handle QR scan result
+  const handleQRScan = async (data: string) => {
+    // Check if it's a Lightning invoice (starts with 'lightning:' or 'lnbc')
+    let cleanedData = data.replace(/^lightning:/i, "");
+
+    // Basic validation for Lightning invoice format
+    if (
+      cleanedData.toLowerCase().startsWith("lnbc") ||
+      cleanedData.toLowerCase().startsWith("lntb") ||
+      cleanedData.toLowerCase().startsWith("lnbcrt")
+    ) {
+      cleanedData = cleanedData.toLowerCase();
+      handleCancel();
+      setSendInvoice(cleanedData);
+      await handleInvoiceInput(cleanedData);
+      setIsScannerOpen(false);
+    } else {
+      setError(
+        "Invalid Lightning invoice. Please scan a valid Lightning invoice QR code."
+      );
+      setTimeout(() => setError(null), 3000);
+    }
   };
 
   // Pay Lightning invoice
@@ -311,9 +335,9 @@ export function CashuWalletLightningCard() {
 
       if (totalProofsAmount < invoiceAmount + (invoiceFeeReserve || 0)) {
         setError(
-          `Insufficient balance: have ${formatBalance(totalProofsAmount)}, need ${formatBalance(
-            invoiceAmount + (invoiceFeeReserve || 0)
-          )}`
+          `Insufficient balance: have ${formatBalance(
+            totalProofsAmount
+          )}, need ${formatBalance(invoiceAmount + (invoiceFeeReserve || 0))}`
         );
         setIsProcessing(false);
         return;
@@ -598,6 +622,15 @@ export function CashuWalletLightningCard() {
           )}
         </CardContent>
       )}
+
+      {/* QR Code Scanner Modal */}
+      <QRScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={handleQRScan}
+        title="Scan Lightning Invoice"
+        description="Position the Lightning invoice QR code within the frame"
+      />
     </Card>
   );
 }

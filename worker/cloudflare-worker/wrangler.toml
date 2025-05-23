@@ -1,0 +1,19 @@
+name = "nostr-nip72-poller"
+main = "src/worker-enhanced.ts"
+compatibility_date = "2023-05-18"
+node_compat = true
+
+[[kv_namespaces]]
+binding = "KV"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[env.production]
+vars = { RELAY_URL = "wss://relay.chorus.community" }
+
+[env.production.vars]
+PUSH_DISPATCH_API = "https://your-push-api.com/dispatch"
+EOF 2>&1
