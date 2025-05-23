@@ -233,7 +233,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Your name" {...field} className="bg-background" />
                   </FormControl>
@@ -250,12 +249,12 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
             <Button
               type="submit"
               className="w-full max-w-[200px] flex items-center justify-center gap-2 mx-auto"
-              disabled={isPending || isUploading}
+              disabled={isPending || isUploading || !form.watch('name')?.trim()}
             >
               {(isPending || isUploading) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Save Profile
+              Save
             </Button>
 
             {showSkipLink && (
