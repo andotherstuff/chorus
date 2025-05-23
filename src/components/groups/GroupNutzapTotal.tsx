@@ -41,7 +41,7 @@ export function GroupNutzapTotal({ groupId, className = "" }: GroupNutzapTotalPr
   return (
     <button
       onClick={() => toggleCurrency()}
-      className={`flex items-center justify-center w-full text-orange-500 hover:text-orange-600 transition-colors cursor-pointer border border-input rounded-md px-3 py-1.5 bg-transparent hover:bg-accent/50 ${className}`}
+      className={`flex items-center justify-center w-full text-amber-500 hover:text-amber-600 transition-colors cursor-pointer border border-input rounded-md px-3 py-1.5 bg-transparent hover:bg-accent/50 ${className}`}
       title="Click to toggle between USD and sats"
     >
       {showSats ? (

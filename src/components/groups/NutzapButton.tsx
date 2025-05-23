@@ -127,9 +127,9 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
       onClick={handleZapClick}
     >
       {showSats ? (
-        <Bitcoin className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-orange-500' : ''}`} />
+        <Bitcoin className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
       ) : (
-        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-orange-500' : ''}`} />
+        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
       )}
       {showText && <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span>}
     </Button>
