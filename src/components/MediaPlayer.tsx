@@ -29,7 +29,11 @@ export function MediaPlayer({ url, type, className }: MediaPlayerProps) {
         src={url}
         controls
         className="w-full h-auto max-w-2xl mx-auto"
-        style={{ maxHeight: '70vh' }}
+        style={{ 
+          maxHeight: '70vh',
+          // For audio-only WebM files, this prevents a tall black box
+          minHeight: '54px' 
+        }}
         preload="metadata"
       >
         Your browser does not support the video tag.

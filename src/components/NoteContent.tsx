@@ -220,14 +220,14 @@ export function NoteContent({
       }
 
       // Match video URLs with common extensions
-      const videoExtensionRegex = /https?:\/\/\S+\.(mp4|mov|avi|mkv|m4v|3gp)(\?\S*)?/gi;
+      const videoExtensionRegex = /https?:\/\/\S+\.(mp4|webm|ogg|mov|avi|mkv|m4v|3gp)(\?\S*)?/gi;
       videoExtensionRegex.lastIndex = 0;
       while ((match = videoExtensionRegex.exec(event.content)) !== null) {
         extractedVideos.push(match[0]);
       }
 
       // Match audio URLs with common extensions
-      const audioExtensionRegex = /https?:\/\/\S+\.(mp3|wav|flac|m4a|aac|opus|oga|wma|webm|ogg)(\?\S*)?/gi;
+      const audioExtensionRegex = /https?:\/\/\S+\.(mp3|wav|flac|m4a|aac|opus|oga|wma)(\?\S*)?/gi;
       audioExtensionRegex.lastIndex = 0;
       while ((match = audioExtensionRegex.exec(event.content)) !== null) {
         extractedAudios.push(match[0]);
