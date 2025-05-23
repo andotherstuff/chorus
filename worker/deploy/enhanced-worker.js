@@ -392,7 +392,7 @@ class NotificationWorker {
   constructor(env) {
     this.env = env;
     this.kv = env.NOTIFICATION_KV;
-    this.relays = (env.NOSTR_RELAYS || 'wss://relay.damus.io,wss://nos.lol,wss://relay.snort.social').split(',');
+    this.relays = (env.NOSTR_RELAYS || 'wss://relay.chorus.community/').split(',');
     this.nostr = new NostrClient(this.relays);
     this.notificationBuilder = new NotificationBuilder();
   }

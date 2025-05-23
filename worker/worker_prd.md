@@ -224,7 +224,7 @@ kv_namespaces = [
   { binding = "KV", id = "<id>" }
 ]
 crons = ["*/0.5 * * * * *"] # every 30 s
-vars = { RELAY_URL = "wss://public.nip72relay.example" }
+vars = { RELAY_URL = "wss://relay.chorus.community/" }
 ```
 
 ### 17.6  Additional LLM Task Prompts
