@@ -371,7 +371,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="mb-4 w-full max-w-xs">
+          <div className="mb-4 w-full">
             <Select value={activeTab} onValueChange={setActiveTab}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select member category" />

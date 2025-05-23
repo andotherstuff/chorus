@@ -188,65 +188,69 @@ export default function GroupDetail() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 min-w-[140px] py-2">
+          <div className="flex flex-col justify-between min-w-[140px] h-36">
             {!isModerator ? (
-              <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+              <>
+                <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+                <div className="flex-1" />
+                <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+              </>
             ) : (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button asChild variant="outline" size="sm" className="relative justify-start">
-                      <Link 
-                        to={`/group/${encodeURIComponent(groupId || '')}/settings${
-                          openReportsCount > 0 ? '?tab=reports' : 
-                          pendingRequestsCount > 0 ? '?tab=members' : ''
-                        }`} 
-                        className="flex items-center gap-2"
-                      >
-                        <Settings className="h-4 w-4" />
-                        <span>Manage Group</span>
-                        {(openReportsCount > 0 || pendingRequestsCount > 0) && (
-                          <Badge 
-                            variant="destructive" 
-                            className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10"
-                          >
-                            {(openReportsCount + pendingRequestsCount) > 99 ? '99+' : (openReportsCount + pendingRequestsCount)}
-                          </Badge>
-                        )}
-                      </Link>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {isOwner ? "Owner settings" : "Moderator settings"}
-                    {openReportsCount > 0 && (
-                      <div className="text-red-400 text-xs mt-1">
-                        {openReportsCount} open report{openReportsCount !== 1 ? 's' : ''}
-                      </div>
-                    )}
-                    {pendingRequestsCount > 0 && (
-                      <div className="text-blue-400 text-xs mt-1">
-                        {pendingRequestsCount} pending join request{pendingRequestsCount !== 1 ? 's' : ''}
-                      </div>
-                    )}
-                    {(openReportsCount > 0 || pendingRequestsCount > 0) && (
-                      <div className="text-xs mt-1 text-muted-foreground">
-                        Click to review
-                      </div>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button asChild variant="outline" size="sm" className="relative justify-start">
+                        <Link 
+                          to={`/group/${encodeURIComponent(groupId || '')}/settings${
+                            openReportsCount > 0 ? '?tab=reports' : 
+                            pendingRequestsCount > 0 ? '?tab=members' : ''
+                          }`} 
+                          className="flex items-center gap-2"
+                        >
+                          <Settings className="h-4 w-4" />
+                          <span>Manage Group</span>
+                          {(openReportsCount > 0 || pendingRequestsCount > 0) && (
+                            <Badge 
+                              variant="destructive" 
+                              className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10"
+                            >
+                              {(openReportsCount + pendingRequestsCount) > 99 ? '99+' : (openReportsCount + pendingRequestsCount)}
+                            </Badge>
+                          )}
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isOwner ? "Owner settings" : "Moderator settings"}
+                      {openReportsCount > 0 && (
+                        <div className="text-red-400 text-xs mt-1">
+                          {openReportsCount} open report{openReportsCount !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                      {pendingRequestsCount > 0 && (
+                        <div className="text-blue-400 text-xs mt-1">
+                          {pendingRequestsCount} pending join request{pendingRequestsCount !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                      {(openReportsCount > 0 || pendingRequestsCount > 0) && (
+                        <div className="text-xs mt-1 text-muted-foreground">
+                          Click to review
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {user && community && (
+                  <GroupNutzapButton
+                    groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                    ownerPubkey={community.pubkey}
+                    variant="outline"
+                  />
+                )}
+                <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+              </>
             )}
-            {user && community && (
-              <GroupNutzapButton
-                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                ownerPubkey={community.pubkey}
-                variant="outline"
-              />
-            )}
-            <div className="flex justify-center">
-              <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
-            </div>
           </div>
         </div>
         
