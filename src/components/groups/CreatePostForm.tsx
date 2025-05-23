@@ -161,7 +161,13 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
         return;
       }
 
-      let finalContent = content;
+      // Add mic emoji to content if this is a voice recording
+      let baseContent = content;
+      if (mediaFile && mediaFile.name.includes('voice_memo')) {
+        baseContent = `🎤 ${content}`.trim();
+      }
+
+      let finalContent = baseContent;
       let imageTags: string[][] = [];
 
       if (mediaFile) {
