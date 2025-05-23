@@ -48,27 +48,35 @@ export function CashuWalletCard() {
   const [newMint, setNewMint] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [expandedMint, setExpandedMint] = useState<string | null>(null);
-  const [flashingMints, setFlashingMints] = useState<Record<string, boolean>>({});
+  const [flashingMints, setFlashingMints] = useState<Record<string, boolean>>(
+    {}
+  );
 
   // Calculate total balance across all mints
   const balances = calculateBalance(cashuStore.proofs);
-  const totalBalance = Object.values(balances).reduce((sum, balance) => sum + balance, 0);
+  const totalBalance = Object.values(balances).reduce(
+    (sum, balance) => sum + balance,
+    0
+  );
   const prevBalances = useRef<Record<string, string>>({});
 
   // Track balance changes for flash effect
   useEffect(() => {
     if (!showSats && btcPrice) {
-      Object.keys(balances).forEach(mint => {
+      Object.keys(balances).forEach((mint) => {
         const amount = balances[mint] || 0;
         const currentValue = formatUSD(satsToUSD(amount, btcPrice.USD));
-        
-        if (prevBalances.current[mint] && prevBalances.current[mint] !== currentValue) {
-          setFlashingMints(prev => ({ ...prev, [mint]: true }));
+
+        if (
+          prevBalances.current[mint] &&
+          prevBalances.current[mint] !== currentValue
+        ) {
+          setFlashingMints((prev) => ({ ...prev, [mint]: true }));
           setTimeout(() => {
-            setFlashingMints(prev => ({ ...prev, [mint]: false }));
+            setFlashingMints((prev) => ({ ...prev, [mint]: false }));
           }, 300);
         }
-        
+
         prevBalances.current[mint] = currentValue;
       });
     }
@@ -121,7 +129,10 @@ export function CashuWalletCard() {
   };
 
   const handleRemoveMint = (mintUrl: string) => {
-    if (!wallet || !wallet.mints) return;
+    if (!wallet || !wallet.mints) {
+      setError("No mints found");
+      return;
+    }
 
     // Don't allow removing the last mint
     if (wallet.mints.length <= 1) {
@@ -129,11 +140,15 @@ export function CashuWalletCard() {
       return;
     }
 
-    // Remove mint from wallet
-    createWallet({
-      ...wallet,
-      mints: wallet.mints.filter((m) => m !== mintUrl),
-    });
+    try {
+      // Remove mint from wallet
+      createWallet({
+        ...wallet,
+        mints: wallet.mints.filter((m) => m !== mintUrl),
+      });
+    } catch (e) {
+      setError("Failed to remove mint");
+    }
 
     // If removing the active mint, set the first available mint as active
     if (cashuStore.activeMintUrl === mintUrl) {
@@ -234,120 +249,122 @@ export function CashuWalletCard() {
       </CardHeader>
       {isExpanded && (
         <CardContent>
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium">Mints</h3>
-          </div>
-          <div>
-            {wallet.mints && wallet.mints.length > 0 ? (
-              <div className="space-y-2">
-                {wallet.mints.map((mint) => {
-                  const amount = balances[mint] || 0;
-                  const isActive = cashuStore.activeMintUrl === mint;
-                  const isExpanded = expandedMint === mint;
-
-                  return (
-                    <div key={mint} className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <button
-                            className="text-sm hover:text-primary text-left truncate max-w-[160px]"
-                            onClick={() => handleSetActiveMint(mint)}
-                          >
-                            {cleanMintUrl(mint)}
-                          </button>
-                          {isActive && (
-                            <Badge
-                              variant="secondary"
-                              className="h-5 px-1.5 bg-green-100 text-green-700 hover:bg-green-200"
-                            >
-                              Active
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span 
-                            className={`font-medium tabular-nums ${flashingMints[mint] ? 'flash-update' : ''}`}
-                          >
-                            {showSats 
-                              ? formatBalance(amount) 
-                              : btcPrice 
-                                ? formatUSD(satsToUSD(amount, btcPrice.USD)) 
-                                : formatBalance(amount)}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => toggleExpandMint(mint)}
-                          >
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      {isExpanded && (
-                        <div className="pl-4 flex justify-end gap-2 pt-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCleanSpentProofs()}
-                            className="border-muted-foreground/20 hover:bg-muted"
-                          >
-                            <Eraser className="h-4 w-4 mr-1 text-amber-500" />
-                            Clean Spent
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveMint(mint)}
-                            className="border-muted-foreground/20 hover:bg-destructive/10"
-                          >
-                            <Trash className="h-4 w-4 mr-1 text-destructive" />
-                            Remove
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground mt-2">
-                No mints added yet
-              </p>
-            )}
-          </div>
-
-          <Separator />
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex items-end gap-2">
-            <div className="grid w-full gap-1.5">
-              <Label htmlFor="mint">Add Mint</Label>
-              <Input
-                id="mint"
-                placeholder="https://mint.example.com"
-                value={newMint}
-                onChange={(e) => setNewMint(e.target.value)}
-              />
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium">Mints</h3>
             </div>
-            <Button onClick={handleAddMint}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add
-            </Button>
+            <div>
+              {wallet.mints && wallet.mints.length > 0 ? (
+                <div className="space-y-2">
+                  {wallet.mints.map((mint) => {
+                    const amount = balances[mint] || 0;
+                    const isActive = cashuStore.activeMintUrl === mint;
+                    const isExpanded = expandedMint === mint;
+
+                    return (
+                      <div key={mint} className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-sm hover:text-primary text-left truncate max-w-[160px]"
+                              onClick={() => handleSetActiveMint(mint)}
+                            >
+                              {cleanMintUrl(mint)}
+                            </button>
+                            {isActive && (
+                              <Badge
+                                variant="secondary"
+                                className="h-5 px-1.5 bg-green-100 text-green-700 hover:bg-green-200"
+                              >
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-medium tabular-nums ${
+                                flashingMints[mint] ? "flash-update" : ""
+                              }`}
+                            >
+                              {showSats
+                                ? formatBalance(amount)
+                                : btcPrice
+                                ? formatUSD(satsToUSD(amount, btcPrice.USD))
+                                : formatBalance(amount)}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => toggleExpandMint(mint)}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                        {isExpanded && (
+                          <div className="pl-4 flex justify-end gap-2 pt-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCleanSpentProofs()}
+                              className="border-muted-foreground/20 hover:bg-muted"
+                            >
+                              <Eraser className="h-4 w-4 mr-1 text-amber-500" />
+                              Clean Spent
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveMint(mint)}
+                              className="border-muted-foreground/20 hover:bg-destructive/10"
+                            >
+                              <Trash className="h-4 w-4 mr-1 text-destructive" />
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-2">
+                  No mints added yet
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex items-end gap-2">
+              <div className="grid w-full gap-1.5">
+                <Label htmlFor="mint">Add Mint</Label>
+                <Input
+                  id="mint"
+                  placeholder="https://mint.example.com"
+                  value={newMint}
+                  onChange={(e) => setNewMint(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleAddMint}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardContent>
+        </CardContent>
       )}
     </Card>
   );

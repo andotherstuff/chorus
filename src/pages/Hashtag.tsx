@@ -12,17 +12,26 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { NoteContent } from "@/components/NoteContent";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { formatRelativeTime } from "@/lib/utils";
-import { ArrowLeft, Hash } from "lucide-react";
+import { ArrowLeft, Hash, MessageSquare, MoreVertical, Flag, Share2, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { nip19 } from "nostr-tools";
+import { shareContent } from "@/lib/share";
+import { ReplyList } from "@/components/groups/ReplyList";
+import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Hashtag() {
   const { hashtag } = useParams<{ hashtag: string }>();
@@ -95,24 +104,22 @@ export default function Hashtag() {
   const renderSkeletons = () => (
     <div className="space-y-4">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Card key={`skeleton-${i}`} className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center space-y-0 gap-3 pb-2">
-            <Skeleton className="h-10 w-10 rounded-full" />
+        <div key={`skeleton-${i}`} className="border-b border-border/70 py-4">
+          <div className="flex items-start gap-3 px-3">
+            <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
             <div className="space-y-1 flex-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-4 w-full mt-3 mb-2" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-2/3" />
+              <div className="flex gap-4 mt-4">
+                <Skeleton className="h-6 w-12" />
+                <Skeleton className="h-6 w-12" />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-2/3" />
-            <div className="flex gap-4 mt-4">
-              <Skeleton className="h-8 w-8" />
-              <Skeleton className="h-8 w-8" />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -133,7 +140,7 @@ export default function Hashtag() {
     <div className="container mx-auto py-4 px-4">
       <Header />
       
-      {/* Header Section */}
+      {/* Header Section - Removed duplicate hashtag icon */}
       <div className="flex items-center gap-4 mb-6 mt-2">
         <Button
           variant="ghost"
@@ -146,8 +153,10 @@ export default function Hashtag() {
         </Button>
         
         <div className="flex items-center gap-2">
-          <Hash className="h-6 w-6 text-blue-500" />
-          <h1 className="text-2xl font-bold">#{hashtag}</h1>
+          <h1 className="text-2xl font-bold flex items-center">
+            <Hash className="h-6 w-6 text-blue-500 mr-1" />
+            {hashtag}
+          </h1>
         </div>
       </div>
 
@@ -161,7 +170,7 @@ export default function Hashtag() {
       </div>
 
       {/* Posts Section */}
-      <div className="space-y-4">
+      <div>
         {isLoadingPosts ? (
           renderSkeletons()
         ) : error ? (
@@ -200,9 +209,12 @@ interface HashtagPostItemProps {
 
 function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
   const author = useAuthor(post.pubkey);
+  const { user } = useCurrentUser();
+  const { nostr } = useNostr();
   const metadata = author.data?.metadata;
   const displayName = metadata?.name || post.pubkey.slice(0, 12);
   const profileImage = metadata?.picture;
+  const [showReplies, setShowReplies] = useState(false);
 
   // Format author identifier
   const authorIdentifier = useMemo(() => {
@@ -232,61 +244,210 @@ function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
     minute: '2-digit'
   })}`;
 
+  // Extract community information if available (NIP-72 format)
+  const communityInfo = useMemo(() => {
+    // Find community information from post tags (NIP-72 format)
+    const communityTag = post.tags.find(tag => tag[0] === 'a' && tag.length >= 2);
+    if (!communityTag) return null;
+
+    const communityId = communityTag[1];
+    
+    return { id: communityId };
+  }, [post.tags]);
+
+  // Query for community details to get the name
+  const { data: community } = useQuery({
+    queryKey: ["community-for-hashtag", communityInfo?.id],
+    queryFn: async (c) => {
+      if (!communityInfo?.id) return null;
+      
+      // Parse the community ID (format: "34550:pubkey:identifier")
+      const parts = communityInfo.id.split(':');
+      if (parts.length !== 3 || parts[0] !== '34550') return null;
+      
+      const [, pubkey, identifier] = parts;
+      
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      const events = await nostr.query([{
+        kinds: [34550],
+        authors: [pubkey],
+        "#d": [identifier]
+      }], { signal });
+
+      return events[0] || null;
+    },
+    enabled: !!nostr && !!communityInfo?.id,
+    staleTime: 300000, // 5 minutes
+  });
+
+  // Extract community name from the community event
+  const communityName = useMemo(() => {
+    if (!community) return null;
+    const nameTag = community.tags.find(tag => tag[0] === "name");
+    return nameTag ? nameTag[1] : null;
+  }, [community]);
+
+  // Handle sharing the post
+  const handleSharePost = async (postId: string) => {
+    try {
+      // Create nevent identifier for the post with relay hint
+      const nevent = nip19.neventEncode({
+        id: post.id,
+        author: post.pubkey,
+        kind: post.kind,
+        relays: ["wss://relay.chorus.community"],
+      });
+      
+      // Create njump.me URL
+      const shareUrl = `https://njump.me/${nevent}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+      
+      toast.success("Post link copied to clipboard");
+    } catch (error) {
+      console.error("Error creating share URL:", error);
+      // Fallback to the original URL format
+      const shareUrl = `${window.location.origin}/e/${post.id}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+      
+      toast.success("Post link copied to clipboard");
+    }
+  };
+
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-row items-start space-y-0 gap-3 pb-3">
-        <Link to={`/profile/${post.pubkey}`} className="flex-shrink-0">
-          <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+    <div className="py-4 hover:bg-muted/5 transition-colors border-b border-border/70">
+      <div className="flex flex-row items-start px-3">
+        <Link to={`/profile/${post.pubkey}`} className="flex-shrink-0 mr-2.5">
+          <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
             <AvatarImage src={profileImage} alt={displayName} />
             <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
           </Avatar>
         </Link>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Link to={`/profile/${post.pubkey}`} className="hover:underline">
-              <span className="font-semibold text-sm">{displayName}</span>
-            </Link>
-            <span className="text-xs text-muted-foreground">·</span>
+
+        <div className="flex-1">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <Link to={`/profile/${post.pubkey}`} className="hover:underline">
+                  <span className="font-semibold text-sm leading-tight block">{displayName}</span>
+                </Link>
+              </div>
+              <div className="flex items-center text-xs text-muted-foreground mt-0 flex-row">
+                <span
+                  className="mr-1.5 hover:underline truncate max-w-[12rem] overflow-hidden whitespace-nowrap"
+                  title={authorIdentifier}
+                >
+                  {authorIdentifier}
+                </span>
+                <span className="mr-1.5">·</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="mr-1.5 whitespace-nowrap hover:underline">{relativeTime}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{formattedAbsoluteTime}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+              </div>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="More options">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                  <span className="sr-only">More options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleSharePost(post.id)} className="text-xs">
+                  <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share Post
+                </DropdownMenuItem>
+                {user && user.pubkey !== post.pubkey && (
+                  <DropdownMenuItem className="text-xs">
+                    <Flag className="h-3.5 w-3.5 mr-1.5" /> Report Post
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="pt-1 pb-1.5 pl-3 pr-3">
+        <div className="whitespace-pre-wrap break-words text-sm mt-1">
+          <NoteContent event={post} />
+        </div>
+      </div>
+
+      {/* Footer Section */}
+      <div className="flex-col pt-1.5 pl-3 pr-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-12">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
+              onClick={() => setShowReplies(!showReplies)}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span className="text-xs ml-0.5">
+                {/* Placeholder for reply count - could be dynamically loaded */}
+                {post.tags.find(tag => tag[0] === 'reply_count') ? 
+                  post.tags.find(tag => tag[0] === 'reply_count')?.[1] : 
+                  ''}
+              </span>
+            </Button>
+            <EmojiReactionButton postId={post.id} showText={false} />
+          </div>
+          
+          {/* Group button on the right side */}
+          {communityInfo && communityName && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="text-xs text-muted-foreground hover:underline cursor-help">
-                    {relativeTime}
-                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground flex items-center h-7 px-2"
+                    asChild
+                  >
+                    <Link to={`/group/${encodeURIComponent(communityInfo.id)}`}>
+                      <Users className="h-3.5 w-3.5 mr-1" />
+                      <span className="text-xs">{communityName}</span>
+                    </Link>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{formattedAbsoluteTime}</p>
+                  <p>View in community: {communityName}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          )}
+        </div>
+
+        {showReplies && (
+          <div className="w-full mt-2.5">
+            <ReplyList
+              postId={post.id}
+              communityId={communityInfo?.id || ''}
+              postAuthorPubkey={post.pubkey}
+            />
           </div>
-          
-          <span 
-            className="text-xs text-muted-foreground truncate block max-w-full" 
-            title={authorIdentifier}
-          >
-            {authorIdentifier}
-          </span>
-        </div>
-        
-        {/* Post type indicator */}
-        <Badge variant="secondary" className="text-xs">
-          {post.kind === 11 ? "Group" : "Note"}
-        </Badge>
-      </CardHeader>
-
-      <CardContent className="pt-0">
-        {/* Post content */}
-        <div className="mb-4">
-          <NoteContent event={post} />
-        </div>
-
-        {/* Post actions */}
-        <div className="flex items-center gap-4">
-          <EmojiReactionButton postId={post.id} showText={true} />
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </div>
   );
 }

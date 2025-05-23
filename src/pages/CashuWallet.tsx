@@ -18,6 +18,8 @@ import { Loader2, Bitcoin, DollarSign, ArrowLeftRight } from "lucide-react";
 import { formatBalance, calculateBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export function CashuWallet() {
   const { user } = useCurrentUser();
@@ -37,14 +39,17 @@ export function CashuWallet() {
   );
 
   // Helper function to format amount based on user preference
-  const formatAmount = useCallback((sats: number): string => {
-    if (showSats) {
-      return `${sats.toLocaleString()} sats`;
-    } else {
-      const usd = satsToUSD(sats, btcPrice?.USD || null);
-      return usd !== null ? formatUSD(usd) : `${sats.toLocaleString()} sats`;
-    }
-  }, [showSats, btcPrice]);
+  const formatAmount = useCallback(
+    (sats: number): string => {
+      if (showSats) {
+        return `${sats.toLocaleString()} sats`;
+      } else {
+        const usd = satsToUSD(sats, btcPrice?.USD || null);
+        return usd !== null ? formatUSD(usd) : `${sats.toLocaleString()} sats`;
+      }
+    },
+    [showSats, btcPrice]
+  );
 
   // Handle pending onboarding token
   useEffect(() => {
@@ -204,6 +209,23 @@ export function CashuWallet() {
           </button>
         </div>
       )}
+
+      {/* Wallet Info Box */}
+      <Alert className="mb-6">
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-sm">
+          <span className="text-lg mr-2">💸</span>
+          <strong>Your Cashu Wallet</strong> uses ecash tokens for private,
+          instant payments.
+          <strong> Cashu</strong> is a privacy-preserving digital cash system
+          built on cryptographic proofs.
+          <strong> Lightning Network</strong> enables fast Bitcoin transactions,
+          and this wallet seamlessly bridges both systems - you can send/receive
+          Lightning payments while maintaining privacy through Cashu's blind
+          signatures. Think of it as digital cash that moves at the speed of
+          Lightning!
+        </AlertDescription>
+      </Alert>
 
       {isProcessingToken && (
         <div className="mb-6 p-4 bg-muted rounded-lg flex items-center space-x-3">

@@ -34,10 +34,7 @@ export function GroupNutzapTotal({ groupId, className = "" }: GroupNutzapTotalPr
     return <Skeleton className={`h-6 w-24 ${className}`} />;
   }
 
-  if (total === 0) {
-    return null; // Don't show anything if there are no nutzaps
-  }
-
+  // Always show even when total is 0, displaying "0 sats" or "$0.00"
   return (
     <button
       type="button"

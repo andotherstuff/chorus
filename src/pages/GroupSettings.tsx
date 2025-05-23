@@ -4,7 +4,7 @@ import { useNostr } from "@/hooks/useNostr";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useUploadFile } from "@/hooks/useUploadFile";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +34,7 @@ export default function GroupSettings() {
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile, isPending: isUploadingMedia } = useUploadFile();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [parsedId, setParsedId] = useState<{ kind: number; pubkey: string; identifier: string } | null>(null);
   
   // Get the tab parameter from URL
@@ -279,6 +280,11 @@ export default function GroupSettings() {
         content: "",
       });
 
+      // Invalidate relevant queries to update the UI
+      queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
+      queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
+      queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
+      
       toast.success("Group settings updated successfully!");
       navigate(`/group/${encodeURIComponent(groupId || "")}`);
     } catch (error) {
@@ -337,6 +343,12 @@ export default function GroupSettings() {
         });
 
         setModerators(uniqueModPubkeys);
+        
+        // Invalidate relevant queries to update the UI
+        queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
+        queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
+        queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
+        
         toast.success("Moderator added successfully!");
       } catch (error) {
         console.error("Error adding moderator:", error);
@@ -394,6 +406,12 @@ export default function GroupSettings() {
         content: "",
       });
       setModerators(moderators.filter(mod => mod !== pubkey));
+      
+      // Invalidate relevant queries to update the UI
+      queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
+      queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
+      queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
+      
       toast.success("Moderator removed successfully!");
     } catch (error) {
       console.error("Error removing moderator:", error);

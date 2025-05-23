@@ -584,23 +584,43 @@ function PostCard({ post, profileImage, displayName, displayNameFull, isLastItem
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
   const handleSharePost = async () => {
-    // Extract group info to create proper share URL
-    const groupInfo = extractGroupInfo(post);
-    let shareUrl: string;
-    
-    if (groupInfo) {
-      // If post is in a group, link to the group with post hash
-      shareUrl = `${window.location.origin}/group/${encodeURIComponent(groupInfo.groupId)}#${post.id}`;
-    } else {
-      // Otherwise, link to the user's profile
-      shareUrl = `${window.location.origin}/profile/${post.pubkey}#${post.id}`;
+    try {
+      // Create nevent identifier for the post with relay hint
+      const nevent = nip19.neventEncode({
+        id: post.id,
+        author: post.pubkey,
+        kind: post.kind,
+        relays: ["wss://relay.chorus.community"],
+      });
+      
+      // Create njump.me URL
+      const shareUrl = `https://njump.me/${nevent}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    } catch (error) {
+      console.error("Error creating share URL:", error);
+      // Fallback to the original URL format
+      const groupInfo = extractGroupInfo(post);
+      let shareUrl: string;
+      
+      if (groupInfo) {
+        // If post is in a group, link to the group with post hash
+        shareUrl = `${window.location.origin}/group/${encodeURIComponent(groupInfo.groupId)}#${post.id}`;
+      } else {
+        // Otherwise, link to the user's profile
+        shareUrl = `${window.location.origin}/profile/${post.pubkey}#${post.id}`;
+      }
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
     }
-    
-    await shareContent({
-      title: "Check out this post",
-      text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
-      url: shareUrl
-    });
   };
 
   // Handle toggle between replies and zaps

@@ -651,15 +651,34 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
   };
 
   const handleSharePost = async () => {
-    // For now, share the group URL with a hash to the post
-    // In the future, we could add a dedicated post view
-    const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${post.id}`;
-    
-    await shareContent({
-      title: "Check out this post",
-      text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
-      url: shareUrl
-    });
+    try {
+      // Create nevent identifier for the post with relay hint
+      const nevent = nip19.neventEncode({
+        id: post.id,
+        author: post.pubkey,
+        kind: post.kind,
+        relays: ["wss://relay.chorus.community"],
+      });
+      
+      // Create njump.me URL
+      const shareUrl = `https://njump.me/${nevent}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    } catch (error) {
+      console.error("Error creating share URL:", error);
+      // Fallback to the original URL format
+      const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${post.id}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    }
   };
 
   const handlePinPost = async () => {
