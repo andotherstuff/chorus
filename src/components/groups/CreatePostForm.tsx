@@ -79,7 +79,8 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
         }
         
         setMediaFile(audioFile);
-        const url = URL.createObjectURL(audioFile);
+        // Create URL from the blob instead of the file for better compatibility
+        const url = URL.createObjectURL(audioBlob);
         setPreviewUrl(url);
         
         // Stop all tracks
@@ -239,7 +240,13 @@ ${mediaUrl}`;
                     src={previewUrl}
                     controls
                     className="w-full rounded-md border"
-                  />
+                    onError={(e) => {
+                      console.error('Audio preview error:', e);
+                      // Optionally show a fallback message
+                    }}
+                  >
+                    Your browser does not support the audio element.
+                  </audio>
                 ) : (
                   <img
                     src={previewUrl}
