@@ -368,9 +368,6 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       toast.info("No pending requests to approve");
       return;
     }
-
-    // Store the current tab before the async operation
-    const currentTab = selectedTabRef.current;
     
     try {
       // Get all the pubkeys from pending requests
@@ -431,9 +428,6 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       refetchRequests();
       refetchMembers();
       refetchDeclined();
-      
-      // Ensure we maintain the same tab that was active before the operation
-      setActiveTab(currentTab);
     } catch (error) {
       console.error("Error approving all users:", error);
       toast.error("Failed to approve all users. Please try again.");
