@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNostr } from "@/hooks/useNostr";
 import { useEffect } from "react";
 import type { CustomizationSettings } from "@/components/groups/GroupCustomization";
+import { chaosEffects } from "@/lib/chaos-effects";
 
 interface UseGroupCustomizationProps {
   communityPubkey: string;
@@ -26,6 +27,10 @@ const defaultSettings: CustomizationSettings = {
   fontSize: 'medium',
   fontWeight: 'normal',
   lineHeight: 1.6,
+  textRotation: 0,
+  textSkew: 0,
+  letterSpacing: 0,
+  wordSpacing: 0,
   
   borderRadius: 8,
   shadowIntensity: 2,
@@ -33,22 +38,58 @@ const defaultSettings: CustomizationSettings = {
   gradientBackground: false,
   backgroundPattern: 'none',
   
+  pageRotation: 0,
+  pageSkew: 0,
+  pageScale: 1,
+  gravityDirection: 'down',
+  elementsFloat: false,
+  elementsRotate: false,
+  elementsBounce: false,
+  
   bannerImage: '',
   bannerHeight: 200,
   logoImage: '',
   logoPosition: 'left',
   showGroupStats: true,
+  headerGravity: false,
   
   postStyle: 'default',
   showAvatars: true,
   showTimestamps: true,
   showReactionCounts: true,
   postsPerPage: 20,
+  postsArrangement: 'linear',
+  postRotation: false,
+  postFloating: false,
+  
+  chaosMode: false,
+  chaosIntensity: 1,
+  randomColors: false,
+  randomFonts: false,
+  randomSizes: false,
+  randomPositions: false,
+  
+  mouseTrail: false,
+  clickEffects: false,
+  hoverChaos: false,
+  scrollEffects: 'none',
+  
+  soundEffects: false,
+  backgroundMusic: '',
+  vibrationEffects: false,
+  
+  timeBasedChanges: false,
+  hourlyColorShift: false,
+  weatherEffects: false,
   
   customCSS: '',
   customFavicon: '',
   customWatermark: '',
-  brandingText: ''
+  brandingText: '',
+  
+  breakTheRules: false,
+  experimentalMode: false,
+  dangerZone: false
 };
 
 export function useGroupCustomization({ 
@@ -297,14 +338,37 @@ export function useGroupCustomization({
       }
     }
 
+    // Initialize chaos effects
+    if (enabled && (settings.mouseTrail || settings.clickEffects || settings.hoverChaos || 
+        settings.soundEffects || settings.backgroundMusic || settings.chaosMode || 
+        settings.timeBasedChanges || settings.hourlyColorShift)) {
+      chaosEffects.init({
+        mouseTrail: settings.mouseTrail,
+        clickEffects: settings.clickEffects,
+        hoverChaos: settings.hoverChaos,
+        soundEffects: settings.soundEffects,
+        vibrationEffects: settings.vibrationEffects,
+        timeBasedChanges: settings.timeBasedChanges,
+        hourlyColorShift: settings.hourlyColorShift,
+        chaosMode: settings.chaosMode,
+        chaosIntensity: settings.chaosIntensity,
+        backgroundMusic: settings.backgroundMusic
+      });
+    }
+
     return () => {
       // Clean up when component unmounts or settings change
       const element = document.getElementById(styleId);
       if (element) {
         element.remove();
       }
+      
+      // Clean up chaos effects
+      chaosEffects.cleanup();
     };
-  }, [css, enabled, communityPubkey, communityIdentifier, settings.customFavicon]);
+  }, [css, enabled, communityPubkey, communityIdentifier, settings.customFavicon, 
+      settings.mouseTrail, settings.clickEffects, settings.hoverChaos, settings.soundEffects,
+      settings.backgroundMusic, settings.chaosMode, settings.timeBasedChanges, settings.hourlyColorShift]);
 
   return {
     settings,
