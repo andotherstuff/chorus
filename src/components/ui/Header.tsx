@@ -6,6 +6,7 @@ import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type React from "react";
 import { Link } from "react-router-dom";
+import { Home } from "lucide-react";
 
 interface HeaderProps {
   className?: string;
@@ -23,12 +24,19 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
 
   return (
     <div className={`flex justify-between items-center ${className || ""}`}>
-      <Link to="/" className="contents">
-        <h1 className="text-2xl font-bold flex flex-row items-center leading-none">
-          <span className="text-red-500 font-extrabold text-3xl">+</span>
-          chorus
-        </h1>
-      </Link>
+      <div className="flex items-center gap-3">
+        <Link to="/" className="contents">
+          <h1 className="text-2xl font-bold flex flex-row items-center leading-none">
+            <span className="text-red-500 font-extrabold text-3xl">+</span>
+            chorus
+          </h1>
+        </Link>
+        {user && (
+          <Link to="/" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
+            <Home className="w-5 h-5" />
+          </Link>
+        )}
+      </div>
       <div className="flex items-center gap-2">
         {showClaimButton ? <ClaimOnboardingTokenButton /> : <BalanceDisplay />}
         <LoginArea />
