@@ -181,8 +181,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       refetchMembers();
       refetchDeclined();
       
-      // Switch to members tab
-      setActiveTab("members");
+      // Stay on the current tab (requests) instead of switching to members
     } catch (error) {
       console.error("Error approving user:", error);
       toast.error("Failed to approve user. Please try again.");
@@ -257,9 +256,6 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       await banUser(pubkey);
       
       toast.success("User banned successfully!");
-      
-      // Switch to banned tab
-      setActiveTab("banned");
     } catch (error) {
       console.error("Error banning user:", error);
       toast.error("Failed to ban user. Please try again.");
@@ -350,8 +346,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       refetchDeclined();
       refetchMembers();
       
-      // Switch to members tab
-      setActiveTab("members");
+      // No tab switching - keep user on current tab
     } catch (error) {
       console.error("Error approving declined user:", error);
       toast.error("Failed to approve user. Please try again.");
