@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { useAuthor } from "@/hooks/useAuthor";
+import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
+import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { toast } from "sonner";
 import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2, FileWarning } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
@@ -147,6 +149,10 @@ export default function GroupSettings() {
 
   const isModerator = user && moderators.includes(user.pubkey);
   const isOwner = Boolean(user && community && user.pubkey === (community as NostrEvent).pubkey);
+
+  // Get notification counts for tabs
+  const { data: openReportsCount = 0 } = useOpenReportsCount(groupId || '');
+  const { pendingRequestsCount = 0 } = usePendingJoinRequests(groupId || '');
 
   console.log("Current user pubkey:", user?.pubkey);
   console.log("Community creator pubkey:", community?.pubkey);
@@ -408,37 +414,52 @@ export default function GroupSettings() {
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <div className="w-full max-w-xs">
-          <Select value={activeTab} onValueChange={setActiveTab}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a section" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="general">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  General
-                </div>
-              </SelectItem>
-              {(isOwner || isModerator) && (
-                <SelectItem value="members">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Members
-                  </div>
-                </SelectItem>
-              )}
-              {(isOwner || isModerator) && (
-                <SelectItem value="reports">
-                  <div className="flex items-center gap-2">
-                    <FileWarning className="h-4 w-4" />
-                    Reports
-                  </div>
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        // Update URL query parameter without full page reload
+        const newSearchParams = new URLSearchParams(location.search);
+        if (value === 'general') {
+          newSearchParams.delete('tab');
+        } else {
+          newSearchParams.set('tab', value);
+        }
+        const newUrl = `${location.pathname}${newSearchParams.toString() ? '?' + newSearchParams.toString() : ''}`;
+        window.history.pushState(null, '', newUrl);
+      }} className="w-full space-y-6">
+        <div className="md:flex md:justify-start">
+          <TabsList className="mb-4 w-full md:w-auto flex">
+            <TabsTrigger value="general" className="flex-1 md:flex-none">
+              <Shield className="h-4 w-4 mr-2" />
+              General
+            </TabsTrigger>
+            {(isOwner || isModerator) && (
+              <TabsTrigger value="members" className="flex-1 md:flex-none relative">
+                <Users className="h-4 w-4 mr-2" />
+                Members
+                {pendingRequestsCount > 0 && (
+                  <Badge 
+                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-blue-500 hover:bg-blue-600 z-10"
+                  >
+                    {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
+            {(isOwner || isModerator) && (
+              <TabsTrigger value="reports" className="flex-1 md:flex-none relative">
+                <FileWarning className="h-4 w-4 mr-2" />
+                Reports
+                {openReportsCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10"
+                  >
+                    {openReportsCount > 99 ? '99+' : openReportsCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
+          </TabsList>
         </div>
 
         <TabsContent value="general" className="space-y-6 mt-3">

@@ -22,7 +22,8 @@ export function useReportActions() {
     invalidateQueries: [
       { queryKey: ["group-reports"] },
       { queryKey: ["approved-posts"] },
-      { queryKey: ["pending-posts"] }
+      { queryKey: ["pending-posts"] },
+      { queryKey: ["open-reports-count"] }
     ]
   });
   const { user } = useCurrentUser();

@@ -205,23 +205,12 @@ export default function GroupDetail() {
                       >
                         <Settings className="h-4 w-4" />
                         <span>Manage Group</span>
-                        {openReportsCount > 0 && (
+                        {(openReportsCount > 0 || pendingRequestsCount > 0) && (
                           <Badge 
                             variant="destructive" 
-                            className={`absolute -top-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10 ${
-                              pendingRequestsCount > 0 ? 'right-0' : '-right-2'
-                            }`}
+                            className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10"
                           >
-                            {openReportsCount > 99 ? '99+' : openReportsCount}
-                          </Badge>
-                        )}
-                        {pendingRequestsCount > 0 && (
-                          <Badge 
-                            className={`absolute -top-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-blue-500 hover:bg-blue-600 ${
-                              openReportsCount > 0 ? 'right-3' : '-right-2'
-                            }`}
-                          >
-                            {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                            {(openReportsCount + pendingRequestsCount) > 99 ? '99+' : (openReportsCount + pendingRequestsCount)}
                           </Badge>
                         )}
                       </Link>
@@ -231,12 +220,17 @@ export default function GroupDetail() {
                     {isOwner ? "Owner settings" : "Moderator settings"}
                     {openReportsCount > 0 && (
                       <div className="text-red-400 text-xs mt-1">
-                        {openReportsCount} open report{openReportsCount !== 1 ? 's' : ''} - Click to review
+                        {openReportsCount} open report{openReportsCount !== 1 ? 's' : ''}
                       </div>
                     )}
                     {pendingRequestsCount > 0 && (
                       <div className="text-blue-400 text-xs mt-1">
-                        {pendingRequestsCount} pending join request{pendingRequestsCount !== 1 ? 's' : ''} - Click to review
+                        {pendingRequestsCount} pending join request{pendingRequestsCount !== 1 ? 's' : ''}
+                      </div>
+                    )}
+                    {(openReportsCount > 0 || pendingRequestsCount > 0) && (
+                      <div className="text-xs mt-1 text-muted-foreground">
+                        Click to review
                       </div>
                     )}
                   </TooltipContent>

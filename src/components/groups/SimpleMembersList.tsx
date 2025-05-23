@@ -59,23 +59,17 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
     event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
   ) || [];
 
-  // Remove duplicates
-  const uniqueApprovedMembers = [...new Set(approvedMembers)];
-
   // Get moderators from community
   const moderatorTags = community?.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator") || [];
   const moderators = moderatorTags.map(tag => tag[1]);
   
-  // Combine all members (owner, moderators, and approved members)
-  const allMembers = [
-    ...(community ? [community.pubkey] : []), // Owner
-    ...moderators.filter(mod => mod !== community?.pubkey), // Moderators (excluding owner)
-    ...uniqueApprovedMembers.filter(member => 
-      member !== community?.pubkey && !moderators.includes(member)
-    ) // Regular members (excluding owner and moderators)
-  ];
+  // Filter out owner and moderators from approved members to show only regular members
+  const regularMembers = approvedMembers.filter(member => 
+    member !== community?.pubkey && !moderators.includes(member)
+  );
 
-  const uniqueAllMembers = [...new Set(allMembers)];
+  // Remove duplicates from regular members
+  const uniqueRegularMembers = [...new Set(regularMembers)];
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -102,7 +96,7 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Users className="h-5 w-5 mr-2" />
-            Members ({uniqueApprovedMembers.length})
+            Members ({uniqueRegularMembers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -115,18 +109,18 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
                 </div>
               ))}
             </div>
-          ) : uniqueApprovedMembers.length === 0 ? (
+          ) : uniqueRegularMembers.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
               <p>No approved members yet</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {uniqueApprovedMembers.slice(0, 10).map((pubkey) => (
+              {uniqueRegularMembers.slice(0, 10).map((pubkey) => (
                 <MemberItem key={pubkey} pubkey={pubkey} />
               ))}
-              {uniqueApprovedMembers.length > 10 && (
+              {uniqueRegularMembers.length > 10 && (
                 <div className="text-center text-sm text-muted-foreground pt-2">
-                  + {uniqueApprovedMembers.length - 10} more members
+                  + {uniqueRegularMembers.length - 10} more members
                 </div>
               )}
             </div>
