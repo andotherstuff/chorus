@@ -272,17 +272,26 @@ ${mediaUrl}`;
                 className="max-h-32 rounded-md object-contain border w-full"
               />
             ) : mediaFile?.type.startsWith('audio/') ? (
-              <audio
-                src={previewUrl}
-                controls
-                className="w-full rounded-md border"
-                onError={(e) => {
-                  console.error('Audio preview error:', e);
-                  // Optionally show a fallback message
-                }}
-              >
-                Your browser does not support the audio element.
-              </audio>
+              <div className="bg-secondary/50 rounded-md border p-2 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium truncate">{mediaFile.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {mediaFile.name.includes('voice_memo') ? 'Voice recording' : 'Audio'} • {(mediaFile.size / 1024).toFixed(0)} KB
+                  </div>
+                </div>
+                {/* Only show audio player for non-voice recordings */}
+                {!mediaFile.name.includes('voice_memo') && (
+                  <audio
+                    src={previewUrl}
+                    controls
+                    className="h-8"
+                    style={{ width: '150px' }}
+                    onError={(e) => {
+                      console.error('Audio preview error:', e);
+                    }}
+                  />
+                )}
+              </div>
             ) : (
               <img
                 src={previewUrl}
