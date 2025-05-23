@@ -292,7 +292,7 @@ export default function GroupDetail() {
         
         {/* Group description moved outside the grid to span full width */}
         <div className="w-full mt-2">
-          <p className="text-base text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
 
