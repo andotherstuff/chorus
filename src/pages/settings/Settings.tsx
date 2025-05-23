@@ -143,6 +143,9 @@ export default function Settings() {
                   {copyPublicSuccess ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Share this with others so they can find and follow you on Nostr.
+              </p>
             </div>
             <div>
               <div className="flex items-center justify-between">
