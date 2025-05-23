@@ -5,7 +5,7 @@ import { getPostExpirationTimestamp } from "../lib/utils";
 import { CASHU_EVENT_KINDS } from "@/lib/cashu";
 
 interface EventTemplate {
-  kind: 0 | 3 | 7 | 11 | 1111 | 4550 | 4551 | 4552 | 4553 | 14550 | 14551 | 14552 | 14553 | 17375 | 7375 | 7376 | 7374 | 10019 | 9321 | 34550;
+  kind: number;
   content?: string;
   tags?: string[][];
   created_at?: number;
@@ -43,14 +43,14 @@ interface UseNostrPublishOptions {
 // - 10019: ZAP info events
 // - 9321: ZAP events
 
-const protectedEventKinds = [
+const protectedEventKinds: number[] = [
   7, // Reactions
   11, // Posts
   1111, // Comments (replies)
   34550, // Group meta
 ];
 
-const expirationEventKinds = [
+const expirationEventKinds: number[] = [
   7, // Reactions
   11, // Posts
   1111, // Comments (replies)
