@@ -13,6 +13,10 @@ import { useUserGroups } from "@/hooks/useUserGroups";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
+import { TrendingTopics } from "@/components/TrendingTopics";
+import { Button } from "@/components/ui/button";
+import { TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { NostrEvent } from "@nostrify/nostrify";
 import type { UserRole } from "@/hooks/useUserRole";
 
@@ -206,7 +210,23 @@ export default function Groups() {
               className="sticky top-0 z-10"
             />
           </div>
+          <div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="flex items-center gap-1 text-muted-foreground"
+              asChild
+            >
+              <Link to="/trending">
+                <TrendingUp className="h-4 w-4" />
+                <span>See What's Trending</span>
+              </Link>
+            </Button>
+          </div>
         </div>
+        
+        {/* Trending Topics Card */}
+        <TrendingTopics className="mb-4" limit={8} />
 
         <div className="space-y-4 mb-6">
           {isGroupsLoading || isUserGroupsLoading ? (

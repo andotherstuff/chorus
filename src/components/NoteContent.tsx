@@ -135,7 +135,7 @@ export function NoteContent({
       return (
         <Link
           key={`hashtag-${match.index}`}
-          to={`/t/${tag}`}
+          to={`/hashtags/${tag}`}
           className="text-blue-500 hover:underline"
         >
           #{tag}
