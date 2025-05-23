@@ -236,4 +236,3 @@ export const enhancedEndpoints = {
     }
   }
 };
-EOF 2>&1

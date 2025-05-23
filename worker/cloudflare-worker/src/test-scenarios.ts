@@ -173,4 +173,3 @@ export async function runNotificationTests() {
 if (import.meta.main) {
   runNotificationTests().catch(console.error);
 }
-EOF 2>&1

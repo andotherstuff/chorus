@@ -208,7 +208,7 @@ async function handleUserRegistration(request: Request, env: Env): Promise<Respo
           auth: string;
         };
       };
-      preferences: any;
+      preferences: unknown;
     };
     
     const userPrefs = {
@@ -277,7 +277,7 @@ async function handleUserUnregistration(request: Request, env: Env): Promise<Res
     const body = await request.json() as { npub: string };
     
     // Get user preferences to clean up subscriptions
-    const prefs = await env.KV.get(`user:${body.npub}`, 'json') as any;
+    const prefs = await env.KV.get(`user:${body.npub}`, 'json') as UserPreferences | null;
     if (prefs) {
       // Remove from keyword subscriptions
       for (const keyword of prefs.subscriptions?.keywords || []) {
@@ -350,11 +350,11 @@ async function handleTestNotification(request: Request, env: Env): Promise<Respo
 /**
  * Update worker stats
  */
-async function updateStats(env: Env, stats: any): Promise<void> {
+async function updateStats(env: Env, stats: unknown): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
   const key = `stats:${today}`;
   
-  const existing = await env.KV.get(key, 'json') as any || {
+  const existing = await env.KV.get(key, 'json') as { timestamp: number } | null || {
     eventsProcessed: 0,
     notificationsQueued: 0,
     polls: 0
@@ -426,4 +426,3 @@ async function handleHealthCheck(env: Env): Promise<Response> {
     return new Response('Service Unavailable', { status: 503 });
   }
 }
-EOF 2>&1

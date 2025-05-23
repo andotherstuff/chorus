@@ -16,4 +16,3 @@ console.log("4. Delete all test events (kind 5)");
 console.log("5. Verify cleanup completed");
 console.log("");
 console.log("To actually run tests with real relays, implement the test-scenarios.ts!");
-EOF 2>&1

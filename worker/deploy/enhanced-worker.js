@@ -877,4 +877,3 @@ export default {
     }
   }
 };
-EOF 2>&1

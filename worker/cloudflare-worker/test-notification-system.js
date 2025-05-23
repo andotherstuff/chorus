@@ -48,4 +48,3 @@ const triggers = await notifSystem.processEvent(testEvent);
 
 console.log('\nTriggered Notifications:', triggers);
 console.log('\n✅ Notification system logic verified!');
-EOF 2>&1

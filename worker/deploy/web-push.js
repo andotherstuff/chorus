@@ -365,4 +365,3 @@ export async function updatePushStats(kv, result) {
 }
 
 export { WebPush };
-EOF 2>&1

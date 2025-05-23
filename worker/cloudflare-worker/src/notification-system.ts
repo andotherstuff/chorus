@@ -54,7 +54,7 @@ export interface UserPreferences {
 export class NotificationSystem {
   private queue = new Map<string, NotificationTrigger[]>();
   
-  constructor(private env: any) {}
+  constructor(private env: unknown) {}
 
   /**
    * Process a Nostr event and determine if it triggers notifications
@@ -297,7 +297,7 @@ export class NotificationSystem {
   private aggregateNotifications(notifications: NotificationTrigger[]): {
     title: string;
     body: string;
-    data: any;
+    data: unknown;
   } {
     if (notifications.length === 1) {
       const n = notifications[0];
@@ -354,7 +354,7 @@ export class NotificationSystem {
    */
   private async sendPushNotification(
     user: UserPreferences,
-    notification: { title: string; body: string; data: any }
+    notification: { title: string; body: string; data: unknown }
   ): Promise<void> {
     const payload = {
       endpoint: user.pushEndpoint,
@@ -408,4 +408,3 @@ export class NotificationSystem {
     await Promise.all(flushPromises);
   }
 }
-EOF 2>&1

@@ -102,4 +102,3 @@ export function generateTestKeypair() {
   const pubkey = getPublicKey(privkey);
   return { privkey, pubkey };
 }
-EOF 2>&1
