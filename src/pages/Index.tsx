@@ -16,6 +16,7 @@ import { useCashuStore } from "@/stores/cashuStore";
 import { getTokenAmount } from "@/lib/cashu";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
+import { usePWA } from "@/hooks/usePWA";
 
 // Create context for storing generated name during onboarding
 export const OnboardingContext = React.createContext<{ generatedName: string | null }>({ 
@@ -36,6 +37,7 @@ const Index = () => {
   const { showSats } = useCurrencyDisplayStore();
   const { data: btcPrice, isLoading: btcPriceLoading } = useBitcoinPrice();
   const [tokenProcessed, setTokenProcessed] = useState(false);
+  const { isRunningAsPwa } = usePWA();
 
   // Check for token in URL on mount
   useEffect(() => {
@@ -188,23 +190,25 @@ const Index = () => {
             </Button>
           </div>
 
-          {/* PWA Install Section */}
-          <div className="mt-8 p-4 bg-muted/50 rounded-lg text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Smartphone className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">
-                Get the App
-              </span>
+          {/* PWA Install Section - Only show if not already running as PWA */}
+          {!isRunningAsPwa && (
+            <div className="mt-8 p-4 bg-muted/50 rounded-lg text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Smartphone className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">
+                  Get the App
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Install +chorus for the best experience
+              </p>
+              <PWAInstallButton
+                variant="outline"
+                size="sm"
+                className="w-full max-w-[200px]"
+              />
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              Install +chorus for the best experience
-            </p>
-            <PWAInstallButton
-              variant="outline"
-              size="sm"
-              className="w-full max-w-[200px]"
-            />
-          </div>
+          )}
         </div>
         <LoginDialog
           isOpen={loginOpen}

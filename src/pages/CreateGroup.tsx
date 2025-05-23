@@ -21,6 +21,7 @@ export default function CreateGroup() {
     name: "",
     identifier: "",
     description: "",
+    guidelines: "",
     imageUrl: "",
   });
 
@@ -82,6 +83,11 @@ export default function CreateGroup() {
         ["name", formData.name],
         ["description", formData.description],
       ];
+
+      // Add guidelines tag if provided
+      if (formData.guidelines) {
+        tags.push(["guidelines", formData.guidelines]);
+      }
 
       // Add image tag if available
       if (imageUrl) {
@@ -158,6 +164,21 @@ export default function CreateGroup() {
                 rows={4}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="guidelines">Group Guidelines</Label>
+              <Textarea
+                id="guidelines"
+                name="guidelines"
+                value={formData.guidelines}
+                onChange={handleInputChange}
+                placeholder="Set community rules and guidelines for members to follow..."
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional: Define rules and expectations for group members
+              </p>
             </div>
 
             <div className="space-y-2">

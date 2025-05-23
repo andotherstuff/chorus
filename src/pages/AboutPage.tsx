@@ -5,16 +5,14 @@ import Header from "@/components/ui/Header";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { Smartphone, Wifi, WifiOff, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { usePWA } from "@/hooks/usePWA";
 
 export default function AboutPage() {
   const html = useMarkdownWithoutFirstHeading("/About.md");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const { isRunningAsPwa } = usePWA();
 
   useEffect(() => {
-    // Check if running as PWA
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
-
     // Listen for online/offline events
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -44,8 +42,8 @@ export default function AboutPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Installation Status</span>
-              <Badge variant={isStandalone ? "default" : "secondary"}>
-                {isStandalone ? (
+              <Badge variant={isRunningAsPwa ? "default" : "secondary"}>
+                {isRunningAsPwa ? (
                   <>
                     <CheckCircle className="w-3 h-3 mr-1" />
                     Installed as App
@@ -73,7 +71,7 @@ export default function AboutPage() {
               </Badge>
             </div>
 
-            {!isStandalone && (
+            {!isRunningAsPwa && (
               <div className="pt-2 border-t">
                 <p className="text-sm text-muted-foreground mb-3">
                   Get the best experience by installing +chorus as an app on your device.
@@ -82,7 +80,7 @@ export default function AboutPage() {
               </div>
             )}
 
-            {isStandalone && (
+            {isRunningAsPwa && (
               <div className="pt-2 border-t">
                 <p className="text-sm text-muted-foreground">
                   ✨ You're using +chorus as an installed app! Enjoy the enhanced experience with faster loading and offline capabilities.

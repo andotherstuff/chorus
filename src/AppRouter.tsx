@@ -5,6 +5,7 @@ import NotFound from "./pages/NotFound";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import GroupSettings from "./pages/GroupSettings";
+import GroupGuidelines from "./pages/GroupGuidelines";
 import CreateGroup from "./pages/CreateGroup";
 import Profile from "./pages/Profile";
 import ProfileSettings from "./pages/settings/ProfileSettings";
@@ -23,6 +24,7 @@ export function AppRouter() {
         <Route path="/groups" element={<Groups />} />
         <Route path="/group/:groupId" element={<GroupDetail />} />
         <Route path="/group/:groupId/settings" element={<GroupSettings />} />
+        <Route path="/group/:groupId/guidelines" element={<GroupGuidelines />} />
         <Route path="/create-group" element={<CreateGroup />} />
         <Route path="/profile/:pubkey" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />

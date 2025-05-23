@@ -11,6 +11,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { nip19 } from 'nostr-tools';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
 import { PWAInstallButton } from "@/components/PWAInstallButton";
+import { usePWA } from "@/hooks/usePWA";
 
 export default function Settings() {
   const { user } = useCurrentUser();
@@ -22,6 +23,7 @@ export default function Settings() {
   const [copyPublicSuccess, setCopyPublicSuccess] = useState(false);
   const checkedForKey = useRef(false);
   const unreadCount = useUnreadNotificationsCount();
+  const { isRunningAsPwa } = usePWA();
 
   // Get pubkey in npub format
   const npub = user ? nip19.npubEncode(user.pubkey) : '';
@@ -208,30 +210,32 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* PWA Install Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Smartphone className="w-5 h-5" />
-              Install App
-            </CardTitle>
-            <CardDescription>Get the full app experience by installing +chorus on your device</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Install +chorus as a Progressive Web App (PWA) for:
-              </p>
-              <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                <li>• Faster loading and offline access</li>
-                <li>• Native app-like experience</li>
-                <li>• Quick access from your home screen</li>
-                <li>• Push notifications (when available)</li>
-              </ul>
-              <PWAInstallButton variant="default" className="w-full sm:w-auto" />
-            </div>
-          </CardContent>
-        </Card>
+        {/* PWA Install Section - Only show if not already running as PWA */}
+        {!isRunningAsPwa && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5" />
+                Install App
+              </CardTitle>
+              <CardDescription>Get the full app experience by installing +chorus on your device</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Install +chorus as a Progressive Web App (PWA) for:
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                  <li>• Faster loading and offline access</li>
+                  <li>• Native app-like experience</li>
+                  <li>• Quick access from your home screen</li>
+                  <li>• Push notifications (when available)</li>
+                </ul>
+                <PWAInstallButton variant="default" className="w-full sm:w-auto" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ import { SimpleMembersList } from "@/components/groups/SimpleMembersList";
 import { GroupNutzapButton } from "@/components/groups/GroupNutzapButton";
 import { GroupNutzapTotal } from "@/components/groups/GroupNutzapTotal";
 import { GroupNutzapList } from "@/components/groups/GroupNutzapList";
-import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode } from "lucide-react";
+import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileText } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import { QRCodeModal } from "@/components/QRCodeModal";
@@ -126,11 +126,12 @@ export default function GroupDetail() {
   const nameTag = community?.tags.find(tag => tag[0] === "name");
   const descriptionTag = community?.tags.find(tag => tag[0] === "description");
   const imageTag = community?.tags.find(tag => tag[0] === "image");
-
+  const guidelinesTag = community?.tags.find(tag => tag[0] === "guidelines");
 
   const name = nameTag ? nameTag[1] : (parsedId?.identifier || "Unnamed Group");
   const description = descriptionTag ? descriptionTag[1] : "No description available";
   const image = imageTag ? imageTag[1] : undefined;
+  const hasGuidelines = guidelinesTag && guidelinesTag[1].trim().length > 0;
 
   useEffect(() => {
     if (name && name !== "Unnamed Group") {
@@ -219,6 +220,7 @@ export default function GroupDetail() {
                   variant="outline"
                   size="default"
                   className="w-full h-8 justify-start pl-3"
+
                   onClick={() => setShowQRCode(true)}
                 >
                   <QrCode className="h-4 w-4 mr-2" />

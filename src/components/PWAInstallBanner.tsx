@@ -1,66 +1,25 @@
-import { useState, useEffect } from 'react';
 import { X, Download, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { usePWAInstall } from './PWAInstallInstructions';
+import { usePWA } from '@/hooks/usePWA';
 
 export function PWAInstallBanner() {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
-  const { isInstallable, promptInstall } = usePWAInstall();
-
-  useEffect(() => {
-    // Check if user has dismissed the banner before
-    const dismissed = localStorage.getItem('pwa-banner-dismissed');
-    if (dismissed) {
-      setIsDismissed(true);
-      return;
-    }
-
-    // Check if we're on a mobile device or if PWA is installable
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
-    // Enhanced PWA detection - check multiple methods
-    const isStandalone = 
-      window.matchMedia('(display-mode: standalone)').matches || // Standard PWA detection
-      (window.navigator as Navigator & { standalone?: boolean }).standalone || // iOS detection
-      document.referrer.includes('android-app://'); // Android TWA detection
-    
-    // Check if launched from homescreen (additional Android signal)
-    const isLaunchedFromHomescreen = document.referrer === '';
-    const hasManifestLink = !!document.querySelector('link[rel="manifest"]');
-    const isFromAppIntent = window.location.href.includes('?source=pwa') || 
-                           window.location.href.includes('?utm_source=pwa') || 
-                           window.location.href.includes('?utm_source=homescreen');
-    
-    // Only show the banner if:
-    // 1. Not already in PWA mode (not standalone)
-    // 2. Either a mobile device or has the install prompt
-    // 3. Not dismissed already
-    if ((isMobile || isInstallable) && 
-        !isStandalone && 
-        !dismissed && 
-        !(isLaunchedFromHomescreen && hasManifestLink && isFromAppIntent)) {
-      setIsVisible(true);
-    }
-  }, [isInstallable]);
+  const { isInstallable, showInstallBanner, promptInstall, dismissBanner } = usePWA();
 
   const handleInstall = async () => {
     if (isInstallable) {
       const success = await promptInstall();
       if (success) {
-        setIsVisible(false);
+        // Banner will be hidden automatically by the hook
       }
     }
   };
 
   const handleDismiss = () => {
-    setIsVisible(false);
-    setIsDismissed(true);
-    localStorage.setItem('pwa-banner-dismissed', 'true');
+    dismissBanner();
   };
 
-  if (!isVisible || isDismissed) {
+  if (!showInstallBanner) {
     return null;
   }
 
