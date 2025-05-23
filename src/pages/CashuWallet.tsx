@@ -175,19 +175,6 @@ export function CashuWallet() {
       <Header />
       <Separator className="my-2" />
 
-      {/* Wallet Info Box */}
-      <Alert className="mb-6">
-        <Info className="h-4 w-4" />
-        <AlertDescription className="text-sm">
-          <span className="text-lg mr-2">💸</span>
-          <strong>Your Cashu Wallet</strong> uses ecash tokens for private, instant payments. 
-          <strong> Cashu</strong> is a privacy-preserving digital cash system built on cryptographic proofs. 
-          <strong> Lightning Network</strong> enables fast Bitcoin transactions, and this wallet seamlessly 
-          bridges both systems - you can send/receive Lightning payments while maintaining privacy through 
-          Cashu's blind signatures. Think of it as digital cash that moves at the speed of Lightning!
-        </AlertDescription>
-      </Alert>
-
       {/* Total Balance Display */}
       {user && wallet && (
         <div className="text-center py-6">
@@ -219,6 +206,19 @@ export function CashuWallet() {
           </button>
         </div>
       )}
+
+      {/* Wallet Info Box */}
+      <Alert className="mb-6">
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-sm">
+          <span className="text-lg mr-2">💸</span>
+          <strong>Your Cashu Wallet</strong> uses ecash tokens for private, instant payments. 
+          <strong> Cashu</strong> is a privacy-preserving digital cash system built on cryptographic proofs. 
+          <strong> Lightning Network</strong> enables fast Bitcoin transactions, and this wallet seamlessly 
+          bridges both systems - you can send/receive Lightning payments while maintaining privacy through 
+          Cashu's blind signatures. Think of it as digital cash that moves at the speed of Lightning!
+        </AlertDescription>
+      </Alert>
 
       {isProcessingToken && (
         <div className="mb-6 p-4 bg-muted rounded-lg flex items-center space-x-3">
