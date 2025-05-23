@@ -17,12 +17,13 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
 import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { toast } from "sonner";
-import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2, FileWarning } from "lucide-react";
+import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2, FileWarning, Palette } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import type { NostrEvent } from "@nostrify/nostrify";
 import Header from "@/components/ui/Header";
 import { ReportsList } from "@/components/groups/ReportsList";
 import { MemberManagement } from "@/components/groups/MemberManagement";
+import { GroupCustomization } from "@/components/groups/GroupCustomization";
 
 
 export default function GroupSettings() {
@@ -40,6 +41,7 @@ export default function GroupSettings() {
   const [activeTab, setActiveTab] = useState(
     tabParam === 'reports' ? 'reports' : 
     tabParam === 'members' ? 'members' : 
+    tabParam === 'customization' ? 'customization' :
     'general'
   );
   
@@ -50,6 +52,8 @@ export default function GroupSettings() {
       setActiveTab('reports');
     } else if (newTabParam === 'members') {
       setActiveTab('members');
+    } else if (newTabParam === 'customization') {
+      setActiveTab('customization');
     } else if (!newTabParam) {
       setActiveTab('general');
     }
@@ -427,11 +431,17 @@ export default function GroupSettings() {
         window.history.pushState(null, '', newUrl);
       }} className="w-full space-y-6">
         <div className="md:flex md:justify-start">
-          <TabsList className="mb-4 w-full md:w-auto flex">
+          <TabsList className="mb-4 w-full md:w-auto grid grid-cols-2 md:flex">
             <TabsTrigger value="general" className="flex-1 md:flex-none">
               <Shield className="h-4 w-4 mr-2" />
               General
             </TabsTrigger>
+            {isOwner && (
+              <TabsTrigger value="customization" className="flex-1 md:flex-none">
+                <Palette className="h-4 w-4 mr-2" />
+                Customization
+              </TabsTrigger>
+            )}
             {(isOwner || isModerator) && (
               <TabsTrigger value="members" className="flex-1 md:flex-none relative">
                 <Users className="h-4 w-4 mr-2" />
@@ -632,6 +642,17 @@ export default function GroupSettings() {
             )}
           </form>
         </TabsContent>
+
+        {isOwner && (
+          <TabsContent value="customization" className="mt-3">
+            <GroupCustomization 
+              communityId={groupId || ""}
+              communityPubkey={parsedId?.pubkey || ""}
+              communityIdentifier={parsedId?.identifier || ""}
+              isOwner={isOwner}
+            />
+          </TabsContent>
+        )}
 
         {(isOwner || isModerator) && (
           <TabsContent value="members" className="mt-3">

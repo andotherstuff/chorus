@@ -5,6 +5,7 @@ import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { usePendingPostsCount } from "@/hooks/usePendingPostsCount";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
 import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
+import { useGroupCustomization } from "@/hooks/useGroupCustomization";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileTe
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import { QRCodeModal } from "@/components/QRCodeModal";
+import { CustomizationPreview } from "@/components/groups/CustomizationPreview";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +79,13 @@ export default function GroupDetail() {
   const isModerator = isOwner || (user && community?.tags
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
     .some(tag => tag[1] === user.pubkey));
+
+  // Load group customization
+  const { settings: customization, hasCustomization } = useGroupCustomization({
+    communityPubkey: parsedId?.pubkey || '',
+    communityIdentifier: parsedId?.identifier || '',
+    enabled: !!parsedId
+  });
 
   const { data: pendingPostsCount = 0 } = usePendingPostsCount(groupId || '');
   const { data: pendingReplies = [] } = usePendingReplies(groupId || '');
@@ -189,38 +198,43 @@ export default function GroupDetail() {
     );
   }
 
+  // Apply customization class
+  const containerClass = hasCustomization ? "group-customized" : "";
+  const contentWidthClass = hasCustomization ? "custom-content-width" : "";
+
   return (
-    <div className="container mx-auto py-1 px-3 sm:px-4">
+    <div className={`container mx-auto py-1 px-3 sm:px-4 ${containerClass}`}>
       <Header />
 
-      <div className="relative mb-6 mt-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <div className="h-40 rounded-lg overflow-hidden mb-2 relative">
-              {imageLoading && (
-                <Skeleton className="absolute inset-0 w-full h-full z-10" />
-              )}
-              <img
-                src={image}
-                alt={name}
-                className="w-full h-full object-cover object-center"
-                onLoad={() => setImageLoading(false)}
-                onError={(e) => {
-                  setImageLoading(false);
-                  e.currentTarget.src = "/placeholder-community.svg";
-                }}
-              />
+      <div className={`relative mb-6 mt-4 ${contentWidthClass}`}>
+        {/* Custom Header Styles */}
+        {(customization.headerStyle === 'banner' || !customization.headerStyle) && (
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className={`custom-banner rounded-lg overflow-hidden mb-2 relative ${customization.bannerImage ? '' : 'h-40'}`}>
+                {imageLoading && (
+                  <Skeleton className="absolute inset-0 w-full h-full z-10" />
+                )}
+                <img
+                  src={customization.bannerImage || image}
+                  alt={name}
+                  className="w-full h-full object-cover object-center"
+                  onLoad={() => setImageLoading(false)}
+                  onError={(e) => {
+                    setImageLoading(false);
+                    e.currentTarget.src = "/placeholder-community.svg";
+                  }}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col min-w-[140px] h-40 space-y-2 justify-between">
+            <div className="flex flex-col min-w-[140px] h-40 space-y-2 justify-between">
             {!isModerator ? (
               <>
                 <Button
                   variant="outline"
                   size="default"
-                  className="w-full h-8 justify-start pl-3"
-
+                  className={`w-full h-8 justify-start pl-3 ${hasCustomization ? 'custom-button-secondary' : ''}`}
                   onClick={() => setShowQRCode(true)}
                 >
                   <QrCode className="h-4 w-4 mr-2" />
@@ -242,7 +256,7 @@ export default function GroupDetail() {
                 <Button
                   variant="outline"
                   size="default"
-                  className="w-full h-8 justify-start pl-3"
+                  className={`w-full h-8 justify-start pl-3 ${hasCustomization ? 'custom-button-secondary' : ''}`}
                   onClick={() => setShowQRCode(true)}
                 >
                   <QrCode className="h-4 w-4 mr-2" />
@@ -311,15 +325,34 @@ export default function GroupDetail() {
             )}
           </div>
         </div>
+        )}
         
         {/* Title and description moved below image and buttons, full width */}
         <div className="w-full mt-4">
-          <h1 className="text-2xl font-bold mb-2">{name}</h1>
+          <div className="flex items-center gap-4 mb-2">
+            {customization.logoImage && (
+              <img 
+                src={customization.logoImage} 
+                alt={`${name} logo`}
+                className={`w-12 h-12 rounded-full object-cover custom-logo`}
+              />
+            )}
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold">{name}</h1>
+              {customization.showGroupStats && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {currentPostCount} posts
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </div>
           {hasGuidelines && (
             <div className="mb-2">
               <Link 
                 to={`/group/${encodeURIComponent(groupId || '')}/guidelines`}
-                className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium inline-flex items-center gap-1"
+                className={`text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium inline-flex items-center gap-1 ${hasCustomization ? 'custom-accent' : ''}`}
               >
                 <FileText className="h-4 w-4" />
                 Community Guidelines
@@ -328,7 +361,137 @@ export default function GroupDetail() {
           )}
           <p className="text-base text-muted-foreground">{description}</p>
         </div>
+        
+        {/* Alternative header styles */}
+        {customization.headerStyle === 'minimal' && (
+          <div className="border-b pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {customization.logoImage && (
+                  <img 
+                    src={customization.logoImage} 
+                    alt={`${name} logo`}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                )}
+                <h1 className="text-xl font-bold">{name}</h1>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={hasCustomization ? 'custom-button-secondary' : ''}
+                  onClick={() => setShowQRCode(true)}
+                >
+                  <QrCode className="h-4 w-4" />
+                </Button>
+                <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">{description}</p>
+          </div>
+        )}
+        
+        {customization.headerStyle === 'overlay' && customization.bannerImage && (
+          <div className="relative custom-banner rounded-lg overflow-hidden mb-4">
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
+              <div className="p-6 text-white w-full">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {customization.logoImage && (
+                      <img 
+                        src={customization.logoImage} 
+                        alt={`${name} logo`}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-white"
+                      />
+                    )}
+                    <div>
+                      <h1 className="text-2xl font-bold">{name}</h1>
+                      <p className="text-sm opacity-90">{description}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+                      onClick={() => setShowQRCode(true)}
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </Button>
+                    <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {customization.headerStyle === 'split' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                {customization.logoImage && (
+                  <img 
+                    src={customization.logoImage} 
+                    alt={`${name} logo`}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                )}
+                <h1 className="text-2xl font-bold">{name}</h1>
+              </div>
+              <p className="text-muted-foreground">{description}</p>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={hasCustomization ? 'custom-button-secondary' : ''}
+                  onClick={() => setShowQRCode(true)}
+                >
+                  <QrCode className="h-4 w-4 mr-2" />
+                  QR Code
+                </Button>
+                <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+              </div>
+            </div>
+            {(customization.bannerImage || image) && (
+              <div className="custom-banner rounded-lg overflow-hidden">
+                <img
+                  src={customization.bannerImage || image}
+                  alt={name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
+      
+      {/* Only show default header if using banner style */}
+      {customization.headerStyle !== 'banner' && (
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1">
+            <div className="h-40 rounded-lg overflow-hidden mb-2 relative">
+              {imageLoading && (
+                <Skeleton className="absolute inset-0 w-full h-full z-10" />
+              )}
+              <img
+                src={image}
+                alt={name}
+                className="w-full h-full object-cover object-center"
+                onLoad={() => setImageLoading(false)}
+                onError={(e) => {
+                  setImageLoading(false);
+                  e.currentTarget.src = "/placeholder-community.svg";
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col min-w-[140px] h-40 space-y-2 justify-between">
+            {/* Buttons for non-banner styles */}
+          </div>
+        </div>
+      )}
 
       <Tabs value={activeTab} defaultValue="posts" onValueChange={(value) => {
         setActiveTab(value);
@@ -355,13 +518,22 @@ export default function GroupDetail() {
         </div>
 
         <TabsContent value="posts" className="space-y-4">
+          {/* Show customization preview for group owners */}
+          <div className={`${contentWidthClass} mx-auto`}>
+            <CustomizationPreview 
+              groupId={groupId || ''}
+              hasCustomization={hasCustomization}
+              isOwner={isOwner}
+            />
+          </div>
+
           {user && (
-            <div className="max-w-3xl mx-auto">
+            <div className={`${contentWidthClass} mx-auto`}>
               <CreatePostForm communityId={groupId || ''} />
             </div>
           )}
 
-          <div className="flex items-center justify-end mb-4 gap-2 max-w-3xl mx-auto">
+          <div className={`flex items-center justify-end mb-4 gap-2 ${contentWidthClass} mx-auto`}>
             <div className="flex items-center space-x-2">
               <Switch
                 id="approved-only"
@@ -375,11 +547,12 @@ export default function GroupDetail() {
             </div>
           </div>
 
-          <div className="max-w-3xl mx-auto">
+          <div className={`${contentWidthClass} mx-auto`}>
             <PostList
               communityId={groupId || ''}
               showOnlyApproved={showOnlyApproved}
               onPostCountChange={setCurrentPostCount}
+              customization={customization}
             />
           </div>
         </TabsContent>
@@ -398,7 +571,7 @@ export default function GroupDetail() {
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
-          <div className="max-w-3xl mx-auto">
+          <div className={`${contentWidthClass} mx-auto`}>
             <SimpleMembersList communityId={groupId || ''} />
           </div>
         </TabsContent>

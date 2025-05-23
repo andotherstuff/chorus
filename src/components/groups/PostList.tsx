@@ -81,9 +81,10 @@ interface PostListProps {
   showOnlyApproved?: boolean;
   pendingOnly?: boolean;
   onPostCountChange?: (count: number) => void; // New prop for tracking post count
+  customization?: any; // Customization settings
 }
 
-export function PostList({ communityId, showOnlyApproved = false, pendingOnly = false, onPostCountChange }: PostListProps) {
+export function PostList({ communityId, showOnlyApproved = false, pendingOnly = false, onPostCountChange, customization }: PostListProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { bannedUsers } = useBannedUsers(communityId);
@@ -384,6 +385,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           isApproved={'approval' in post}
           isModerator={isUserModerator}
           isLastItem={index === sortedPosts.length - 1}
+          customization={customization}
         />
       ))}
     </div>
@@ -406,9 +408,10 @@ interface PostItemProps {
   isApproved: boolean;
   isModerator: boolean;
   isLastItem?: boolean;
+  customization?: any;
 }
 
-function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false }: PostItemProps) {
+function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false, customization }: PostItemProps) {
   const author = useAuthor(post.pubkey);
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish({
@@ -566,10 +569,13 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
     });
   };
 
+  // Apply custom post styling
+  const postClasses = customization ? `custom-post ${customization.postStyle}` : '';
+  
   return (
-    <div className={`py-4 hover:bg-muted/5 transition-colors ${!isLastItem ? 'border-b-2 border-border/70' : ''}`}>
+    <div className={`py-4 hover:bg-muted/5 transition-colors ${!isLastItem ? 'border-b-2 border-border/70' : ''} ${postClasses}`}>
       <div className="flex flex-row items-start px-3">
-        <Link to={`/profile/${post.pubkey}`} className="flex-shrink-0 mr-2.5">
+        <Link to={`/profile/${post.pubkey}`} className={`flex-shrink-0 mr-2.5 ${customization?.showAvatars === false ? 'custom-avatar' : ''}`}>
           <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
             <AvatarImage src={profileImage} alt={displayName} />
             <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
@@ -593,7 +599,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="mr-1.5 whitespace-nowrap hover:underline">{relativeTime}</span>
+                      <span className={`mr-1.5 whitespace-nowrap hover:underline ${customization?.showTimestamps === false ? 'custom-timestamp' : ''}`}>{relativeTime}</span>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{formattedAbsoluteTime}</p>
