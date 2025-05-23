@@ -186,6 +186,28 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Disappearing posts Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Disappearing posts</CardTitle>
+            <CardDescription>Set how long your posts should remain before expiring and not being served by relays</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select value={postExpiration} onValueChange={(value) => setPostExpiration(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select expiration period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">No expiration</SelectItem>
+                <SelectItem value="1-week">1 week</SelectItem>
+                <SelectItem value="1-month">1 month</SelectItem>
+                <SelectItem value="3-months">3 months</SelectItem>
+                <SelectItem value="12-months">12 months</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
         {/* PWA Install Section */}
         <Card>
           <CardHeader>
@@ -208,28 +230,6 @@ export default function Settings() {
               </ul>
               <PWAInstallButton variant="default" className="w-full sm:w-auto" />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Disappearing posts Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Disappearing posts</CardTitle>
-            <CardDescription>Set how long your posts should remain before expiring and not being served by relays</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={postExpiration} onValueChange={(value) => setPostExpiration(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select expiration period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="off">No expiration</SelectItem>
-                <SelectItem value="1-week">1 week</SelectItem>
-                <SelectItem value="1-month">1 month</SelectItem>
-                <SelectItem value="3-months">3 months</SelectItem>
-                <SelectItem value="12-months">12 months</SelectItem>
-              </SelectContent>
-            </Select>
           </CardContent>
         </Card>
       </div>
