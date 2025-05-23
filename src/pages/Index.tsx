@@ -222,7 +222,7 @@ const Index = () => {
           {/* Footer attribution */}
           <div className="absolute bottom-4 left-0 right-0 text-center">
             <p className="text-xs text-muted-foreground">
-              *vibed by{" "}
+              vibed by{" "}
               <a
                 href="https://andotherstuff.org"
                 target="_blank"
