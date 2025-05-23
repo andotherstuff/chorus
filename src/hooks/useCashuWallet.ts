@@ -280,6 +280,13 @@ export function useCashuWallet() {
           created_at: Math.floor(Date.now() / 1000)
         });
 
+        // remove proofs from store
+        const proofsToRemoveFiltered = proofsToRemove.filter(proof => !newProofs.includes(proof));
+        cashuStore.removeProofs(proofsToRemoveFiltered);
+
+        // add proofs to store
+        cashuStore.addProofs(newProofs, newTokenEvent?.id || '');
+
         // publish token event
         try {
           await nostr.event(newTokenEvent);
@@ -312,13 +319,6 @@ export function useCashuWallet() {
           console.error('Failed to publish deletion event:', error);
         }
       }
-
-      // remove proofs from store
-      const proofsToRemoveFiltered = proofsToRemove.filter(proof => !newProofs.includes(proof));
-      cashuStore.removeProofs(proofsToRemoveFiltered);
-
-      // add proofs to store
-      cashuStore.addProofs(newProofs, eventToReturn?.id || '');
 
       return eventToReturn;
     },
