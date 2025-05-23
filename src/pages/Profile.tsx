@@ -20,7 +20,6 @@ import { NoteContent } from "@/components/NoteContent";
 import { Link } from "react-router-dom";
 import { 
   ExternalLink, 
-  Copy, 
   Users, 
   Pencil,
   Calendar, 
@@ -732,13 +731,6 @@ export default function Profile() {
   // Check if this is the current user's profile
   const isCurrentUser = user && pubkey === user.pubkey;
 
-  const copyPubkeyToClipboard = () => {
-    if (pubkey) {
-      navigator.clipboard.writeText(pubkey);
-      toast.success("Public key copied to clipboard");
-    }
-  };
-
   useEffect(() => {
     if (displayNameFull && displayNameFull !== "Unnamed User") {
       document.title = `+chorus - ${displayNameFull}`;
@@ -871,18 +863,7 @@ export default function Profile() {
 
         {/* Bottom row: Action buttons */}
         <div className="flex flex-wrap gap-2">
-          {/* Npub button - always first */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={copyPubkeyToClipboard}
-          >
-            <Copy className="h-4 w-4" />
-            Npub
-          </Button>
-          
-          {/* Website button - second if exists */}
+          {/* Website button - first if exists */}
           {website && (
             <Button
               variant="outline"
