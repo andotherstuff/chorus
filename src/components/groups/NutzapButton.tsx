@@ -129,7 +129,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
       {showSats ? (
         <Bitcoin className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
       ) : (
-        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
+        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-green-500' : ''}`} />
       )}
       {showText && nutzapTotal > 0 && <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span>}
     </Button>

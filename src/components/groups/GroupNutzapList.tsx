@@ -136,8 +136,12 @@ function NutzapItem({ event, btcPrice, showSats }: { event: any; btcPrice?: numb
               <div className="text-xs text-muted-foreground">{formattedDate}</div>
             </div>
           </Link>
-          <div className="flex items-center text-amber-500">
-            <DollarSign className="h-4 w-4 mr-1" />
+          <div className="flex items-center">
+            {showSats ? (
+              <Bitcoin className="h-4 w-4 mr-1 text-amber-500" />
+            ) : (
+              <DollarSign className="h-4 w-4 mr-1 text-green-500" />
+            )}
             <span className={`font-medium tabular-nums ${isFlashing ? 'flash-update' : ''}`}>
               {currentValue}
             </span>

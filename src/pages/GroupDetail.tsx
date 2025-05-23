@@ -278,7 +278,7 @@ export default function GroupDetail() {
                       groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
                       ownerPubkey={community.pubkey}
                       variant="outline"
-                      className="w-full h-8"
+                      className="w-full h-full"
                     />
                   )}
                 </div>
@@ -376,10 +376,13 @@ export default function GroupDetail() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Group eCash</h2>
             {user && community && (
-              <GroupNutzapButton
-                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                ownerPubkey={community.pubkey}
-              />
+              <div className="flex-shrink-0">
+                <GroupNutzapButton
+                  groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                  ownerPubkey={community.pubkey}
+                  className="w-auto"
+                />
+              </div>
             )}
           </div>
           <GroupNutzapList groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
