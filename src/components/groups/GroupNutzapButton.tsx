@@ -167,8 +167,8 @@ export function GroupNutzapButton({
         className={cn("justify-start", className)}
         onClick={handleOpenDialog}
       >
-        <DollarSign className="h-4 w-4 mr-2" />
-        <span>eCash Group</span>
+        <DollarSign className="h-4 w-4" />
+        Send eCash
       </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -78,6 +78,9 @@ export function EmojiReactionButton({ postId, showText = true }: EmojiReactionBu
   // Calculate total reactions count
   const totalReactionsCount = Object.values(processedReactions).reduce((sum, reaction) => sum + reaction.count, 0);
   
+  // Find the user's reaction emoji (if any)
+  const userReaction = Object.values(processedReactions).find(reaction => reaction.hasReacted);
+  
   // Handle emoji selection
   const handleEmojiClick = async (emojiData: EmojiClickData) => {
     if (!user) {
@@ -106,16 +109,68 @@ export function EmojiReactionButton({ postId, showText = true }: EmojiReactionBu
     }
   };
 
+  // Handle button click - remove reaction if already reacted, otherwise open picker
+  const handleButtonClick = async (e: React.MouseEvent) => {
+    if (!user) {
+      toast.error("You must be logged in to react to posts");
+      return;
+    }
+
+    // If user has already reacted, remove the reaction
+    if (userReaction) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      try {
+        // Find the user's reaction event to delete
+        const userReactionEvent = reactions?.find(
+          reaction => reaction.pubkey === user.pubkey && reaction.content === userReaction.emoji
+        );
+        
+        if (userReactionEvent) {
+          // Create a delete event (kind 5)
+          await publishEvent({
+            kind: 5,
+            tags: [
+              ["e", userReactionEvent.id],
+            ],
+            content: "",
+          });
+          
+          toast.success("Reaction removed!");
+          
+          // Refetch reactions to update the UI
+          refetch();
+        }
+      } catch (error) {
+        console.error("Error removing reaction:", error);
+        toast.error("Failed to remove reaction. Please try again.");
+      }
+    } else {
+      // Open emoji picker if not reacted
+      setOpen(!open);
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
+          className={`flex items-center h-7 px-1.5 ${
+            userReaction 
+              ? "text-primary hover:text-primary/80" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
           disabled={isLoading || !user}
+          onClick={handleButtonClick}
         >
-          <SmilePlus className={`h-3.5 w-3.5`} />
+          {userReaction ? (
+            <span className="text-sm">{userReaction.emoji}</span>
+          ) : (
+            <SmilePlus className="h-3.5 w-3.5" />
+          )}
           {totalReactionsCount > 0 && (
             <span className="text-xs ml-0.5">{totalReactionsCount}</span>
           )}
