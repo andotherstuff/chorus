@@ -237,23 +237,36 @@ ${mediaUrl}`;
                   />
                 ) : mediaFile?.type.startsWith('audio/') ? (
                   <div className="bg-secondary/50 rounded-md border p-3 flex items-center gap-3">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{mediaFile.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {mediaFile.name.includes('voice_memo') ? 'Voice recording' : 'Audio file'} ({(mediaFile.size / 1024).toFixed(0)} KB)
-                      </div>
-                    </div>
-                    {/* Only show audio player for non-voice recordings to avoid WebM compatibility issues */}
-                    {!mediaFile.name.includes('voice_memo') && (
-                      <audio
-                        src={previewUrl}
-                        controls
-                        className="h-8"
-                        style={{ width: '200px' }}
-                        onError={(e) => {
-                          console.error('Audio preview error:', e);
-                        }}
-                      />
+                    {mediaFile.name.includes('voice_memo') ? (
+                      <>
+                        <div className="bg-green-500/10 rounded-full p-2">
+                          <Mic className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">Voice Recording</div>
+                          <div className="text-xs text-muted-foreground">
+                            Ready to send • {(mediaFile.size / 1024).toFixed(0)} KB
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{mediaFile.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Audio file • {(mediaFile.size / 1024).toFixed(0)} KB
+                          </div>
+                        </div>
+                        <audio
+                          src={previewUrl}
+                          controls
+                          className="h-8"
+                          style={{ width: '200px' }}
+                          onError={(e) => {
+                            console.error('Audio preview error:', e);
+                          }}
+                        />
+                      </>
                     )}
                   </div>
                 ) : (
