@@ -24,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
 
   return (
     <div className={`flex justify-between items-center ${className || ""}`}>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-baseline gap-1.5">
         <Link to="/" className="contents">
           <h1 className="text-2xl font-bold flex flex-row items-center leading-none">
             <span className="text-red-500 font-extrabold text-3xl">+</span>
