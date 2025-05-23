@@ -202,20 +202,21 @@ export default function GroupDetail() {
                   >
                     <QrCode className="h-4 w-4" />
                   </Button>
+                  {hasGuidelines && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="h-8 px-2 text-sm"
+                    >
+                      <Link to={`/group/${encodeURIComponent(groupId || '')}/guidelines`} className="flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">View Guidelines</span>
+                        <span className="sm:hidden">Guidelines</span>
+                      </Link>
+                    </Button>
+                  )}
                 </div>
-                {hasGuidelines && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    asChild
-                    className="self-start p-1 h-auto text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
-                  >
-                    <Link to={`/group/${encodeURIComponent(groupId || '')}/guidelines`} className="flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5" />
-                      View Guidelines
-                    </Link>
-                  </Button>
-                )}
               </div>
               <div className="flex items-center gap-2">
                 {/* Manage Group button moved to the right column */}
