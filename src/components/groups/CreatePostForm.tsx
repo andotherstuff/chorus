@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useUploadFile } from "@/hooks/useUploadFile";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Image, Loader2, Send, XCircle } from "lucide-react"; // Added XCircle
+import { Image, Loader2, Send, XCircle, Mic, Square } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { Link } from "react-router-dom";
 
@@ -31,6 +31,12 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
   const [content, setContent] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clean up object URLs when component unmounts or preview changes
   useEffect(() => {
@@ -40,6 +46,78 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
       }
     };
   }, [previewUrl, mediaFile]);
+
+  // Clean up recording interval on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `voice_memo_${Date.now()}.webm`, { type: 'audio/webm' });
+        
+        // Clean up previous media if any
+        if (previewUrl && (mediaFile?.type.startsWith('video/') || mediaFile?.type.startsWith('audio/'))) {
+          URL.revokeObjectURL(previewUrl);
+        }
+        
+        setMediaFile(audioFile);
+        const url = URL.createObjectURL(audioFile);
+        setPreviewUrl(url);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      // Start duration counter
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast.error('Could not access microphone. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   if (!user) return null;
 
@@ -191,7 +269,7 @@ ${mediaUrl}`;
       </CardContent>
 
       <CardFooter className="flex justify-between items-center border-t px-3 py-2">
-        <div>
+        <div className="flex gap-1">
           <Button variant="ghost" size="sm" className="text-muted-foreground h-8 px-2 text-xs" asChild>
             <label htmlFor="media-upload" className="cursor-pointer flex items-center">
               <Image className="h-3.5 w-3.5 mr-1" />
@@ -202,8 +280,29 @@ ${mediaUrl}`;
                 accept="image/*,video/*,audio/*"
                 onChange={handleMediaSelect}
                 className="hidden"
+                disabled={isRecording}
               />
             </label>
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`text-muted-foreground h-8 px-2 text-xs ${isRecording ? 'text-red-500' : ''}`}
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isPublishing || isUploading}
+          >
+            {isRecording ? (
+              <>
+                <Square className="h-3.5 w-3.5 mr-1 fill-current" />
+                {formatDuration(recordingDuration)}
+              </>
+            ) : (
+              <>
+                <Mic className="h-3.5 w-3.5 mr-1" />
+                Record
+              </>
+            )}
           </Button>
         </div>
 
