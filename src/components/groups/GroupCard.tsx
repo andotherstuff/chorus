@@ -88,11 +88,9 @@ export function GroupCard({
     e.preventDefault();
 
     if (!user) {
-      toast.error("Please log in to pin groups");
+      toast.error("Please log in to pin/unpin groups.");
       return;
     }
-
-    if (isUpdating) return;
 
     if (isPinned) {
       unpinGroup(communityId);
@@ -101,35 +99,35 @@ export function GroupCard({
     }
   };
 
-  const displayParticipants = stats?.participants.size || 0;
-  const displayPosts = stats?.posts || 0;
-
-  // Show notification indicators for owners/moderators (only for NIP-72)
-  const showReportsIndicator = community.type === "nip72" && openReportsCount > 0;
-  const showJoinRequestsIndicator = community.type === "nip72" && pendingRequestsCount > 0;
+  // Get the first letter of the group name for avatar fallback
+  const getInitials = () => {
+    if (community.type === "nip29") return "";
+    return name.charAt(0).toUpperCase();
+  };
 
   // Determine if user is a member or owner of this group
   const isUserMember = isMember ?? Boolean(userRole);
 
-  // Style adjustments based on membership and group type
+  // Style adjustments based on membership
   const cardStyle = cn(
-    "overflow-hidden flex flex-col relative group h-full transition-colors hover:bg-accent/5",
+    "overflow-hidden flex flex-col relative group h-full transition-colors hover:bg-accent/5 cursor-pointer",
     isPinned && "ring-1 ring-primary/20",
     isUserMember && "bg-primary/5", // Subtle highlight for groups the user is a member of
     hasPendingRequest && !isUserMember && "bg-gray-50/50" // Different background for pending requests
   );
 
+  const displayParticipants = stats?.participants.size || 0;
+  const displayPosts = stats?.posts || 0;
+
   return (
-    <Card className={cardStyle}>
-      <Link to={`/group/${routeId}`} className="flex-1 flex flex-col">
-        {/* Role badge for user's groups */}
+    <Link to={`/group/${routeId}`}>
+      <Card className={cardStyle}>
         {displayRole && (
           <div className="absolute top-2 right-10 z-10">
             <RoleBadge role={displayRole} />
           </div>
         )}
 
-        {/* Pending request badge */}
         {hasPendingRequest && !displayRole && (
           <div className="absolute top-2 right-10 z-10">
             <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
@@ -165,125 +163,116 @@ export function GroupCard({
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>
-                  {openReportsCount > 0 && `${openReportsCount} open report${openReportsCount !== 1 ? 's' : ''}`}
-                  {openReportsCount > 0 && pendingRequestsCount > 0 && ', '}
-                  {pendingRequestsCount > 0 && `${pendingRequestsCount} join request${pendingRequestsCount !== 1 ? 's' : ''}`}
-                </p>
+                <div className="text-sm">
+                  {openReportsCount > 0 && (
+                    <div className="text-red-400">
+                      {openReportsCount} open report{openReportsCount !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                  {pendingRequestsCount > 0 && (
+                    <div className="text-blue-400">
+                      {pendingRequestsCount} pending join request{pendingRequestsCount !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Click to manage group
+                  </div>
+                </div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}
 
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={image} alt={name} />
-                  <AvatarFallback className="bg-muted">
-                    {community.type === "nip29" ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-base leading-tight truncate">
-                      {name}
-                    </CardTitle>
-                    {community.type === "nip29" ? (
-                      <Badge variant="secondary" className="text-xs">Private</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">Public</Badge>
-                    )}
+        <CardHeader className="flex flex-row items-center space-y-0 gap-3 pt-4 pb-2 px-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-12 w-12 rounded-md">
+              <AvatarImage src={image} alt={name} />
+              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                {community.type === "nip29" ? <Lock className="h-5 w-5" /> : getInitials()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-medium leading-tight">{name}</CardTitle>
+              <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+                {isLoadingStats ? (
+                  <>
+                    <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px] opacity-70">
+                      <MessageSquare className="h-2.5 w-2.5 mr-0.5" />
+                      ...
+                    </div>
+                    <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px] opacity-70">
+                      <Activity className="h-2.5 w-2.5 mr-0.5" />
+                      ...
+                    </div>
+                  </>
+                ) : stats ? (
+                  <>
+                    <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px]">
+                      <MessageSquare className="h-2.5 w-2.5 mr-0.5" />
+                      {displayPosts}
+                    </div>
+                    <div className="inline-flex items-center py-0.5 px-1.5 bg-muted rounded text-[10px]">
+                      <Activity className="h-2.5 w-2.5 mr-0.5" />
+                      {displayParticipants}
+                    </div>
+                  </>
+                ) : null}
+                {community.type === "nip29" && (
+                  <div className="inline-flex items-center py-0.5 px-1.5 bg-secondary rounded text-[10px]">
+                    <Lock className="h-2.5 w-2.5 mr-0.5" />
+                    Private
                   </div>
-                  {description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                      {description}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
         </CardHeader>
-        
-        <CardContent className="pt-0">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <MessageSquare className="h-4 w-4" />
-              <span>
-                {isLoadingStats ? "..." : displayPosts} post{displayPosts !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Activity className="h-4 w-4" />
-              <span>
-                {isLoadingStats ? "..." : displayParticipants} participant{displayParticipants !== 1 ? "s" : ""}
-              </span>
-            </div>
-          </div>
+
+        <CardContent className="px-3 pb-3 pt-0">
+          <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>
         </CardContent>
-      </Link>
 
-      {/* Pin/More actions buttons */}
-      <div className="absolute top-2 right-2 flex items-center gap-1">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleTogglePin}
-                disabled={isUpdating}
-                className="h-8 w-8 p-0"
-              >
-                {isPinned ? (
-                  <PinOff className="h-4 w-4 text-primary" />
-                ) : (
-                  <Pin className="h-4 w-4" />
+        {/* Pin/More menu buttons - positioned absolute */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+          {isPinned ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={handleTogglePin}
+                    disabled={isUpdating}
+                  >
+                    <PinOff className="h-3.5 w-3.5 text-primary" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Unpin group</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={handleTogglePin}>
+                  <Pin className="h-4 w-4 mr-2" />
+                  Pin group
+                </DropdownMenuItem>
+                {!isUserMember && community.type === "nip72" && (
+                  <JoinRequestMenuItem communityId={communityId} hasPendingRequest={hasPendingRequest} />
                 )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{isPinned ? "Unpin group" : "Pin group"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Dropdown menu for additional actions */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-              {(showReportsIndicator || showJoinRequestsIndicator) && (
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
-            {showJoinRequestsIndicator && (
-              <DropdownMenuItem asChild>
-                <Link to={`/group/${routeId}/settings`} className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Join Requests ({pendingRequestsCount})
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {showReportsIndicator && (
-              <DropdownMenuItem asChild>
-                <Link to={`/group/${routeId}/settings`} className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                  Reports ({openReportsCount})
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {/* Join request menu item for non-members */}
-            {!isUserMember && community.type === "nip72" && (
-              <JoinRequestMenuItem communityId={communityId} hasPendingRequest={hasPendingRequest} />
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </Card>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </Card>
+    </Link>
   );
 }
