@@ -30,7 +30,11 @@ import {
   LinkIcon,
   MoreVertical,
   Flag,
-  QrCode
+  QrCode,
+  ArrowRight,
+  Crown,
+  Shield,
+  User
 } from "lucide-react";
 import { toast } from "sonner";
 import type { NostrEvent } from "@nostrify/nostrify";
@@ -43,6 +47,7 @@ import { shareContent } from "@/lib/share";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { NutzapInterface } from "@/components/groups/NutzapInterface";
@@ -55,6 +60,88 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { QRCodeModal } from "@/components/QRCodeModal";
+import { CommonGroupsListImproved } from "@/components/profile/CommonGroupsListImproved";
+
+// Hook to get shared group IDs
+function useSharedGroupIds(profileUserPubkey: string): string[] {
+  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
+
+  const { data: sharedGroupIds = [] } = useQuery({
+    queryKey: ["shared-group-ids", user?.pubkey, profileUserPubkey],
+    queryFn: async (c) => {
+      if (!user || !nostr || !profileUserPubkey || user.pubkey === profileUserPubkey) {
+        return [];
+      }
+
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
+
+      // Helper function to get community ID
+      const getCommunityId = (community: NostrEvent) => {
+        const dTag = community.tags.find(tag => tag[0] === "d");
+        return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+      };
+
+      // Get membership events for both users
+      const [currentUserMemberships, profileUserMemberships] = await Promise.all([
+        nostr.query([{ kinds: [14550], "#p": [user.pubkey], limit: 100 }], { signal }),
+        nostr.query([{ kinds: [14550], "#p": [profileUserPubkey], limit: 100 }], { signal })
+      ]);
+
+      // Get communities owned/moderated by both users
+      const [currentUserCommunities, profileUserCommunities] = await Promise.all([
+        nostr.query([
+          { kinds: [34550], authors: [user.pubkey] },
+          { kinds: [34550], "#p": [user.pubkey] }
+        ], { signal }),
+        nostr.query([
+          { kinds: [34550], authors: [profileUserPubkey] },
+          { kinds: [34550], "#p": [profileUserPubkey] }
+        ], { signal })
+      ]);
+
+      // Extract community IDs for current user
+      const currentUserCommunityIds = new Set<string>();
+      
+      // From memberships
+      for (const membership of currentUserMemberships) {
+        const aTag = membership.tags.find(tag => tag[0] === "a");
+        if (aTag) currentUserCommunityIds.add(aTag[1]);
+      }
+      
+      // From owned/moderated communities
+      for (const community of currentUserCommunities) {
+        const communityId = getCommunityId(community);
+        currentUserCommunityIds.add(communityId);
+      }
+
+      // Extract community IDs for profile user
+      const profileUserCommunityIds = new Set<string>();
+      
+      // From memberships
+      for (const membership of profileUserMemberships) {
+        const aTag = membership.tags.find(tag => tag[0] === "a");
+        if (aTag) profileUserCommunityIds.add(aTag[1]);
+      }
+      
+      // From owned/moderated communities
+      for (const community of profileUserCommunities) {
+        const communityId = getCommunityId(community);
+        profileUserCommunityIds.add(communityId);
+      }
+
+      // Find common community IDs
+      const commonCommunityIds = [...currentUserCommunityIds].filter(id => 
+        profileUserCommunityIds.has(id)
+      );
+
+      return commonCommunityIds;
+    },
+    enabled: !!nostr && !!user && !!profileUserPubkey && user.pubkey !== profileUserPubkey,
+  });
+
+  return sharedGroupIds;
+}
 
 // Helper function to extract group information from a post
 function extractGroupInfo(post: NostrEvent): { groupId: string; groupName: string } | null {
@@ -223,14 +310,101 @@ interface UserGroup {
   groupEvent: NostrEvent;
 }
 
+// Modern role badge component with optional avatar
+function RoleBadge({ 
+  role, 
+  size = "default",
+  userPubkey,
+  showAvatar = false,
+  simplified = false
+}: { 
+  role: "owner" | "moderator" | "member";
+  size?: "default" | "sm";
+  userPubkey?: string;
+  showAvatar?: boolean;
+  simplified?: boolean;
+}) {
+  const author = useAuthor(userPubkey);
+  const metadata = showAvatar && userPubkey ? author.data?.metadata : null;
+  
+  const getIcon = () => {
+    const iconSize = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
+    switch (role) {
+      case "owner":
+        return <Crown className={`${iconSize} ${showAvatar && !simplified ? '' : 'mr-1'}`} />;
+      case "moderator":
+        return <Shield className={`${iconSize} ${showAvatar && !simplified ? '' : 'mr-1'}`} />;
+      case "member":
+        return null; // No icon for regular members
+    }
+  };
+
+  const getRoleStyles = () => {
+    switch (role) {
+      case "owner":
+        return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800";
+      case "moderator":
+        return "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800";
+      case "member":
+        return "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700";
+    }
+  };
+
+  if (role === "member") {
+    return null; // Don't show badge for regular members
+  }
+
+  const roleText = role.charAt(0).toUpperCase() + role.slice(1);
+  const paddingSize = size === "sm" ? "px-1.5 py-0.5" : "px-2 py-0.5";
+
+  // Simplified version: just show avatar and icon
+  if (simplified && showAvatar && userPubkey) {
+    return (
+      <div className={`inline-flex items-center gap-1 ${paddingSize} text-xs font-medium rounded-md border ${getRoleStyles()}`}>
+        <Avatar className="h-4 w-4">
+          <AvatarImage src={metadata?.picture} />
+          <AvatarFallback className="text-[8px]">
+            {metadata?.name?.slice(0, 1).toUpperCase() || userPubkey.slice(0, 1).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        {getIcon()}
+      </div>
+    );
+  }
+
+  // Original version with text
+  return (
+    <div className={`inline-flex items-center gap-1.5 ${paddingSize} text-xs font-medium rounded-md border ${getRoleStyles()}`}>
+      {showAvatar && userPubkey && (
+        <Avatar className="h-4 w-4">
+          <AvatarImage src={metadata?.picture} />
+          <AvatarFallback className="text-[8px]">
+            {metadata?.name?.slice(0, 1).toUpperCase() || userPubkey.slice(0, 1).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+      )}
+      {getIcon()}
+      <span>{roleText}</span>
+    </div>
+  );
+}
+
 function UserGroupsList({
   groups,
-  isLoading
+  isLoading,
+  profileUserPubkey,
+  sharedGroupIds = []
 }: {
   groups: UserGroup[] | undefined;
   isLoading: boolean;
+  profileUserPubkey: string;
+  sharedGroupIds?: string[];
 }) {
   const { user } = useCurrentUser();
+  const isCurrentUser = user && profileUserPubkey === user.pubkey;
+  const profileAuthor = useAuthor(profileUserPubkey);
+  const profileMetadata = profileAuthor.data?.metadata;
+  const profileDisplayName = profileMetadata?.display_name || profileMetadata?.name || profileUserPubkey.slice(0, 8);
 
   if (isLoading) {
     return (
@@ -250,15 +424,28 @@ function UserGroupsList({
 
   if (!groups || groups.length === 0) {
     return (
-      <div className="p-8 text-center border border-border/30 rounded-md bg-card">
-        <p className="text-muted-foreground">This user is not a member of any groups yet</p>
+      <div className="p-8 text-center bg-muted/20 rounded-xl border border-border/50">
+        <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+        <p className="text-muted-foreground">
+          {isCurrentUser ? "You are not a member of any groups yet" : "This user is not a member of any groups yet"}
+        </p>
+        {isCurrentUser && (
+          <Link to="/groups" className="mt-3 inline-block">
+            <Button variant="outline" size="sm">Explore Groups</Button>
+          </Link>
+        )}
       </div>
     );
   }
 
-  // Create a map to deduplicate groups by ID
+  // Create a map to deduplicate groups by ID and filter out shared groups
   const uniqueGroups = new Map<string, UserGroup>();
   for (const group of groups) {
+    // Skip if this group is in the shared groups list (only when viewing another user's profile)
+    if (!isCurrentUser && sharedGroupIds.includes(group.id)) {
+      continue;
+    }
+    
     // Only add if not already in the map, or replace with newer version
     if (
       !uniqueGroups.has(group.id) ||
@@ -288,60 +475,97 @@ function UserGroupsList({
     return 'member';
   };
 
+  // Sort groups by role (owner first, then moderator, then member)
+  const sortedGroups = Array.from(uniqueGroups.values()).sort((a, b) => {
+    const roleOrder = { owner: 0, moderator: 1, member: 2 };
+    const aRole = getUserRole(a, profileUserPubkey);
+    const bRole = getUserRole(b, profileUserPubkey);
+    
+    if (roleOrder[aRole] !== roleOrder[bRole]) {
+      return roleOrder[aRole] - roleOrder[bRole];
+    }
+    
+    // If same role, sort by name
+    return a.name.localeCompare(b.name);
+  });
+
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {Array.from(uniqueGroups.values()).map((group) => {
-        const userRole = user ? getUserRole(group, user.pubkey) : 'member';
+    <div className="space-y-6">
+      {/* Common Groups Section - only show when viewing another user's profile */}
+      {!isCurrentUser && user && (
+        <CommonGroupsListImproved profileUserPubkey={profileUserPubkey} />
+      )}
+
+      {/* User's Groups Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">
+              {isCurrentUser ? "Your Groups" : `${profileDisplayName}'s Groups`}
+            </h3>
+          </div>
+          <Badge variant="secondary" className="text-xs">
+            {uniqueGroups.size} {uniqueGroups.size === 1 ? 'group' : 'groups'}
+          </Badge>
+        </div>
         
-        return (
-          <Link
-            key={group.id}
-            to={`/group/${encodeURIComponent(group.id)}`}
-            className="block"
-          >
-            <Card className="overflow-hidden border border-border/40 hover:border-border hover:shadow-sm transition-all duration-200">
-              <div className="flex p-4">
-                <div className="h-14 w-14 rounded-lg overflow-hidden mr-4 flex-shrink-0 bg-muted relative">
-                  {group.image ? (
-                    <img
-                      src={group.image}
-                      alt={group.name}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = "flex";
-                      }}
-                    />
-                  ) : null}
-                  <div 
-                    className={`absolute inset-0 bg-primary/10 text-primary font-bold text-lg flex items-center justify-center ${group.image ? 'hidden' : 'flex'}`}
-                  >
-                    {group.name.charAt(0).toUpperCase()}
+        <div className="grid grid-cols-1 gap-3">
+          {sortedGroups.map((group) => {
+            const userRole = getUserRole(group, profileUserPubkey);
+            
+            return (
+              <Link
+                key={group.id}
+                to={`/group/${encodeURIComponent(group.id)}`}
+                className="block group"
+              >
+                <Card className="overflow-hidden hover:shadow-md transition-all duration-200 hover:border-primary/20">
+                  <div className="flex p-4">
+                    <div className="h-16 w-16 rounded-lg overflow-hidden mr-4 flex-shrink-0 bg-muted relative">
+                      {group.image ? (
+                        <img
+                          src={group.image}
+                          alt={group.name}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className={`absolute inset-0 bg-primary/10 text-primary font-bold text-xl flex items-center justify-center ${group.image ? 'hidden' : 'flex'}`}
+                      >
+                        {group.name.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-base group-hover:text-primary transition-colors">{group.name}</h3>
+                        <RoleBadge 
+                          role={userRole} 
+                          size="sm" 
+                          userPubkey={profileUserPubkey}
+                          showAvatar={!isCurrentUser}
+                          simplified={!isCurrentUser}
+                        />
+                      </div>
+                      {group.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {group.description}
+                        </p>
+                      )}
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-center ml-2" />
                   </div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <h3 className="font-medium text-sm">{group.name}</h3>
-                    {userRole !== 'member' && (
-                      <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                        userRole === 'owner' 
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                      }`}>
-                        {userRole === 'owner' ? 'Owner' : 'Moderator'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs leading-snug text-muted-foreground line-clamp-2">
-                    {group.description || "No description available"}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </Link>
-        );
-      })}
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -753,6 +977,9 @@ export default function Profile() {
   // Check if this is the current user's profile
   const isCurrentUser = user && pubkey === user.pubkey;
 
+  // Get shared group IDs to filter them out from the main groups list
+  const sharedGroupIds = useSharedGroupIds(pubkey || "");
+
   useEffect(() => {
     if (displayNameFull && displayNameFull !== "Unnamed User") {
       document.title = `+chorus - ${displayNameFull}`;
@@ -1012,8 +1239,13 @@ export default function Profile() {
         </TabsContent>
 
         <TabsContent value="groups" className="space-y-4">
-          <div className="max-w-3xl mx-auto">
-            <UserGroupsList groups={userGroups} isLoading={isLoadingGroups} />
+          <div className="max-w-3xl mx-auto pb-6">
+            <UserGroupsList 
+              groups={userGroups} 
+              isLoading={isLoadingGroups} 
+              profileUserPubkey={pubkey || ""} 
+              sharedGroupIds={sharedGroupIds}
+            />
           </div>
         </TabsContent>
       </Tabs>

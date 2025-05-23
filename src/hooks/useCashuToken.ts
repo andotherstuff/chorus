@@ -37,6 +37,11 @@ export function useCashuToken() {
       // Get all proofs from store
       const proofs = await cashuStore.getMintProofs(mintUrl);
 
+      const proofsAmount = proofs.reduce((sum, p) => sum + p.amount, 0);
+      if (proofsAmount < amount) {
+        throw new Error(`Not enough funds on mint ${mintUrl}`);
+      }
+
       // For regular token, create a token string
       // Perform coin selection
       const { keep: proofsToKeep, send: proofsToSend } = await wallet.send(amount, proofs, { pubkey: p2pkPubkey, privkey: cashuStore.privkey });

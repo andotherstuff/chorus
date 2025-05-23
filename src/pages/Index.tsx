@@ -139,10 +139,6 @@ const Index = () => {
           // fallthrough
         }
       }, 100);
-      toast({
-        title: "Account created",
-        description: "You are now logged in.",
-      });
       setNewUser(true); // Mark as new user
     } catch (e) {
       toast({
@@ -222,11 +218,19 @@ const Index = () => {
               />
             </div>
           )}
-          
+
           {/* Footer attribution */}
           <div className="absolute bottom-4 left-0 right-0 text-center">
             <p className="text-xs text-muted-foreground">
-              *vibed by <a href="https://andotherstuff.org" target="_blank" rel="noopener noreferrer" className="hover:underline">AOS</a>
+              *vibed by{" "}
+              <a
+                href="https://andotherstuff.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                AOS
+              </a>
             </p>
           </div>
         </div>
