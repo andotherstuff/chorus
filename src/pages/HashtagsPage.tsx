@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { NoteContent } from "@/components/NoteContent";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthor } from "@/hooks/useAuthor";
-import { Hash, ArrowLeft, ChevronDown } from "lucide-react";
+import { Hash, ArrowLeft, ChevronDown, TrendingUp } from "lucide-react";
 import { TrendingTopics } from "@/components/TrendingTopics";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import type { NostrEvent } from "@nostrify/nostrify";
@@ -154,6 +154,18 @@ export default function HashtagsPage() {
           
           <div className="max-w-2xl mx-auto">
             <TrendingTopics limit={16} className="mb-4" />
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              asChild
+              className="mt-4"
+            >
+              <Link to="/trending">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View All Trending Topics
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

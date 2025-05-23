@@ -48,19 +48,24 @@ export function TrendingTopics({
             <TrendingUp className="h-4 w-4 text-primary" />
             <CardTitle className="text-base">Trending Topics</CardTitle>
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {formatTimeWindow(timeWindow)}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Trending in the last {formatTimeWindow(timeWindow)}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {formatTimeWindow(timeWindow)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Trending in the last {formatTimeWindow(timeWindow)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Link to="/trending" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+              View all
+            </Link>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

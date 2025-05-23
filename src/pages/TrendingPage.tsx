@@ -71,10 +71,24 @@ export default function TrendingPage() {
       <Header />
 
       <div className="flex flex-col mt-4">
-        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          Trending Topics
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Trending Topics
+          </h1>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="flex items-center gap-1"
+          >
+            <Link to="/hashtags">
+              <Hash className="h-4 w-4 mr-1" />
+              Explore All Hashtags
+            </Link>
+          </Button>
+        </div>
 
         <div className="mb-6">
           <Tabs defaultValue={timeOptions[0].value.toString()} 
@@ -141,16 +155,30 @@ export default function TrendingPage() {
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  {selectedTopic ? (
-                    <>
-                      <Hash className="h-4 w-4" />
-                      {selectedTopic}
-                    </>
-                  ) : (
-                    "Select a topic to see recent posts"
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {selectedTopic ? (
+                      <>
+                        <Hash className="h-4 w-4" />
+                        {selectedTopic}
+                      </>
+                    ) : (
+                      "Select a topic to see recent posts"
+                    )}
+                  </CardTitle>
+                  {selectedTopic && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      asChild
+                      className="text-xs"
+                    >
+                      <Link to={`/hashtags/${encodeURIComponent(selectedTopic)}`}>
+                        View all posts
+                      </Link>
+                    </Button>
                   )}
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
                 {selectedTopicData ? (
