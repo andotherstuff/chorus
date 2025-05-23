@@ -26,6 +26,7 @@ import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -36,6 +37,7 @@ export default function GroupDetail() {
   const [showOnlyApproved, setShowOnlyApproved] = useState(true);
   const [currentPostCount, setCurrentPostCount] = useState(0);
   const [activeTab, setActiveTab] = useState("posts");
+  const [imageLoading, setImageLoading] = useState(true);
 
   
   const searchParams = new URLSearchParams(location.search);
@@ -139,11 +141,35 @@ export default function GroupDetail() {
     };
   }, [name]);
 
+  // Reset image loading state when image URL changes
+  useEffect(() => {
+    setImageLoading(true);
+  }, [image]);
+
   if (isLoadingCommunity || !parsedId) {
     return (
       <div className="container mx-auto py-1 px-3 sm:px-4">
         <Header />
         <h1 className="text-2xl font-bold mb-4">Loading group...</h1>
+        
+        <div className="relative mb-6 mt-4">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Skeleton className="h-36 w-full rounded-lg mb-2" />
+            </div>
+            <div className="min-w-[140px]">
+              <Skeleton className="h-10 w-full rounded-md mb-4" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          </div>
+          
+          <div className="w-full mt-4">
+            <Skeleton className="h-8 w-3/4 rounded-md mb-2" />
+            <Skeleton className="h-4 w-full rounded-md mb-1" />
+            <Skeleton className="h-4 w-5/6 rounded-md mb-1" />
+            <Skeleton className="h-4 w-2/3 rounded-md" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -168,23 +194,19 @@ export default function GroupDetail() {
         <div className="flex gap-4">
           <div className="flex-1">
             <div className="h-36 rounded-lg overflow-hidden mb-2 relative">
+              {imageLoading && (
+                <Skeleton className="absolute inset-0 w-full h-full z-10" />
+              )}
               <img
                 src={image}
                 alt={name}
                 className="w-full h-full object-cover object-center"
+                onLoad={() => setImageLoading(false)}
                 onError={(e) => {
+                  setImageLoading(false);
                   e.currentTarget.src = "/placeholder-community.svg";
                 }}
               />
-            </div>
-
-            <div className="flex flex-row items-start justify-between gap-4 mb-2">
-              <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold">{name}</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* Manage Group button moved to the right column */}
-              </div>
             </div>
           </div>
 
@@ -254,8 +276,9 @@ export default function GroupDetail() {
           </div>
         </div>
         
-        {/* Group description moved outside the grid to span full width */}
-        <div className="w-full mt-2">
+        {/* Title and description moved below image and buttons, full width */}
+        <div className="w-full mt-4">
+          <h1 className="text-2xl font-bold mb-2">{name}</h1>
           <p className="text-base text-muted-foreground">{description}</p>
         </div>
       </div>
