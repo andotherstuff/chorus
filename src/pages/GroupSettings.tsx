@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useNostr } from "@/hooks/useNostr";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useUploadFile } from "@/hooks/useUploadFile";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
 import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { toast } from "sonner";
-import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2, FileWarning } from "lucide-react";
+import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2, FileWarning, Upload, Loader2 } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import type { NostrEvent } from "@nostrify/nostrify";
 import Header from "@/components/ui/Header";
@@ -31,6 +32,7 @@ export default function GroupSettings() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
+  const { mutateAsync: uploadFile, isPending: isUploadingMedia } = useUploadFile();
   const navigate = useNavigate();
   const [parsedId, setParsedId] = useState<{ kind: number; pubkey: string; identifier: string } | null>(null);
   
@@ -157,6 +159,36 @@ export default function GroupSettings() {
   console.log("Current user pubkey:", user?.pubkey);
   console.log("Community creator pubkey:", community?.pubkey);
   console.log("Is owner:", isOwner);
+
+  // Handle media upload
+  const handleMediaUpload = async (file: File) => {
+    if (!file) return;
+    
+    // Check if it's an image or video
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    
+    if (!isImage && !isVideo) {
+      toast.error("Please select an image or video file");
+      return;
+    }
+
+    // Check file size (e.g., 100MB limit for videos, 10MB for images)
+    const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(`File size exceeds ${isVideo ? '100MB' : '10MB'} limit`);
+      return;
+    }
+
+    try {
+      const [[_, url]] = await uploadFile(file);
+      setImageUrl(url);
+      toast.success(`${isVideo ? 'Video' : 'Image'} uploaded successfully!`);
+    } catch (error) {
+      console.error("Error uploading media:", error);
+      toast.error(`Failed to upload ${isVideo ? 'video' : 'image'}. Please try again.`);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -484,24 +516,77 @@ export default function GroupSettings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="image">Image URL</Label>
-                  <Input
-                    id="image"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Enter image URL"
-                  />
+                  <Label htmlFor="media" className="flex items-center gap-2">
+                    Group Media
+                    {isUploadingMedia && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </Label>
+                  
+                  <div className="flex flex-col gap-4">
+                    {/* Media upload button */}
+                    <div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('media-upload')?.click()}
+                        disabled={isUploadingMedia}
+                        className="w-full sm:w-auto"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {isUploadingMedia ? 'Uploading...' : 'Upload Media'}
+                      </Button>
+                      <input
+                        id="media-upload"
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleMediaUpload(file);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Supported: Images (max 10MB) and videos (max 100MB)
+                      </p>
+                    </div>
+
+                    <div className="text-sm text-muted-foreground">or</div>
+
+                    {/* URL input as fallback */}
+                    <Input
+                      id="image"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="Enter media URL"
+                      disabled={isUploadingMedia}
+                    />
+                  </div>
 
                   {imageUrl && (
-                    <div className="mt-2 rounded-md overflow-hidden border w-full">
-                      <img
-                        src={imageUrl}
-                        alt="Group preview"
-                        className="w-full h-auto"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
+                    <div className="mt-4 rounded-lg overflow-hidden border max-w-full">
+                      {/* Check if URL is likely a video */}
+                      {imageUrl.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                        <video
+                          src={imageUrl}
+                          controls
+                          className="w-full max-h-96 object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <img
+                          src={imageUrl}
+                          alt="Group preview"
+                          className="w-full h-auto max-h-96 object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -529,7 +614,7 @@ export default function GroupSettings() {
                 </div>
 
                 <div className="mt-3 flex justify-end">
-                  <Button type="submit">
+                  <Button type="submit" disabled={isUploadingMedia}>
                     <Save className="h-4 w-4 mr-2" />
                     Save Changes
                   </Button>

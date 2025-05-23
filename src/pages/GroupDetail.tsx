@@ -235,16 +235,37 @@ export default function GroupDetail() {
               {imageLoading && (
                 <Skeleton className="absolute inset-0 w-full h-full z-10" />
               )}
-              <img
-                src={image}
-                alt={name}
-                className="w-full h-full object-cover object-center"
-                onLoad={() => setImageLoading(false)}
-                onError={(e) => {
-                  setImageLoading(false);
-                  e.currentTarget.src = "/placeholder-community.svg";
-                }}
-              />
+              {/* Check if the image URL is likely a video */}
+              {image && image.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                <video
+                  src={image}
+                  className="w-full h-full object-cover object-center"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  onLoadedData={() => setImageLoading(false)}
+                  onError={(e) => {
+                    setImageLoading(false);
+                    // Fall back to placeholder if video fails
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<img src="/placeholder-community.svg" class="w-full h-full object-cover object-center" />';
+                    }
+                  }}
+                />
+              ) : (
+                <img
+                  src={image}
+                  alt={name}
+                  className="w-full h-full object-cover object-center"
+                  onLoad={() => setImageLoading(false)}
+                  onError={(e) => {
+                    setImageLoading(false);
+                    e.currentTarget.src = "/placeholder-community.svg";
+                  }}
+                />
+              )}
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useUploadFile } from "@/hooks/useUploadFile";
@@ -29,27 +29,49 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
   const profileImage = metadata?.picture;
 
   const [content, setContent] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Clean up object URLs when component unmounts or preview changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl && mediaFile?.type.startsWith('video/')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl, mediaFile]);
 
   if (!user) return null;
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
+      
+      // Clean up previous object URL if it exists
+      if (previewUrl && mediaFile?.type.startsWith('video/')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      
+      setMediaFile(file);
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // For videos, we might want to use a video element for preview
+      if (file.type.startsWith('video/')) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+      } else {
+        // For images, use FileReader as before
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && !imageFile) {
-      toast.error("Please enter some content or add an image");
+    if (!content.trim() && !mediaFile) {
+      toast.error("Please enter some content or add media");
       return;
     }
 
@@ -63,12 +85,12 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
       let finalContent = content;
       let imageTags: string[][] = [];
 
-      if (imageFile) {
-        const tags = await uploadFile(imageFile);
-        const [[_, imageUrl]] = tags;
+      if (mediaFile) {
+        const tags = await uploadFile(mediaFile);
+        const [[_, mediaUrl]] = tags;
         finalContent += `
 
-${imageUrl}`;
+${mediaUrl}`;
         imageTags = tags;
       }
 
@@ -92,7 +114,7 @@ ${imageUrl}`;
       });
 
       setContent("");
-      setImageFile(null);
+      setMediaFile(null);
       setPreviewUrl(null);
 
       toast.success("Post published successfully!");
@@ -128,17 +150,29 @@ ${imageUrl}`;
 
             {previewUrl && (
               <div className="mt-1.5 relative">
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="max-h-52 rounded-md object-contain border"
-                />
+                {mediaFile?.type.startsWith('video/') ? (
+                  <video
+                    src={previewUrl}
+                    controls
+                    className="max-h-52 rounded-md object-contain border w-full"
+                  />
+                ) : (
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="max-h-52 rounded-md object-contain border"
+                  />
+                )}
                 <Button
                   variant="destructive"
                   size="icon"
                   className="absolute top-1 right-1 h-5 w-5"
                   onClick={() => {
-                    setImageFile(null);
+                    // Clean up object URL if it's a video
+                    if (previewUrl && mediaFile?.type.startsWith('video/')) {
+                      URL.revokeObjectURL(previewUrl);
+                    }
+                    setMediaFile(null);
                     setPreviewUrl(null);
                   }}
                 >
@@ -153,14 +187,14 @@ ${imageUrl}`;
       <CardFooter className="flex justify-between items-center border-t px-3 py-2">
         <div>
           <Button variant="ghost" size="sm" className="text-muted-foreground h-8 px-2 text-xs" asChild>
-            <label htmlFor="image-upload" className="cursor-pointer flex items-center">
+            <label htmlFor="media-upload" className="cursor-pointer flex items-center">
               <Image className="h-3.5 w-3.5 mr-1" />
-              Photo
+              Media
               <input
-                id="image-upload"
+                id="media-upload"
                 type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
+                accept="image/*,video/*"
+                onChange={handleMediaSelect}
                 className="hidden"
               />
             </label>
@@ -169,7 +203,7 @@ ${imageUrl}`;
 
         <Button
           onClick={handleSubmit}
-          disabled={isPublishing || isUploading || (!content.trim() && !imageFile)}
+          disabled={isPublishing || isUploading || (!content.trim() && !mediaFile)}
           size="sm"
           className="h-8 px-3 text-xs"
         >
