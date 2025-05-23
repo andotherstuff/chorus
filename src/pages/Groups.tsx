@@ -1,5 +1,3 @@
-import { useNostr } from "@/hooks/useNostr";
-import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Header from "@/components/ui/Header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,83 +6,57 @@ import { GroupSearch } from "@/components/groups/GroupSearch";
 import { useState, useMemo, useEffect } from "react";
 import { useGroupStats } from "@/hooks/useGroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
-import { useUserGroups } from "@/hooks/useUserGroups";
+import { useUnifiedGroups } from "@/hooks/useUnifiedGroups";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
 import type { NostrEvent } from "@nostrify/nostrify";
 import type { UserRole } from "@/hooks/useUserRole";
 import type { Group } from "@/types/groups";
-import { parseGroup, getCommunityId, createGroupRouteId } from "@/lib/group-utils";
+import { getCommunityId } from "@/lib/group-utils";
 import { Badge } from "@/components/ui/badge";
 
-// Helper function to get community ID for backward compatibility
-const getLegacyCommunityId = (community: NostrEvent) => {
-  const dTag = community.tags.find(tag => tag[0] === "d");
-  return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
-};
-
 export default function Groups() {
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { pinGroup, unpinGroup, isGroupPinned, isUpdating } = usePinnedGroups();
   const [searchQuery, setSearchQuery] = useState("");
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
 
-  // Fetch NIP-72 communities
+  // Fetch unified groups (both NIP-72 and NIP-29)
   const {
-    data: communities = [],
-    isLoading: isLoadingCommunities,
-    error: communitiesError,
-  } = useQuery({
-    queryKey: ["communities"],
-    queryFn: async () => {
-      const signal = AbortSignal.timeout(10000);
-      try {
-        const events = await nostr.query([{ kinds: [34550] }], { signal });
-        return events;
-      } catch (error) {
-        console.error("Error fetching NIP-72 communities:", error);
-        return [];
-      }
-    },
-  });
+    data: unifiedGroupsData,
+    isLoading: isLoadingGroups,
+    error: groupsError,
+  } = useUnifiedGroups();
 
-  // Convert NostrEvents to Groups for unified interface
+  // Get all groups from the unified data
   const allGroups: Group[] = useMemo(() => {
-    return communities
-      .map(community => parseGroup(community))
-      .filter((group): group is Group => group !== null);
-  }, [communities]);
+    return unifiedGroupsData?.allGroups || [];
+  }, [unifiedGroupsData]);
 
-  // Use the main branch's API correctly
+  // Use NIP-72 events for group stats
+  const nip72Events = useMemo(() => {
+    return unifiedGroupsData?.nip72Events || [];
+  }, [unifiedGroupsData]);
+
   const {
     data: groupStatsResults = {},
     isLoading: isLoadingStats,
     refetch: refetchStats,
-  } = useGroupStats(communities);
+  } = useGroupStats(nip72Events);
 
-  const {
-    data: userGroupsData,
-    isLoading: isLoadingUserGroups,
-  } = useUserGroups();
-
-  // Extract user groups properly
+  // Extract user groups from unified data
   const userGroups = useMemo(() => {
-    if (!userGroupsData) return [];
+    if (!unifiedGroupsData) return [];
     
-    const allUserGroups = [
-      ...(userGroupsData.pinned || []),
-      ...(userGroupsData.owned || []),
-      ...(userGroupsData.moderated || []),
-      ...(userGroupsData.member || []),
-    ];
+    const { pinned, owned, moderated, member } = unifiedGroupsData;
+    const allUserGroups = [...pinned, ...owned, ...moderated, ...member];
     
-    return allUserGroups.map(community => ({
-      id: getLegacyCommunityId(community),
+    return allUserGroups.map(group => ({
+      id: getCommunityId(group),
       role: "member" as UserRole, // Default role, could be enhanced
     }));
-  }, [userGroupsData]);
+  }, [unifiedGroupsData]);
 
   // Filter groups based on search
   const filteredGroups = useMemo(() => {
@@ -153,8 +125,8 @@ export default function Groups() {
     }
   }, [allGroups.length, refetchStats]);
 
-  const isLoading = isLoadingCommunities || isLoadingUserGroups;
-  const error = communitiesError;
+  const isLoading = isLoadingGroups;
+  const error = groupsError;
 
   if (error) {
     console.error("Error fetching groups:", error);
@@ -232,7 +204,7 @@ export default function Groups() {
         <div>
           <h1 className="text-3xl font-bold">Groups</h1>
           <p className="text-muted-foreground mt-2">
-            Discover and join communities. Enhanced with NIP-29 private group support coming soon!
+            Discover and join communities. Now supports both public communities (NIP-72) and private groups (NIP-29)!
           </p>
         </div>
 

@@ -30,7 +30,8 @@ export function useUnifiedGroups() {
         owned: [] as Group[],
         moderated: [] as Group[],
         member: [] as Group[],
-        allGroups: [] as Group[]
+        allGroups: [] as Group[],
+        nip72Events: [] as NostrEvent[]
       };
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
@@ -66,7 +67,8 @@ export function useUnifiedGroups() {
           owned: [] as Group[],
           moderated: [] as Group[],
           member: [] as Group[],
-          allGroups
+          allGroups,
+          nip72Events: nip72Communities
         };
       }
 
@@ -114,7 +116,8 @@ export function useUnifiedGroups() {
         owned: filteredOwned,
         moderated: filteredModerated,
         member: filteredMember,
-        allGroups
+        allGroups,
+        nip72Events: nip72Communities
       };
     },
     enabled: !!nostr && !isNip29Loading,
