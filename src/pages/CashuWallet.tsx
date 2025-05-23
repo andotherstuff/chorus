@@ -18,6 +18,8 @@ import { Loader2, Bitcoin, DollarSign, ArrowLeftRight } from "lucide-react";
 import { formatBalance, calculateBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export function CashuWallet() {
   const { user } = useCurrentUser();
@@ -172,6 +174,19 @@ export function CashuWallet() {
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
       <Separator className="my-2" />
+
+      {/* Wallet Info Box */}
+      <Alert className="mb-6">
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-sm">
+          <span className="text-lg mr-2">💸</span>
+          <strong>Your Cashu Wallet</strong> uses ecash tokens for private, instant payments. 
+          <strong> Cashu</strong> is a privacy-preserving digital cash system built on cryptographic proofs. 
+          <strong> Lightning Network</strong> enables fast Bitcoin transactions, and this wallet seamlessly 
+          bridges both systems - you can send/receive Lightning payments while maintaining privacy through 
+          Cashu's blind signatures. Think of it as digital cash that moves at the speed of Lightning!
+        </AlertDescription>
+      </Alert>
 
       {/* Total Balance Display */}
       {user && wallet && (
