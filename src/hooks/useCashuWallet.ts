@@ -74,13 +74,20 @@ export function useCashuWallet() {
 
 
         // fetch the mint info and keysets for each mint
-        Promise.all(walletData.mints.map(async (mint) => {
-          const { mintInfo, keysets } = await activateMint(mint);
-          cashuStore.addMint(mint);
-          cashuStore.setMintInfo(mint, mintInfo);
-          cashuStore.setKeysets(mint, keysets);
-          const { keys } = await updateMintKeys(mint, keysets);
-          cashuStore.setKeys(mint, keys);
+        await Promise.all(walletData.mints.map(async (mint) => {
+          try {
+            const { mintInfo, keysets } = await activateMint(mint);
+            cashuStore.addMint(mint);
+            cashuStore.setMintInfo(mint, mintInfo);
+            cashuStore.setKeysets(mint, keysets);
+            const { keys } = await updateMintKeys(mint, keysets);
+            cashuStore.setKeys(mint, keys);
+          } catch (error) {
+            console.error(`Failed to activate mint ${mint}:`, error);
+            // Continue with other mints even if one fails
+            // Store the error state for this mint
+            cashuStore.setMintError(mint, error instanceof Error ? error.message : 'Failed to connect');
+          }
         }));
 
         cashuStore.setPrivkey(walletData.privkey);
@@ -100,7 +107,11 @@ export function useCashuWallet() {
         return null;
       }
     },
-    enabled: !!user
+    enabled: !!user,
+    retry: 1, // Only retry once on failure
+    retryDelay: 1000, // Wait 1 second before retry
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus to avoid repeated attempts
   });
 
   // Create or update wallet
