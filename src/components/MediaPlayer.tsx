@@ -10,16 +10,12 @@ interface MediaPlayerProps {
 export function MediaPlayer({ url, type, className }: MediaPlayerProps) {
   if (type === 'audio') {
     return (
-      <div className={cn("bg-secondary/30 rounded-lg p-3 flex items-center gap-3", className)}>
-        <div className="bg-primary/10 rounded-full p-2 flex-shrink-0">
-          <Music className="h-4 w-4 text-primary" />
-        </div>
+      <div className={cn("rounded-lg flex items-center", className)}>
         <audio
           src={url}
           controls
-          className="flex-1 h-10"
+          className="w-full"
           preload="metadata"
-          style={{ maxWidth: '400px' }}
         >
           Your browser does not support the audio element.
         </audio>
