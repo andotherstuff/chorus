@@ -267,12 +267,19 @@ export function NoteContent({
     }
   }, [event, getFirstUrl, processTextContent]);
 
+  // Filter out empty strings from processed content
+  const hasTextContent = processedContent.some(part => 
+    typeof part === 'string' ? part.trim().length > 0 : true
+  );
+
   return (
     <div className={cn("whitespace-pre-wrap break-words", className)}>
       {/* Text content */}
-      <div>
-        {processedContent.length > 0 ? processedContent : event.content}
-      </div>
+      {hasTextContent && (
+        <div>
+          {processedContent.length > 0 ? processedContent : event.content}
+        </div>
+      )}
 
       {/* Link Preview */}
       {linkUrl && (
