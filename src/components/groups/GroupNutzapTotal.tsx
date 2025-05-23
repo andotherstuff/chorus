@@ -40,19 +40,23 @@ export function GroupNutzapTotal({ groupId, className = "" }: GroupNutzapTotalPr
 
   return (
     <button
+      type="button"
       onClick={() => toggleCurrency()}
-      className={`flex items-center justify-center w-full text-amber-500 hover:text-amber-600 transition-colors cursor-pointer border border-input rounded-md px-3 py-1.5 bg-transparent hover:bg-accent/50 ${className}`}
+      className={`flex items-center w-full h-full text-amber-500 hover:text-amber-600 transition-colors cursor-pointer border border-input rounded-md pl-3 pr-3 py-1.5 bg-transparent hover:bg-accent/50 text-sm ${className}`}
       title="Click to toggle between USD and sats"
     >
-      {showSats ? (
-        <Bitcoin className="h-4 w-4 mr-1" />
-      ) : (
-        <DollarSign className="h-4 w-4 mr-1" />
-      )}
-      <span className={`tabular-nums ${isFlashing ? 'flash-update' : ''}`}>
-        {currentValue}
-      </span>
-      <ArrowLeftRight className="h-3 w-3 ml-1.5" />
+      <div className="flex items-center">
+        {showSats ? (
+          <Bitcoin className="h-4 w-4 mr-4" />
+        ) : (
+          <DollarSign className="h-4 w-4 mr-4" />
+        )}
+        <span className={`text-sm tabular-nums ${isFlashing ? 'flash-update' : ''}`}>
+          {currentValue}
+        </span>
+      </div>
+      <div className="flex-1" />
+      <ArrowLeftRight className="h-4 w-4" />
     </button>
   );
 }

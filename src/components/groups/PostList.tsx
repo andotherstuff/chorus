@@ -22,6 +22,7 @@ import { parseNostrAddress } from "@/lib/nostr-utils";
 import { formatRelativeTime } from "@/lib/utils";
 import { ReplyList } from "./ReplyList";
 import { ReportDialog } from "./ReportDialog";
+import { shareContent } from "@/lib/share";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -553,6 +554,18 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
     }
   };
 
+  const handleSharePost = async () => {
+    // For now, share the group URL with a hash to the post
+    // In the future, we could add a dedicated post view
+    const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${post.id}`;
+    
+    await shareContent({
+      title: "Check out this post",
+      text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+      url: shareUrl
+    });
+  };
+
   return (
     <div className={`py-4 hover:bg-muted/5 transition-colors ${!isLastItem ? 'border-b-2 border-border/70' : ''}`}>
       <div className="flex flex-row items-start px-3">
@@ -641,7 +654,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`)} className="text-xs">
+                    <DropdownMenuItem onClick={handleSharePost} className="text-xs">
                       <Share2 className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Share Post
                     </DropdownMenuItem>
                     {user && user.pubkey !== post.pubkey && (
@@ -712,7 +725,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`)} className="text-xs">
+                    <DropdownMenuItem onClick={handleSharePost} className="text-xs">
                       <Share2 className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Share Post
                     </DropdownMenuItem>
                     {user && user.pubkey !== post.pubkey && (

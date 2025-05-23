@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface EditProfileFormProps {
   showSkipLink?: boolean;
+  initialName?: string | null;
 }
 
 /**
@@ -37,7 +38,7 @@ interface EditProfileFormProps {
  * This ensures that using this minimal edit interface doesn't accidentally delete
  * other profile information that may have been set elsewhere.
  */
-export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false }) => {
+export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false, initialName = null }) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -52,20 +53,24 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
   const form = useForm<NostrMetadata>({
     resolver: zodResolver(n.metadata()),
     defaultValues: {
-      name: '',
+      name: initialName || '',
       picture: '',
     },
   });
 
   // Update form values when user data is loaded
   useEffect(() => {
-    if (metadata) {
+    // If initialName is provided, use it (for onboarding flow)
+    if (initialName) {
+      form.setValue('name', initialName);
+    } else if (metadata) {
+      // Otherwise, use metadata from relays (for existing users)
       form.reset({
         name: metadata.name || '',
         picture: metadata.picture || '',
       });
     }
-  }, [metadata, form]);
+  }, [metadata, form, initialName]);
 
   // Handle file uploads for profile picture and banner
   const uploadPicture = async (file: File, field: 'picture' | 'banner') => {

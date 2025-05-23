@@ -19,6 +19,7 @@ import { NutzapButton } from "@/components/groups/NutzapButton";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { shareContent } from "@/lib/share";
 import { formatRelativeTime } from "@/lib/utils";
 import { nip19 } from 'nostr-tools';
 import {
@@ -190,6 +191,17 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
   });
   const [showReplyForm, setShowReplyForm] = useState(false);
   const { data: nestedReplies, isLoading: isLoadingNested, refetch: refetchNested } = useNestedReplies(reply.id);
+
+  const handleShareReply = async () => {
+    // Share the group URL with a hash to the reply
+    const shareUrl = `${window.location.origin}/group/${encodeURIComponent(communityId)}#${reply.id}`;
+    
+    await shareContent({
+      title: "Check out this reply",
+      text: reply.content.slice(0, 100) + (reply.content.length > 100 ? "..." : ""),
+      url: shareUrl
+    });
+  };
   const [showNestedReplies, setShowNestedReplies] = useState(true);
   const { approvedMembers, isApprovedMember } = useApprovedMembers(communityId);
   const { replyApprovals, isReplyApproved } = useReplyApprovals(communityId);
@@ -349,7 +361,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${window.location.origin}/post/${reply.id}`)} className="text-xs">
+                    <DropdownMenuItem onClick={handleShareReply} className="text-xs">
                       <Share2 className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Share Reply
                     </DropdownMenuItem>
                     {user && user.pubkey !== reply.pubkey && (

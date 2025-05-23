@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCashuToken } from "@/hooks/useCashuToken";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { useCashuStore } from "@/stores/cashuStore";
+import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useToast } from "@/hooks/useToast";
 import { Loader2 } from "lucide-react";
 // import { formatUSD, satoshisToUSD } from "@/lib/bitcoinUtils";
@@ -24,6 +25,7 @@ export function CashuWallet() {
   const { receiveToken } = useCashuToken();
   const { toast } = useToast();
   const cashuStore = useCashuStore();
+  const onboardingStore = useOnboardingStore();
   const [isProcessingToken, setIsProcessingToken] = useState(false);
   const { showSats, toggleCurrency } = useCurrencyDisplayStore();
   const { data: btcPrice, isLoading: btcPriceLoading } = useBitcoinPrice();
@@ -52,6 +54,13 @@ export function CashuWallet() {
     // Check for pending onboarding token
     const pendingToken = cashuStore.getPendingOnboardingToken();
     if (pendingToken) {
+      // Check if already claimed
+      if (onboardingStore.isTokenClaimed()) {
+        // Clear the pending token without processing
+        cashuStore.setPendingOnboardingToken(undefined);
+        return;
+      }
+
       // If USD mode and price is still loading, wait
       if (!showSats && btcPriceLoading) {
         return;
@@ -69,6 +78,9 @@ export function CashuWallet() {
 
           // Calculate total amount
           const totalAmount = proofs.reduce((sum, p) => sum + p.amount, 0);
+
+          // Mark onboarding token as claimed
+          onboardingStore.setTokenClaimed(true);
 
           // Show success toast
           toast({
@@ -96,6 +108,7 @@ export function CashuWallet() {
     user,
     wallet,
     cashuStore,
+    onboardingStore,
     receiveToken,
     toast,
     showSats,

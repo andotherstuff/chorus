@@ -119,7 +119,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
 
   if (!user) {
     return (
-      <Button variant="outline" disabled className={cn("justify-start", className)}>
+      <Button variant="outline" disabled className={cn("w-full h-full justify-start pl-3", className)}>
         <UserPlus className="h-4 w-4 mr-2" />
         <span className="text-left">Log in to join</span>
       </Button>
@@ -128,7 +128,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
 
   if (isCheckingRequest || isCheckingApproval || isCheckingDeclined) {
     return (
-      <Button variant="outline" disabled className={cn("justify-start", className)}>
+      <Button variant="outline" disabled className={cn("w-full h-full justify-start pl-3", className)}>
         <Clock className="h-4 w-4 mr-2 animate-spin" />
         Checking status...
       </Button>
@@ -138,7 +138,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
   // If user is in both approved and declined lists, treat them as approved
   if (isApprovedMember) {
     return (
-      <Button variant="outline" disabled className={cn("text-green-600 border-green-600 justify-start", className)}>
+      <Button variant="outline" disabled className={cn("text-green-600 border-green-600 w-full h-full justify-start pl-3", className)}>
         <CheckCircle className="h-4 w-4 mr-2" />
         Member
       </Button>
@@ -147,7 +147,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
 
   if (existingRequest) {
     return (
-      <Button variant="outline" disabled className={cn("justify-start", className)}>
+      <Button variant="outline" disabled className={cn("w-full h-full justify-start pl-3", className)}>
         <Clock className="h-4 w-4 mr-2" />
         Request pending
       </Button>
@@ -156,7 +156,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
   
   if (isDeclinedUser) {
     return (
-      <Button variant="outline" disabled className={cn("text-red-600 border-red-600 justify-start", className)}>
+      <Button variant="outline" disabled className={cn("text-red-600 border-red-600 w-full h-full justify-start pl-3", className)}>
         <XCircle className="h-4 w-4 mr-2" />
         Request declined
       </Button>
@@ -166,9 +166,9 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className={cn("justify-start", className)}>
+        <Button variant="outline" className={cn("w-full h-full justify-start pl-3", className)}>
           <UserPlus className="h-4 w-4 mr-2" />
-          Request to join
+          Join
         </Button>
       </DialogTrigger>
       <DialogContent>

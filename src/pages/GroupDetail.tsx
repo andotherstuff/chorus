@@ -27,6 +27,7 @@ import Header from "@/components/ui/Header";
 import { QRCodeModal } from "@/components/QRCodeModal";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -37,9 +38,10 @@ export default function GroupDetail() {
   const [showOnlyApproved, setShowOnlyApproved] = useState(true);
   const [currentPostCount, setCurrentPostCount] = useState(0);
   const [activeTab, setActiveTab] = useState("posts");
+  const [imageLoading, setImageLoading] = useState(true);
   const [showQRCode, setShowQRCode] = useState(false);
 
-  
+
   const searchParams = new URLSearchParams(location.search);
   const reportId = searchParams.get('reportId');
   const hash = location.hash.replace('#', '');
@@ -86,11 +88,11 @@ export default function GroupDetail() {
   useEffect(() => {
     // Define valid tab values
     const validTabs = ["posts", "members", "ecash"];
-    
+
     if (hash && validTabs.includes(hash)) {
       setActiveTab(hash);
-    } 
-    // If the hash references an invalid tab, default to "posts" 
+    }
+    // If the hash references an invalid tab, default to "posts"
     else if (hash) {
       // Only update if not already on posts tab to avoid unnecessary re-renders
       if (activeTab !== "posts") {
@@ -101,7 +103,7 @@ export default function GroupDetail() {
     else if (!activeTab || !validTabs.includes(activeTab)) {
       setActiveTab("posts");
     }
-    
+
     // Deliberately not including activeTab in the dependencies to prevent loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hash]);
@@ -142,11 +144,35 @@ export default function GroupDetail() {
     };
   }, [name]);
 
+  // Reset image loading state when image URL changes
+  useEffect(() => {
+    setImageLoading(true);
+  }, [image]);
+
   if (isLoadingCommunity || !parsedId) {
     return (
       <div className="container mx-auto py-1 px-3 sm:px-4">
         <Header />
         <h1 className="text-2xl font-bold mb-4">Loading group...</h1>
+
+        <div className="relative mb-6 mt-4">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Skeleton className="h-40 w-full rounded-lg mb-2" />
+            </div>
+            <div className="min-w-[140px]">
+              <Skeleton className="h-10 w-full rounded-md mb-4" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          </div>
+
+          <div className="w-full mt-4">
+            <Skeleton className="h-8 w-3/4 rounded-md mb-2" />
+            <Skeleton className="h-4 w-full rounded-md mb-1" />
+            <Skeleton className="h-4 w-5/6 rounded-md mb-1" />
+            <Skeleton className="h-4 w-2/3 rounded-md" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -170,85 +196,63 @@ export default function GroupDetail() {
       <div className="relative mb-6 mt-4">
         <div className="flex gap-4">
           <div className="flex-1">
-            <div className="h-36 rounded-lg overflow-hidden mb-2 relative">
-              {image ? (
-                <img
-                  src={image}
-                  alt={name}
-                  className="w-full h-full object-cover object-center"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = "flex";
-                  }}
-                />
-              ) : null}
-              <div 
-                className={`w-full h-full bg-primary/10 text-primary font-bold text-4xl flex items-center justify-center ${image ? 'hidden' : 'flex'}`}
-              >
-                {name.charAt(0).toUpperCase()}
-              </div>
-            </div>
-
-            <div className="flex flex-row items-start justify-between gap-4 mb-2">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold">{name}</h1>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setShowQRCode(true)}
-                  >
-                    <QrCode className="h-4 w-4" />
-                  </Button>
-                  {hasGuidelines && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                      className="h-8 px-2 text-sm"
-                    >
-                      <Link to={`/group/${encodeURIComponent(groupId || '')}/guidelines`} className="flex items-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">View Guidelines</span>
-                        <span className="sm:hidden">Guidelines</span>
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* Manage Group button moved to the right column */}
-              </div>
+            <div className="h-40 rounded-lg overflow-hidden mb-2 relative">
+              {imageLoading && (
+                <Skeleton className="absolute inset-0 w-full h-full z-10" />
+              )}
+              <img
+                src={image}
+                alt={name}
+                className="w-full h-full object-cover object-center"
+                onLoad={() => setImageLoading(false)}
+                onError={(e) => {
+                  setImageLoading(false);
+                  e.currentTarget.src = "/placeholder-community.svg";
+                }}
+              />
             </div>
           </div>
 
-          <div className="flex flex-col justify-between min-w-[140px] h-36">
+          <div className="flex flex-col min-w-[140px] h-40 space-y-2 justify-between">
             {!isModerator ? (
               <>
-                <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+                <div className="h-8">
+                  <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+                </div>
+                {/* Add spacer to ensure buttons are distributed evenly */}
                 <div className="flex-1" />
-                <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                {/* Ensure consistent height for GroupNutzapTotal */}
+                <div className="h-8 flex items-center">
+                  <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                </div>
               </>
             ) : (
               <>
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="w-full h-8 justify-start pl-3"
+                  onClick={() => setShowQRCode(true)}
+                >
+                  <QrCode className="h-4 w-4 mr-2" />
+                  QR Code
+                </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button asChild variant="outline" size="sm" className="relative justify-start">
-                        <Link 
+                      <Button asChild variant="outline" size="default" className="relative h-8 w-full justify-start pl-3">
+                        <Link
                           to={`/group/${encodeURIComponent(groupId || '')}/settings${
-                            openReportsCount > 0 ? '?tab=reports' : 
+                            openReportsCount > 0 ? '?tab=reports' :
                             pendingRequestsCount > 0 ? '?tab=members' : ''
-                          }`} 
+                          }`}
                           className="flex items-center gap-2"
                         >
-                          <Settings className="h-4 w-4" />
+                          <Settings className="h-4 w-4 mr-2" />
                           <span>Manage Group</span>
                           {(openReportsCount > 0 || pendingRequestsCount > 0) && (
-                            <Badge 
-                              variant="destructive" 
+                            <Badge
+                              variant="destructive"
                               className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10"
                             >
                               {(openReportsCount + pendingRequestsCount) > 99 ? '99+' : (openReportsCount + pendingRequestsCount)}
@@ -277,21 +281,47 @@ export default function GroupDetail() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {user && community && (
-                  <GroupNutzapButton
-                    groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                    ownerPubkey={community.pubkey}
-                    variant="outline"
-                  />
-                )}
-                <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                {/* Ensure consistent height for GroupNutzapButton */}
+                <div className="h-8">
+                  {user && community && (
+                    <GroupNutzapButton
+                      groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                      ownerPubkey={community.pubkey}
+                      variant="outline"
+                      className="w-full h-8"
+                    />
+                  )}
+                </div>
+                {/* Ensure consistent height for GroupNutzapTotal */}
+                <div className="h-8 flex items-center">
+                  <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                </div>
               </>
             )}
           </div>
         </div>
-        
-        {/* Group description moved outside the grid to span full width */}
-        <div className="w-full mt-2">
+
+        <div className="w-full mt-4">
+          <h1 className="text-2xl font-bold mb-2">{name}</h1>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShowQRCode(true)}
+          >
+            <QrCode className="h-4 w-4" />
+          </Button>
+          {hasGuidelines && (
+            <div className="mb-2">
+              <Link
+                to={`/group/${encodeURIComponent(groupId || '')}/guidelines`}
+                className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium inline-flex items-center gap-1"
+              >
+                <FileText className="h-4 w-4" />
+                Community Guidelines
+              </Link>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </div>

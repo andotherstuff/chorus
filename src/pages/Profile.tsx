@@ -39,6 +39,7 @@ import Header from "@/components/ui/Header";
 import { VerifiedNip05 } from "@/components/VerifiedNip05";
 import { useNip05Verification } from "@/hooks/useNip05Verification";
 import { cn, formatRelativeTime } from "@/lib/utils";
+import { shareContent } from "@/lib/share";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -356,6 +357,26 @@ function PostCard({ post, profileImage, displayName, displayNameFull, isLastItem
   const [showReplies, setShowReplies] = useState(false);
   const [showZaps, setShowZaps] = useState(false);
 
+  const handleSharePost = async () => {
+    // Extract group info to create proper share URL
+    const groupInfo = extractGroupInfo(post);
+    let shareUrl: string;
+    
+    if (groupInfo) {
+      // If post is in a group, link to the group with post hash
+      shareUrl = `${window.location.origin}/group/${encodeURIComponent(groupInfo.groupId)}#${post.id}`;
+    } else {
+      // Otherwise, link to the user's profile
+      shareUrl = `${window.location.origin}/profile/${post.pubkey}#${post.id}`;
+    }
+    
+    await shareContent({
+      title: "Check out this post",
+      text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+      url: shareUrl
+    });
+  };
+
   // Handle toggle between replies and zaps
   const handleShowReplies = () => {
     const newState = !showReplies;
@@ -443,7 +464,7 @@ function PostCard({ post, profileImage, displayName, displayNameFull, isLastItem
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`)} className="text-xs">
+                  <DropdownMenuItem onClick={handleSharePost} className="text-xs">
                     <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share Post
                   </DropdownMenuItem>
                   {user && user.pubkey !== post.pubkey && (

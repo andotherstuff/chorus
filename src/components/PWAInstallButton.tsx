@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Download, Smartphone } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PWAInstallInstructions, usePWAInstall } from './PWAInstallInstructions';
+import { PWAInstallInstructions } from './PWAInstallInstructions';
+import { usePWA } from '@/hooks/usePWA';
 
 interface PWAInstallButtonProps {
   variant?: 'default' | 'outline' | 'ghost' | 'link';
@@ -17,12 +18,9 @@ export function PWAInstallButton({
   showIcon = true 
 }: PWAInstallButtonProps) {
   const [showInstructions, setShowInstructions] = useState(false);
-  const { isInstallable, promptInstall } = usePWAInstall();
-
-  // Check if already installed (running in standalone mode)
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  const { isInstallable, isRunningAsPwa, promptInstall } = usePWA();
   
-  if (isStandalone) {
+  if (isRunningAsPwa) {
     return null; // Don't show install button if already installed
   }
 

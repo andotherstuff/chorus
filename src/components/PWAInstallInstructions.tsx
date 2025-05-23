@@ -1,66 +1,23 @@
-import { useState, useEffect } from 'react';
-import { X, Smartphone, Monitor, Share, Plus, Download } from 'lucide-react';
+import { Smartphone, Monitor, Share, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { usePWA } from '@/hooks/usePWA';
+import { detectPlatform } from '@/lib/pwa';
 
 interface PWAInstallInstructionsProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
 export function PWAInstallInstructions({ isOpen, onClose }: PWAInstallInstructionsProps) {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
-  }, []);
+  const { isInstallable, promptInstall } = usePWA();
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      setIsInstallable(false);
+    const success = await promptInstall();
+    if (success) {
       onClose();
     }
-  };
-
-  const detectPlatform = () => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
-    const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent);
-    const isChrome = /chrome/.test(userAgent);
-    const isFirefox = /firefox/.test(userAgent);
-
-    if (isIOS) return 'ios';
-    if (isAndroid && isChrome) return 'android-chrome';
-    if (isAndroid) return 'android';
-    if (isSafari) return 'safari';
-    if (isChrome) return 'chrome';
-    if (isFirefox) return 'firefox';
-    return 'desktop';
   };
 
   const platform = detectPlatform();
@@ -245,71 +202,4 @@ export function PWAInstallInstructions({ isOpen, onClose }: PWAInstallInstructio
       </DialogContent>
     </Dialog>
   );
-}
-
-// Hook to detect if PWA is installable and check if already in PWA mode
-export function usePWAInstall() {
-  const [isInstallable, setIsInstallable] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isRunningAsPwa, setIsRunningAsPwa] = useState(false);
-
-  useEffect(() => {
-    // Check if already running as a PWA
-    const checkIfPwa = () => {
-      // Standard web app manifest display mode
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      // iOS specific detection
-      const isIOSStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
-      // Android TWA detection
-      const isAndroidTwa = document.referrer.includes('android-app://');
-      // Check other indicators
-      const isLaunchedFromHomescreen = document.referrer === '';
-      const hasManifestLink = !!document.querySelector('link[rel="manifest"]');
-      const isFromAppIntent = window.location.href.includes('?source=pwa') || 
-                             window.location.href.includes('?utm_source=pwa') || 
-                             window.location.href.includes('?utm_source=homescreen');
-      
-      // If any of these conditions is true, we're likely running as a PWA
-      const pwaMode = isStandalone || isIOSStandalone || isAndroidTwa || 
-                      (isLaunchedFromHomescreen && hasManifestLink && isFromAppIntent);
-                      
-      setIsRunningAsPwa(pwaMode);
-      
-      // Don't show install prompt if already running as PWA
-      return pwaMode;
-    };
-    
-    const isPwa = checkIfPwa();
-    
-    // Only attach the beforeinstallprompt handler if not already a PWA
-    if (!isPwa) {
-      const handler = (e: Event) => {
-        e.preventDefault();
-        setDeferredPrompt(e as BeforeInstallPromptEvent);
-        setIsInstallable(true);
-      };
-  
-      window.addEventListener('beforeinstallprompt', handler);
-  
-      return () => {
-        window.removeEventListener('beforeinstallprompt', handler);
-      };
-    }
-  }, []);
-
-  const promptInstall = async () => {
-    if (!deferredPrompt) return false;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      setIsInstallable(false);
-      return true;
-    }
-    return false;
-  };
-
-  return { isInstallable, promptInstall, isRunningAsPwa };
 }

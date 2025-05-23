@@ -149,11 +149,14 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         <DropdownMenuItem
           onClick={() => {
             removeLogin(currentUser.id);
-            navigate("/");
-            removeLogin(currentUser.id);
-            navigate("/");
-            localStorage.clear();
             cashuStore.clearStore();
+            const chorusOnboardingStored =
+              localStorage.getItem("chorus-onboarding");
+            localStorage.clear();
+            if (chorusOnboardingStored) {
+              localStorage.setItem("chorus-onboarding", chorusOnboardingStored);
+            }
+            navigate("/");
           }}
           className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-red-500 text-sm md:gap-2 gap-3"
         >

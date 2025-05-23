@@ -4,9 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthor } from "@/hooks/useAuthor";
-import { Users } from "lucide-react";
+import { DollarSign, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { UserNutzapDialog } from "./UserNutzapDialog";
 
 interface SimpleMembersListProps {
   communityId: string;
@@ -74,14 +77,14 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center">
-            <Users className="h-4 w-4 mr-2" />
+        <CardHeader className="px-4 py-3">
+          <CardTitle className="text-lg flex items-center">
+            <Users className="h-5 w-5 mr-2" />
             Group Owner & Moderators
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="px-3 pt-0 pb-3">
+          <div className="space-y-1">
             {community && <ModeratorItem key={community.pubkey} pubkey={community.pubkey} isCreator />}
             {moderatorTags
               .filter(tag => tag[1] !== community?.pubkey)
@@ -93,13 +96,13 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
+        <CardHeader className="px-4 py-3">
+          <CardTitle className="text-lg flex items-center">
             <Users className="h-5 w-5 mr-2" />
             Members ({uniqueRegularMembers.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 pt-0 pb-3">
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
@@ -114,7 +117,7 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
               <p>No approved members yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {uniqueRegularMembers.slice(0, 10).map((pubkey) => (
                 <MemberItem key={pubkey} pubkey={pubkey} />
               ))}
@@ -134,19 +137,20 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
 function ModeratorItem({ pubkey, isCreator = false }: { pubkey: string; isCreator?: boolean }) {
   const author = useAuthor(pubkey);
   const metadata = author.data?.metadata;
+  const [nutzapOpen, setNutzapOpen] = useState(false);
 
   const displayName = metadata?.name || pubkey.slice(0, 8);
   const profileImage = metadata?.picture;
 
   return (
-    <Link to={`/profile/${pubkey}`} className="block hover:bg-muted rounded-md transition-colors">
-      <div className="flex items-center space-x-3 p-2">
-        <Avatar className="rounded-md">
+    <div className="flex items-center justify-between p-1.5 rounded-md hover:bg-muted transition-colors">
+      <Link to={`/profile/${pubkey}`} className="flex items-center gap-3">
+        <Avatar className="rounded-md h-9 w-9">
           <AvatarImage src={profileImage} />
           <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-medium">{displayName}</p>
+          <p className="font-medium leading-tight">{displayName}</p>
           {isCreator ? (
             <span className="text-xs bg-purple-100 text-purple-600 rounded-full px-2 py-0.5">
               Group Owner
@@ -157,8 +161,27 @@ function ModeratorItem({ pubkey, isCreator = false }: { pubkey: string; isCreato
             </span>
           )}
         </div>
-      </div>
-    </Link>
+      </Link>
+      
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="text-xs py-1 px-2 h-auto"
+        onClick={(e) => {
+          e.stopPropagation();
+          setNutzapOpen(true);
+        }}
+      >
+        <DollarSign className="h-3 w-3 mr-1" />
+        Send eCash
+      </Button>
+      
+      <UserNutzapDialog 
+        open={nutzapOpen} 
+        onOpenChange={setNutzapOpen} 
+        pubkey={pubkey} 
+      />
+    </div>
   );
 }
 
@@ -169,17 +192,39 @@ interface MemberItemProps {
 function MemberItem({ pubkey }: MemberItemProps) {
   const author = useAuthor(pubkey);
   const metadata = author.data?.metadata;
+  const [nutzapOpen, setNutzapOpen] = useState(false);
   
   const displayName = metadata?.name || pubkey.slice(0, 8);
   const profileImage = metadata?.picture;
   
   return (
-    <Link to={`/profile/${pubkey}`} className="flex items-center gap-3 hover:bg-muted p-2 rounded-md transition-colors">
-      <Avatar>
-        <AvatarImage src={profileImage} />
-        <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-      </Avatar>
-      <span className="font-medium">{displayName}</span>
-    </Link>
+    <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors">
+      <Link to={`/profile/${pubkey}`} className="flex items-center gap-3">
+        <Avatar>
+          <AvatarImage src={profileImage} />
+          <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <span className="font-medium">{displayName}</span>
+      </Link>
+      
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="text-xs py-1 px-2 h-auto"
+        onClick={(e) => {
+          e.stopPropagation();
+          setNutzapOpen(true);
+        }}
+      >
+        <DollarSign className="h-3 w-3 mr-1" />
+        Send eCash
+      </Button>
+      
+      <UserNutzapDialog 
+        open={nutzapOpen} 
+        onOpenChange={setNutzapOpen} 
+        pubkey={pubkey} 
+      />
+    </div>
   );
 }
