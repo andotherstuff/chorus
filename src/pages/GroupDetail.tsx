@@ -157,7 +157,7 @@ export default function GroupDetail() {
         <div className="relative mb-6 mt-4">
           <div className="flex gap-4">
             <div className="flex-1">
-              <Skeleton className="h-36 w-full rounded-lg mb-2" />
+              <Skeleton className="h-40 w-full rounded-lg mb-2" />
             </div>
             <div className="min-w-[140px]">
               <Skeleton className="h-10 w-full rounded-md mb-4" />
@@ -195,7 +195,7 @@ export default function GroupDetail() {
       <div className="relative mb-6 mt-4">
         <div className="flex gap-4">
           <div className="flex-1">
-            <div className="h-36 rounded-lg overflow-hidden mb-2 relative">
+            <div className="h-40 rounded-lg overflow-hidden mb-2 relative">
               {imageLoading && (
                 <Skeleton className="absolute inset-0 w-full h-full z-10" />
               )}
@@ -212,37 +212,44 @@ export default function GroupDetail() {
             </div>
           </div>
 
-          <div className="flex flex-col justify-between min-w-[140px] h-36">
+          <div className="flex flex-col min-w-[140px] h-40 space-y-2 justify-between">
             {!isModerator ? (
               <>
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="gap-1.5 mb-2"
+                  size="default"
+                  className="w-full h-8 justify-start pl-3"
                   onClick={() => setShowQRCode(true)}
                 >
-                  <QrCode className="h-4 w-4" />
+                  <QrCode className="h-4 w-4 mr-2" />
                   QR Code
                 </Button>
-                <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+                {/* Make JoinRequestButton height consistent */}
+                <div className="h-8">
+                  <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
+                </div>
+                {/* Add spacer to ensure buttons are distributed evenly */}
                 <div className="flex-1" />
-                <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                {/* Ensure consistent height for GroupNutzapTotal */}
+                <div className="h-8 flex items-center">
+                  <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                </div>
               </>
             ) : (
               <>
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="gap-1.5 mb-2"
+                  size="default"
+                  className="w-full h-8 justify-start pl-3"
                   onClick={() => setShowQRCode(true)}
                 >
-                  <QrCode className="h-4 w-4" />
+                  <QrCode className="h-4 w-4 mr-2" />
                   QR Code
                 </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button asChild variant="outline" size="sm" className="relative justify-start">
+                      <Button asChild variant="outline" size="default" className="relative h-8 w-full justify-start pl-3">
                         <Link 
                           to={`/group/${encodeURIComponent(groupId || '')}/settings${
                             openReportsCount > 0 ? '?tab=reports' : 
@@ -250,7 +257,7 @@ export default function GroupDetail() {
                           }`} 
                           className="flex items-center gap-2"
                         >
-                          <Settings className="h-4 w-4" />
+                          <Settings className="h-4 w-4 mr-2" />
                           <span>Manage Group</span>
                           {(openReportsCount > 0 || pendingRequestsCount > 0) && (
                             <Badge 
@@ -283,14 +290,21 @@ export default function GroupDetail() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {user && community && (
-                  <GroupNutzapButton
-                    groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                    ownerPubkey={community.pubkey}
-                    variant="outline"
-                  />
-                )}
-                <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                {/* Ensure consistent height for GroupNutzapButton */}
+                <div className="h-8">
+                  {user && community && (
+                    <GroupNutzapButton
+                      groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                      ownerPubkey={community.pubkey}
+                      variant="outline"
+                      className="w-full h-8"
+                    />
+                  )}
+                </div>
+                {/* Ensure consistent height for GroupNutzapTotal */}
+                <div className="h-8 flex items-center">
+                  <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+                </div>
               </>
             )}
           </div>
