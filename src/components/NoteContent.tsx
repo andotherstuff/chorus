@@ -197,6 +197,34 @@ export function NoteContent({
     const extractedVideos: string[] = [];
     const extractedAudios: string[] = [];
 
+    // Create a map of URLs to their MIME types from 'm' tags
+    const urlMimeTypes: Record<string, string> = {};
+    
+    // Look for 'm' tags that specify mime types for URLs
+    event.tags.forEach(tag => {
+      if (tag[0] === 'm' && tag.length >= 2) {
+        // 'm' tag format: ["m", "mime-type"] 
+        // Get the previous tag which should contain the URL
+        const tagIndex = event.tags.indexOf(tag);
+        if (tagIndex > 0) {
+          const prevTag = event.tags[tagIndex - 1];
+          if (prevTag[0] === 'url' && prevTag[1]) {
+            urlMimeTypes[prevTag[1]] = tag[1];
+          }
+        }
+      }
+    });
+
+    // Also check for inline 'm' tags paired with URLs
+    for (let i = 0; i < event.tags.length - 1; i++) {
+      const tag = event.tags[i];
+      const nextTag = event.tags[i + 1];
+      
+      if (tag[0] === 'url' && nextTag[0] === 'm') {
+        urlMimeTypes[tag[1]] = nextTag[1];
+      }
+    }
+
     // 1. Extract images from tags
     const tagImages = event.tags
       .filter(tag => ['image', 'img', 'media'].includes(tag[0]) && tag[1]?.startsWith('http'))
@@ -212,26 +240,44 @@ export function NoteContent({
 
     // 3. Extract images and videos from content
     if (event.content) {
-      // Match image URLs with common extensions
-      const imageExtensionRegex = /https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp|tiff|avif|heic)(\?\S*)?/gi;
+      // Extract all URLs from content
+      const urlRegex = /https?:\/\/[^\s]+/gi;
       let match;
-      while ((match = imageExtensionRegex.exec(event.content)) !== null) {
-        extractedImages.push(match[0]);
+      const contentUrls: string[] = [];
+      
+      while ((match = urlRegex.exec(event.content)) !== null) {
+        contentUrls.push(match[0]);
       }
-
-      // Match video URLs with common extensions
-      const videoExtensionRegex = /https?:\/\/\S+\.(mp4|webm|ogg|mov|avi|mkv|m4v|3gp)(\?\S*)?/gi;
-      videoExtensionRegex.lastIndex = 0;
-      while ((match = videoExtensionRegex.exec(event.content)) !== null) {
-        extractedVideos.push(match[0]);
-      }
-
-      // Match audio URLs with common extensions
-      const audioExtensionRegex = /https?:\/\/\S+\.(mp3|wav|flac|m4a|aac|opus|oga|wma)(\?\S*)?/gi;
-      audioExtensionRegex.lastIndex = 0;
-      while ((match = audioExtensionRegex.exec(event.content)) !== null) {
-        extractedAudios.push(match[0]);
-      }
+      
+      // Process each URL
+      contentUrls.forEach(url => {
+        // Check if we have a MIME type from the 'm' tag
+        const mimeType = urlMimeTypes[url];
+        
+        if (mimeType) {
+          // Use the mime type from the tag
+          if (mimeType.startsWith('audio/')) {
+            extractedAudios.push(url);
+          } else if (mimeType.startsWith('video/')) {
+            extractedVideos.push(url);
+          } else if (mimeType.startsWith('image/')) {
+            if (!extractedImages.includes(url)) {
+              extractedImages.push(url);
+            }
+          }
+        } else {
+          // Fall back to file extension matching
+          if (/\.(jpg|jpeg|png|gif|webp|bmp|tiff|avif|heic)(\?\S*)?$/i.test(url)) {
+            if (!extractedImages.includes(url)) {
+              extractedImages.push(url);
+            }
+          } else if (/\.(mp4|webm|ogg|mov|avi|mkv|m4v|3gp)(\?\S*)?$/i.test(url)) {
+            extractedVideos.push(url);
+          } else if (/\.(mp3|wav|flac|m4a|aac|opus|oga|wma)(\?\S*)?$/i.test(url)) {
+            extractedAudios.push(url);
+          }
+        }
+      });
 
       // Match URLs from common image hosting services
       const imageHostRegex = /https?:\/\/(i\.imgur\.com|imgur\.com\/[a-zA-Z0-9]+|pbs\.twimg\.com|i\.ibb\.co|nostr\.build|void\.cat\/d\/|imgproxy\.snort\.social|image\.nostr\.build|media\.tenor\.com|cloudflare-ipfs\.com\/ipfs\/|ipfs\.io\/ipfs\/|files\.zaps\.lol|img\.zaps\.lol|primal\.b-cdn\.net|cdn\.nostr\.build|nitter\.net\/pic|postimages\.org|ibb\.co|cdn\.discordapp\.com\/attachments)\S+/gi;
