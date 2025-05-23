@@ -82,9 +82,32 @@ export function formatBalance(sats: number): string {
 export async function activateMint(mintUrl: string): Promise<{ mintInfo: GetInfoResponse, keysets: MintKeyset[] }> {
   const mint = new CashuMint(mintUrl);
   const wallet = new CashuWallet(mint);
-  const mintInfo = await wallet.getMintInfo();
-  const keysets = await wallet.getKeySets();
-  return { mintInfo, keysets };
+  
+  try {
+    const mintInfo = await wallet.getMintInfo();
+    const keysets = await wallet.getKeySets();
+    return { mintInfo, keysets };
+  } catch (error: any) {
+    // Check if it's a CORS error
+    if (error?.message?.includes('CORS') || error?.message?.includes('Failed to fetch')) {
+      console.warn(`CORS error connecting to ${mintUrl}, will skip mint activation`);
+      // Return minimal valid response to avoid breaking the app
+      return {
+        mintInfo: {
+          name: mintUrl,
+          pubkey: '',
+          version: '',
+          description: 'Mint unavailable due to CORS',
+          description_long: 'This mint cannot be accessed from the browser due to CORS policy',
+          contact: [],
+          motd: 'CORS Error',
+          nuts: {}
+        } as GetInfoResponse,
+        keysets: []
+      };
+    }
+    throw error;
+  }
 }
 
 export async function updateMintKeys(mintUrl: string, keysets: MintKeyset[]): Promise<{ keys: Record<string, MintKeys>[] }> {

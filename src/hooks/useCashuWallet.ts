@@ -84,9 +84,16 @@ export function useCashuWallet() {
             cashuStore.setKeys(mint, keys);
           } catch (error) {
             console.error(`Failed to activate mint ${mint}:`, error);
-            // Continue with other mints even if one fails
-            // Store the error state for this mint
-            cashuStore.setMintError(mint, error instanceof Error ? error.message : 'Failed to connect');
+            // Check if it's a CORS error
+            const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+            if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
+              console.log(`Skipping ${mint} due to CORS policy`);
+              // Don't store CORS errors as they're expected for some mints
+              // Just skip this mint silently
+            } else {
+              // Store other errors
+              cashuStore.setMintError(mint, errorMessage);
+            }
           }
         }));
 
