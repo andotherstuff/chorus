@@ -24,8 +24,6 @@ import { GroupNutzapList } from "@/components/groups/GroupNutzapList";
 import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileText } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
-import type { Group } from "@/types/groups";
-import { parseGroupRouteId, parseGroup } from "@/lib/group-utils";
 import { QRCodeModal } from "@/components/QRCodeModal";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
