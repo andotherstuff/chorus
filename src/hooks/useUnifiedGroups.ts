@@ -14,13 +14,14 @@ export function useUnifiedGroups() {
   const { user } = useCurrentUser();
   const { pinnedGroups, isLoading: isPinnedGroupsLoading } = usePinnedGroups();
 
-  // Get the default NIP-29 relay
-  const defaultNip29Relay = enhancedNostr?.getNip29DefaultRelay();
+  // Define NIP-29 relays to query for public groups
+  const nip29Relays = [
+    'wss://communities.nos.social',
+    'wss://relays.groups.nip29.com'
+  ];
 
-  // Fetch NIP-29 groups from the default relay
-  const { data: nip29Groups = [], isLoading: isNip29Loading } = useNip29Groups([
-    defaultNip29Relay || 'wss://communities.nos.social/'
-  ]);
+  // Fetch NIP-29 groups from multiple relays
+  const { data: nip29Groups = [], isLoading: isNip29Loading } = useNip29Groups(nip29Relays);
 
   return useQuery({
     queryKey: ["unified-groups", user?.pubkey, pinnedGroups, nip29Groups],
