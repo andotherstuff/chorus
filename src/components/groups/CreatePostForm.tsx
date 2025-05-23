@@ -35,7 +35,7 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
   // Clean up object URLs when component unmounts or preview changes
   useEffect(() => {
     return () => {
-      if (previewUrl && mediaFile?.type.startsWith('video/')) {
+      if (previewUrl && (mediaFile?.type.startsWith('video/') || mediaFile?.type.startsWith('audio/'))) {
         URL.revokeObjectURL(previewUrl);
       }
     };
@@ -48,14 +48,14 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
       const file = e.target.files[0];
       
       // Clean up previous object URL if it exists
-      if (previewUrl && mediaFile?.type.startsWith('video/')) {
+      if (previewUrl && (mediaFile?.type.startsWith('video/') || mediaFile?.type.startsWith('audio/'))) {
         URL.revokeObjectURL(previewUrl);
       }
       
       setMediaFile(file);
 
-      // For videos, we might want to use a video element for preview
-      if (file.type.startsWith('video/')) {
+      // For videos and audio, use object URL for preview
+      if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
         const url = URL.createObjectURL(file);
         setPreviewUrl(url);
       } else {
@@ -156,6 +156,12 @@ ${mediaUrl}`;
                     controls
                     className="max-h-52 rounded-md object-contain border w-full"
                   />
+                ) : mediaFile?.type.startsWith('audio/') ? (
+                  <audio
+                    src={previewUrl}
+                    controls
+                    className="w-full rounded-md border"
+                  />
                 ) : (
                   <img
                     src={previewUrl}
@@ -168,8 +174,8 @@ ${mediaUrl}`;
                   size="icon"
                   className="absolute top-1 right-1 h-5 w-5"
                   onClick={() => {
-                    // Clean up object URL if it's a video
-                    if (previewUrl && mediaFile?.type.startsWith('video/')) {
+                    // Clean up object URL if it's a video or audio
+                    if (previewUrl && (mediaFile?.type.startsWith('video/') || mediaFile?.type.startsWith('audio/'))) {
                       URL.revokeObjectURL(previewUrl);
                     }
                     setMediaFile(null);
@@ -193,7 +199,7 @@ ${mediaUrl}`;
               <input
                 id="media-upload"
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*,video/*,audio/*"
                 onChange={handleMediaSelect}
                 className="hidden"
               />

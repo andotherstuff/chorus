@@ -164,29 +164,32 @@ export default function GroupSettings() {
   const handleMediaUpload = async (file: File) => {
     if (!file) return;
     
-    // Check if it's an image or video
+    // Check if it's an image, video, or audio
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
+    const isAudio = file.type.startsWith('audio/');
     
-    if (!isImage && !isVideo) {
-      toast.error("Please select an image or video file");
+    if (!isImage && !isVideo && !isAudio) {
+      toast.error("Please select an image, video, or audio file");
       return;
     }
 
-    // Check file size (e.g., 100MB limit for videos, 10MB for images)
-    const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    // Check file size (e.g., 100MB limit for videos/audio, 10MB for images)
+    const maxSize = (isVideo || isAudio) ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(`File size exceeds ${isVideo ? '100MB' : '10MB'} limit`);
+      toast.error(`File size exceeds ${(isVideo || isAudio) ? '100MB' : '10MB'} limit`);
       return;
     }
 
     try {
       const [[_, url]] = await uploadFile(file);
       setImageUrl(url);
-      toast.success(`${isVideo ? 'Video' : 'Image'} uploaded successfully!`);
+      const fileType = isVideo ? 'Video' : isAudio ? 'Audio' : 'Image';
+      toast.success(`${fileType} uploaded successfully!`);
     } catch (error) {
       console.error("Error uploading media:", error);
-      toast.error(`Failed to upload ${isVideo ? 'video' : 'image'}. Please try again.`);
+      const fileType = isVideo ? 'video' : isAudio ? 'audio' : 'image';
+      toast.error(`Failed to upload ${fileType}. Please try again.`);
     }
   };
 
@@ -537,7 +540,7 @@ export default function GroupSettings() {
                       <input
                         id="media-upload"
                         type="file"
-                        accept="image/*,video/*"
+                        accept="image/*,video/*,audio/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
@@ -547,7 +550,7 @@ export default function GroupSettings() {
                         className="hidden"
                       />
                       <p className="text-xs text-muted-foreground mt-2">
-                        Supported: Images (max 10MB) and videos (max 100MB)
+                        Supported: Images (max 10MB), videos and audio (max 100MB)
                       </p>
                     </div>
 

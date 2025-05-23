@@ -8,7 +8,7 @@ import { PostImage } from '@/components/PostImage';
 import { DebugImageDisplay } from '@/components/DebugImageDisplay';
 import { DirectImageDisplay } from '@/components/DirectImageDisplay';
 import { LinkPreview } from '@/components/LinkPreview';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { MediaPlayer } from '@/components/MediaPlayer';
 import { useExtractUrls } from '@/hooks/useExtractUrls';
 import { DEBUG_IMAGES } from '@/lib/debug';
 
@@ -24,11 +24,12 @@ export function NoteContent({
   const [processedContent, setProcessedContent] = useState<React.ReactNode[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [audioUrls, setAudioUrls] = useState<string[]>([]);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const { getFirstUrl } = useExtractUrls();
 
   // Process text content with links, mentions, etc. - memoized with useCallback
-  const processTextContent = useCallback((text: string, currentImageUrls: string[], currentVideoUrls: string[]) => {
+  const processTextContent = useCallback((text: string, currentImageUrls: string[], currentVideoUrls: string[], currentAudioUrls: string[]) => {
     // Regular expressions for different patterns
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const nostrRegex = /nostr:(npub1|note1|nprofile1|nevent1)([a-z0-9]+)/g;
@@ -77,9 +78,12 @@ export function NoteContent({
       
       // Check if this URL is a video URL that will be displayed separately
       const isVideoUrl = currentVideoUrls.includes(url);
+      
+      // Check if this URL is an audio URL that will be displayed separately
+      const isAudioUrl = currentAudioUrls.includes(url);
 
-      if (isImageUrl || isVideoUrl) {
-        // Return null for image/video URLs - they'll be displayed as media below
+      if (isImageUrl || isVideoUrl || isAudioUrl) {
+        // Return null for image/video/audio URLs - they'll be displayed as media below
         return null;
       }
 
@@ -188,9 +192,10 @@ export function NoteContent({
   useEffect(() => {
     if (!event) return;
 
-    // Extract images and videos from content
+    // Extract images, videos, and audio from content
     const extractedImages: string[] = [];
     const extractedVideos: string[] = [];
+    const extractedAudios: string[] = [];
 
     // 1. Extract images from tags
     const tagImages = event.tags
@@ -221,6 +226,13 @@ export function NoteContent({
         extractedVideos.push(match[0]);
       }
 
+      // Match audio URLs with common extensions
+      const audioExtensionRegex = /https?:\/\/\S+\.(mp3|wav|flac|m4a|aac|opus|oga|wma)(\?\S*)?/gi;
+      audioExtensionRegex.lastIndex = 0;
+      while ((match = audioExtensionRegex.exec(event.content)) !== null) {
+        extractedAudios.push(match[0]);
+      }
+
       // Match URLs from common image hosting services
       const imageHostRegex = /https?:\/\/(i\.imgur\.com|imgur\.com\/[a-zA-Z0-9]+|pbs\.twimg\.com|i\.ibb\.co|nostr\.build|void\.cat\/d\/|imgproxy\.snort\.social|image\.nostr\.build|media\.tenor\.com|cloudflare-ipfs\.com\/ipfs\/|ipfs\.io\/ipfs\/|files\.zaps\.lol|img\.zaps\.lol|primal\.b-cdn\.net|cdn\.nostr\.build|nitter\.net\/pic|postimages\.org|ibb\.co|cdn\.discordapp\.com\/attachments)\S+/gi;
 
@@ -232,8 +244,8 @@ export function NoteContent({
         }
       }
 
-      // Extract the first non-image/video URL for link preview
-      const allMediaUrls = [...extractedImages, ...extractedVideos];
+      // Extract the first non-image/video/audio URL for link preview
+      const allMediaUrls = [...extractedImages, ...extractedVideos, ...extractedAudios];
       const firstUrl = getFirstUrl(event.content);
       if (firstUrl && !allMediaUrls.includes(firstUrl)) {
         setLinkUrl(firstUrl);
@@ -245,11 +257,12 @@ export function NoteContent({
     // Set the extracted URLs
     setImageUrls(extractedImages);
     setVideoUrls(extractedVideos);
+    setAudioUrls(extractedAudios);
 
     // Process the text content
     if (event.content) {
       // Process the content and update state in one go to prevent multiple renders
-      const processed = processTextContent(event.content, extractedImages, extractedVideos);
+      const processed = processTextContent(event.content, extractedImages, extractedVideos, extractedAudios);
       setProcessedContent(processed);
     }
   }, [event, getFirstUrl, processTextContent]);
@@ -270,9 +283,23 @@ export function NoteContent({
       {videoUrls.length > 0 && (
         <div className="mt-2 space-y-2">
           {videoUrls.map((url, index) => (
-            <VideoPlayer
+            <MediaPlayer
               key={`video-${index}`}
               url={url}
+              type="video"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Audio */}
+      {audioUrls.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {audioUrls.map((url, index) => (
+            <MediaPlayer
+              key={`audio-${index}`}
+              url={url}
+              type="audio"
             />
           ))}
         </div>
