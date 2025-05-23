@@ -12,8 +12,11 @@ import { nip19 } from 'nostr-tools';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { usePWA } from "@/hooks/usePWA";
+import { useTranslation } from "react-i18next";
+import { LanguageSelector } from "@/components/settings/LanguageSelector";
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { user } = useCurrentUser();
   const { mutate: createEvent } = useNostrPublish();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
@@ -123,6 +126,19 @@ export default function Settings() {
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
       <div className="space-y-6 my-6">
+        {/* Language Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.language")}</CardTitle>
+            <CardDescription>
+              {t("settings.changeLanguageDesc", "Choose your preferred language for the interface")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LanguageSelector />
+          </CardContent>
+        </Card>
+
         {/* Keys Section */}
         <Card>
           <CardHeader>

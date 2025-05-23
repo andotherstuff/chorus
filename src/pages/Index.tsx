@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import LoginDialog from "@/components/auth/LoginDialog";
 import { useLoggedInAccounts } from "@/hooks/useLoggedInAccounts";
@@ -21,6 +22,7 @@ import { usePWA } from "@/hooks/usePWA";
 import { OnboardingContext } from "@/contexts/OnboardingContext";
 
 const Index = () => {
+  const { t } = useTranslation();
   const { currentUser } = useLoggedInAccounts();
   const [loginOpen, setLoginOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -83,8 +85,8 @@ const Index = () => {
 
           // Show notification with animated icon
           toast({
-            title: "✅ Ecash waiting for you!",
-            description: `Complete signup to receive ${displayAmount} in your wallet`,
+            title: t("onboarding.ecashWaiting"),
+            description: t("onboarding.completeSignup", { amount: displayAmount }),
           });
 
           // Mark as processed
@@ -102,6 +104,7 @@ const Index = () => {
     btcPrice,
     btcPriceLoading,
     tokenProcessed,
+    t,
   ]);
 
   // Redirect to /groups after user is logged in
@@ -140,14 +143,14 @@ const Index = () => {
         }
       }, 100);
       toast({
-        title: "Account created",
-        description: "You are now logged in.",
+        title: t("onboarding.accountCreated"),
+        description: t("onboarding.loggedIn"),
       });
       setNewUser(true); // Mark as new user
     } catch (e) {
       toast({
-        title: "Error",
-        description: "Failed to create account. Please try again.",
+        title: t("common.error"),
+        description: t("errors.failedToSave"),
         variant: "destructive",
       });
     } finally {
@@ -169,7 +172,7 @@ const Index = () => {
             <h1 className="text-4xl font-extralight mb-4">
               <div className="flex flex-row items-baseline justify-center flex-wrap">
                 <span className="font-extralight mr-2 whitespace-nowrap">
-                  welcome to
+                  {t("welcome.title")}
                 </span>
                 <div className="flex flex-row items-baseline">
                   <span className="text-red-500 font-extrabold">+</span>
@@ -180,7 +183,7 @@ const Index = () => {
               </div>
             </h1>
             <div className="text-lg text-muted-foreground font-extralight">
-              public/private groups are money
+              {t("welcome.tagline")}
             </div>
           </div>
           <Button
@@ -189,17 +192,17 @@ const Index = () => {
             disabled={creating}
             className="w-full max-w-[200px] flex items-center justify-center gap-2 mb-6"
           >
-            {creating ? "Creating..." : "Get Started"}
+            {creating ? t("common.creating") : t("common.getStarted")}
           </Button>
           <div className="text-sm text-muted-foreground flex items-center justify-center mt-3">
-            <span>Have a Nostr/+chorus account?</span>&nbsp;
+            <span>{t("welcome.haveAccount")}</span>&nbsp;
             <Button
               variant="link"
               size="sm"
               className="text-primary font-medium hover:underline p-0 h-auto"
               onClick={() => setLoginOpen(true)}
             >
-              Sign in
+              {t("common.signIn")}
             </Button>
           </div>
 
@@ -209,11 +212,11 @@ const Index = () => {
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Smartphone className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-muted-foreground">
-                  Get the App
+                  {t("welcome.getTheApp")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
-                Install +chorus for the best experience
+                {t("welcome.installForBest")}
               </p>
               <PWAInstallButton
                 variant="outline"
@@ -239,11 +242,10 @@ const Index = () => {
         <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background">
           <div className="w-full max-w-lg mx-auto p-8 bg-card dark:bg-dark-card rounded-2xl shadow-lg">
             <h2 className="text-2xl font-bold mb-4 text-center">
-              Set up your profile
+              {t("onboarding.setupProfile")}
             </h2>
             <p className="text-gray-600 mb-6 text-center">
-              Add your display name and picture. You can always update them
-              later.
+              {t("onboarding.setupProfileDesc")}
             </p>
             <EditProfileForm showSkipLink={true} initialName={generatedName} />
           </div>
@@ -255,7 +257,7 @@ const Index = () => {
   // Fallback (should redirect to /groups in most cases)
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
-      <div>Redirecting to groups...</div>
+      <div>{t("common.loading")}</div>
     </div>
   );
 };
