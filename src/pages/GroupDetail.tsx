@@ -160,8 +160,8 @@ export default function GroupDetail() {
             <div className="flex-1">
               <Skeleton className="h-40 w-full rounded-lg mb-2" />
             </div>
-            <div className="min-w-[140px]">
-              <Skeleton className="h-10 w-full rounded-md mb-4" />
+            <div className="min-w-[140px] flex flex-col space-y-4">
+              <Skeleton className="h-10 w-full rounded-md" />
               <Skeleton className="h-10 w-full rounded-md" />
             </div>
           </div>
@@ -213,14 +213,13 @@ export default function GroupDetail() {
             </div>
           </div>
 
-          <div className="flex flex-col min-w-[140px] h-40 space-y-2 justify-between">
+          <div className="flex flex-col min-w-[140px] h-40 space-y-2">
             {!isModerator ? (
               <>
                 <div className="h-8">
                   <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
                 </div>
-                {/* Add spacer to ensure buttons are distributed evenly */}
-                <div className="flex-1" />
+                {/* If there are more buttons than these, they will flow from top to bottom */}
                 {/* Ensure consistent height for GroupNutzapTotal */}
                 <div className="h-8 flex items-center">
                   <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
@@ -228,19 +227,10 @@ export default function GroupDetail() {
               </>
             ) : (
               <>
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="w-full h-8 justify-start pl-3"
-                  onClick={() => setShowQRCode(true)}
-                >
-                  <QrCode className="h-4 w-4 mr-2" />
-                  QR Code
-                </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button asChild variant="outline" size="default" className="relative h-8 w-full justify-start pl-3">
+                      <Button asChild variant="outline" size="default" className="relative h-8 w-full justify-start pl-3 text-xs">
                         <Link
                           to={`/group/${encodeURIComponent(groupId || '')}/settings${
                             openReportsCount > 0 ? '?tab=reports' :
@@ -248,7 +238,7 @@ export default function GroupDetail() {
                           }`}
                           className="flex items-center gap-2"
                         >
-                          <Settings className="h-4 w-4 mr-2" />
+                          <Settings className="h-4 w-4 mr-1" />
                           <span>Manage Group</span>
                           {(openReportsCount > 0 || pendingRequestsCount > 0) && (
                             <Badge
@@ -302,27 +292,29 @@ export default function GroupDetail() {
         </div>
 
         <div className="w-full mt-4">
-          <h1 className="text-2xl font-bold mb-2">{name}</h1>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setShowQRCode(true)}
-          >
-            <QrCode className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center mb-2">
+            <h1 className="text-2xl font-bold">{name}</h1>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 ml-2"
+              onClick={() => setShowQRCode(true)}
+            >
+              <QrCode className="h-4 w-4" />
+            </Button>
+          </div>
           {hasGuidelines && (
             <div className="mb-2">
               <Link
                 to={`/group/${encodeURIComponent(groupId || '')}/guidelines`}
-                className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium inline-flex items-center gap-1"
+                className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 text-xs font-medium inline-flex items-center gap-0.5"
               >
                 <FileText className="h-4 w-4" />
                 Community Guidelines
               </Link>
             </div>
           )}
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       </div>
 
@@ -334,17 +326,17 @@ export default function GroupDetail() {
         <div className="md:flex md:justify-start">
           <TabsList className="mb-4 w-full md:w-auto grid grid-cols-3 gap-0">
             <TabsTrigger value="posts" className="flex items-center justify-center">
-              <MessageSquare className="h-4 w-4 mr-2" />
+              <MessageSquare className="h-4 w-4 mr-1" />
               Posts
             </TabsTrigger>
 
             <TabsTrigger value="members" className="flex items-center justify-center">
-              <Users className="h-4 w-4 mr-2" />
+              <Users className="h-4 w-4 mr-1" />
               Members
             </TabsTrigger>
 
             <TabsTrigger value="ecash" className="flex items-center justify-center">
-              <DollarSign className="h-4 w-4 mr-2" />
+              <DollarSign className="h-4 w-4 mr-1" />
               Send eCash
             </TabsTrigger>
           </TabsList>
@@ -365,7 +357,7 @@ export default function GroupDetail() {
                 onCheckedChange={setShowOnlyApproved}
               />
               <Label htmlFor="approved-only" className="flex items-center cursor-pointer text-sm">
-                <CheckCircle className="h-3.5 w-3.5 mr-1.5 text-green-500" />
+                <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-500" />
                 Show only approved posts
               </Label>
             </div>

@@ -164,10 +164,10 @@ export function GroupNutzapButton({
       <Button
         variant={variant}
         size={size}
-        className={cn("w-full h-full justify-start pl-3", className)}
+        className={cn("w-full h-full justify-start pl-3 text-xs", className)}
         onClick={handleOpenDialog}
       >
-        <DollarSign className="h-4 w-4 mr-2" />
+        <DollarSign className="h-4 w-4 mr-1" />
         Send eCash
       </Button>
 
