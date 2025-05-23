@@ -358,9 +358,87 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     }
   };
 
-  if (!isModerator) {
-    return null;
-  }
+  const handleApproveAllRequests = async () => {
+    if (!user || !isModerator) {
+      toast.error("You must be a moderator to approve members");
+      return;
+    }
+
+    if (pendingRequests.length === 0) {
+      toast.info("No pending requests to approve");
+      return;
+    }
+
+    // Store the current tab before the async operation
+    const currentTab = selectedTabRef.current;
+    
+    try {
+      // Get all the pubkeys from pending requests
+      const pendingPubkeys = pendingRequests.map(request => request.pubkey);
+      
+      // Create a new list of all existing approved members plus all pending requests
+      const tags = [
+        ["a", communityId],
+        ...uniqueApprovedMembers.map(pk => ["p", pk]),
+        ...pendingPubkeys.map(pk => ["p", pk]) // Add all pending members
+      ];
+
+      // Create approved members event (kind 14550)
+      await publishEvent({
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
+        tags,
+        content: "",
+      });
+      
+      // Handle any declined users in the pending list
+      const declinedPubkeysInPendingList = pendingPubkeys.filter(pk => 
+        uniqueDeclinedUsers.includes(pk)
+      );
+      
+      if (declinedPubkeysInPendingList.length > 0) {
+        // For each previously declined user, find their events and remove them from declined list
+        for (const pubkey of declinedPubkeysInPendingList) {
+          const declinedEventsForUser = declinedUsersEvents?.filter(event => 
+            event.tags.some(tag => tag[0] === "p" && tag[1] === pubkey)
+          ) || [];
+          
+          for (const declinedEvent of declinedEventsForUser) {
+            // Get the original request event ID and kind from the declined event
+            const eventIdTag = declinedEvent.tags.find(tag => tag[0] === "e");
+            const kindTag = declinedEvent.tags.find(tag => tag[0] === "k");
+            
+            if (eventIdTag && kindTag) {
+              // Create a new declined event that doesn't include this pubkey
+              await publishEvent({
+                kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
+                tags: [
+                  ["a", communityId],
+                  ["e", eventIdTag[1]],
+                  // Deliberately omitting the pubkey tag to remove the user
+                  ["k", kindTag[1]]
+                ],
+                content: "", // Empty content to indicate removal
+              });
+            }
+          }
+        }
+      }
+      
+      const approvedCount = pendingRequests.length;
+      toast.success(`${approvedCount} ${approvedCount === 1 ? 'user' : 'users'} approved successfully!`);
+      
+      // Refetch data
+      refetchRequests();
+      refetchMembers();
+      refetchDeclined();
+      
+      // Ensure we maintain the same tab that was active before the operation
+      setActiveTab(currentTab);
+    } catch (error) {
+      console.error("Error approving all users:", error);
+      toast.error("Failed to approve all users. Please try again.");
+    }
+  };
 
   return (
     <Card>
@@ -437,6 +515,18 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
               </div>
             ) : (
               <div className="space-y-4">
+                {pendingRequests.length > 1 && (
+                  <div className="flex justify-end mb-4">
+                    <Button 
+                      size="sm" 
+                      onClick={handleApproveAllRequests}
+                      className="gap-2"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Approve All ({pendingRequests.length})
+                    </Button>
+                  </div>
+                )}
                 {pendingRequests.map((request) => (
                   <JoinRequestItem 
                     key={request.id} 
