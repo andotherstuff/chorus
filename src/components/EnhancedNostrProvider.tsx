@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useMemo, useCallback, useRef } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   NPool,
   NRelay1,
@@ -57,6 +60,13 @@ export function EnhancedNostrProvider({
   // Get the base nostr instance from the regular provider
   const baseNostr = useNostr();
   
+  // Preconnect to known NIP-29 relays
+  const nip29Relays = useMemo(() => [
+    nip29DefaultRelay,
+    'wss://relays.groups.nip29.com',
+    'wss://groups.fiatjaf.com'
+  ], [nip29DefaultRelay]);
+  
   // Track authenticated relays
   const authenticatedRelays = useRef<Set<string>>(new Set());
   // Track pending auth challenges
@@ -73,14 +83,17 @@ export function EnhancedNostrProvider({
     
     // Check if we already have a connection
     if (relayConnections.current.has(url)) {
+      console.log(`[EnhancedNostrProvider] Reusing existing connection to ${url}`);
       return relayConnections.current.get(url)!;
     }
 
     const relay = new NRelay1(url);
     relayConnections.current.set(url, relay);
+    
+    // Log connection status (NRelay1 doesn't have addEventListener, so we'll add logging elsewhere)
 
     // Set up WebSocket event listeners for NIP-42 auth
-    const ws = (relay as any).socket;
+    const ws = (relay as unknown as { socket?: WebSocket }).socket;
     if (ws) {
       const originalOnMessage = ws.onmessage;
       ws.onmessage = async (event: MessageEvent) => {
@@ -135,7 +148,7 @@ export function EnhancedNostrProvider({
       // Send AUTH response
       const relay = relayConnections.current.get(relayUrl);
       if (relay) {
-        const ws = (relay as any).socket;
+        const ws = (relay as unknown as { socket?: WebSocket }).socket;
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(['AUTH', authEvent]));
           authenticatedRelays.current.add(relayUrl);
@@ -342,6 +355,19 @@ export function EnhancedNostrProvider({
     getGroupRelay,
     getNip29DefaultRelay
   }), [pool, query, event, addGroupRelay, getGroupRelay, getNip29DefaultRelay]);
+  
+  // Preconnect to NIP-29 relays on mount
+  useEffect(() => {
+    console.log('[EnhancedNostrProvider] Preconnecting to NIP-29 relays...');
+    for (const relay of nip29Relays) {
+      try {
+        open(relay);
+        console.log(`[EnhancedNostrProvider] Initiated connection to ${relay}`);
+      } catch (error) {
+        console.error(`[EnhancedNostrProvider] Failed to connect to ${relay}:`, error);
+      }
+    }
+  }, [nip29Relays, open]);
 
   return (
     <EnhancedNostrContext.Provider value={{ nostr: enhancedNostr }}>

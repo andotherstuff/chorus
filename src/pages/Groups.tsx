@@ -118,7 +118,7 @@ export default function Groups() {
     }
 
     return membershipMap;
-  }, [unifiedGroupsData, user]);
+  }, [unifiedGroupsData, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Create a set of pending join request community IDs for quick lookup
   const pendingJoinRequestsSet = useMemo(() => {

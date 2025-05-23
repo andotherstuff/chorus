@@ -16,8 +16,9 @@ export function useUnifiedGroups() {
 
   // Define NIP-29 relays to query for public groups
   const nip29Relays = [
-    'wss://communities.nos.social',
-    'wss://relays.groups.nip29.com'
+    'wss://communities.nos.social/',
+    'wss://relays.groups.nip29.com',
+    'wss://groups.fiatjaf.com'
   ];
 
   // Fetch NIP-29 groups from multiple relays

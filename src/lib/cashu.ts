@@ -87,9 +87,10 @@ export async function activateMint(mintUrl: string): Promise<{ mintInfo: GetInfo
     const mintInfo = await wallet.getMintInfo();
     const keysets = await wallet.getKeySets();
     return { mintInfo, keysets };
-  } catch (error: any) {
+  } catch (error) {
     // Check if it's a CORS error
-    if (error?.message?.includes('CORS') || error?.message?.includes('Failed to fetch')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
       console.warn(`CORS error connecting to ${mintUrl}, will skip mint activation`);
       // Return minimal valid response to avoid breaking the app
       return {
@@ -101,7 +102,10 @@ export async function activateMint(mintUrl: string): Promise<{ mintInfo: GetInfo
           description_long: 'This mint cannot be accessed from the browser due to CORS policy',
           contact: [],
           motd: 'CORS Error',
-          nuts: {}
+          nuts: {
+            '4': { methods: [], disabled: true },
+            '5': { methods: [], disabled: true }
+          }
         } as GetInfoResponse,
         keysets: []
       };

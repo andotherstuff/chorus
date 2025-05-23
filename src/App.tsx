@@ -44,7 +44,7 @@ function AppWithEnhancedNostr({ children }: { children: ReactNode }) {
   return (
     <EnhancedNostrProvider 
       relays={defaultRelays} 
-      nip29DefaultRelay="wss://communities.nos.social"
+      nip29DefaultRelay="wss://communities.nos.social/"
       signer={user?.signer}
     >
       {children}

@@ -65,7 +65,7 @@ export async function fetchWithCorsFailback(url: string): Promise<Response> {
 /**
  * Create a CORS-friendly CashuMint instance
  */
-export function createCorsFriendlyMint(mintUrl: string): any {
+export function createCorsFriendlyMint(mintUrl: string): null {
   // This would require modifying the CashuMint class to use our fetch wrapper
   // For now, we'll just document this as a future enhancement
   console.warn('CORS-friendly mint creation not yet implemented');

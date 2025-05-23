@@ -35,6 +35,7 @@ export function useNip29Groups(groupRelays: string[] = []) {
           
           // Query for relay-generated group metadata events (kind 39000)
           // These are created by the relay after a successful group creation
+          // We don't filter by author since we might not know the relay's pubkey
           const events = await nostr.query([{
             kinds: [39000], // NIP-29 relay-generated group metadata
             limit: 100
@@ -56,8 +57,8 @@ export function useNip29Groups(groupRelays: string[] = []) {
               groups.push(group);
               
               // Register this group's relay for future operations
-              if ('addGroupRelay' in nostr) {
-                (nostr as any).addGroupRelay(group.groupId, relayUrl);
+              if ('addGroupRelay' in nostr && typeof nostr.addGroupRelay === 'function') {
+                nostr.addGroupRelay(group.groupId, relayUrl);
               }
             }
           }

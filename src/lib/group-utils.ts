@@ -87,7 +87,8 @@ export function parseNip29Group(event: NostrEvent, relay: string): Nip29Group | 
       relay,
       admins: [], // Will be populated from kind 39002 events
       members: [], // Will be populated from kind 39002 events
-      moderators: [], // NIP-29 uses admins instead of moderators      isOpen: !closedTag, // If no "closed" tag, group is open
+      moderators: [], // NIP-29 uses admins instead of moderators
+      isOpen: !closedTag, // If no "closed" tag, group is open
       isPublic: !privateTag, // If no "private" tag, group is public
       tags: event.tags
     };
