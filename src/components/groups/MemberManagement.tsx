@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNostr } from "@/hooks/useNostr";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -33,16 +33,32 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     banUser, 
     unbanUser 
   } = useBannedUsers(communityId);
-  const [activeTab, setActiveTab] = useState("requests");
+  
+  // Set initialTab based on URL param
+  const getInitialTabFromURL = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const membersTab = searchParams.get('membersTab');
+    return membersTab && ['requests', 'members', 'declined', 'banned'].includes(membersTab)
+      ? membersTab
+      : "requests";
+  };
+  
+  // Use useRef to maintain tab state across re-renders
+  const selectedTabRef = useRef<string>(getInitialTabFromURL());
+  // Also keep a state for UI updates
+  const [activeTab, setActiveTab] = useState<string>(selectedTabRef.current);
+  
+  // Update both the state and ref when tab changes
+  const handleTabChange = (value: string) => {
+    selectedTabRef.current = value;
+    setActiveTab(value);
+  };
   
   // Check URL parameters for tab selection
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const membersTab = searchParams.get('membersTab');
-    
-    if (membersTab && ['requests', 'members', 'declined', 'banned'].includes(membersTab)) {
-      setActiveTab(membersTab);
-    }
+    const initialTab = getInitialTabFromURL();
+    selectedTabRef.current = initialTab;
+    setActiveTab(initialTab);
   }, [location.search]);
 
   // Query for join requests
@@ -119,11 +135,16 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     !uniqueBannedUsers.includes(request.pubkey)
   ) || [];
 
+  // Now we can access the current tab at any time via selectedTabRef.current
+  // This ensures we know which tab we're on even during async operations
   const handleApproveUser = async (pubkey: string) => {
     if (!user || !isModerator) {
       toast.error("You must be a moderator to approve members");
       return;
     }
+
+    // Store the current tab before the async operation
+    const currentTab = selectedTabRef.current;
 
     try {
       // Check if the user is in the declined list
@@ -181,7 +202,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       refetchMembers();
       refetchDeclined();
       
-      // Stay on the current tab (requests) instead of switching to members
+      // Ensure we maintain the same tab that was active before the operation
+      // This forces the UI to use the ref value rather than any default
+      setActiveTab(currentTab);
     } catch (error) {
       console.error("Error approving user:", error);
       toast.error("Failed to approve user. Please try again.");
@@ -194,6 +217,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       return;
     }
 
+    // Store the current tab before the async operation
+    const currentTab = selectedTabRef.current;
+    
     try {
       // Filter out the member to remove
       const updatedMembers = uniqueApprovedMembers.filter(pk => pk !== pubkey);
@@ -234,6 +260,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       // Refetch data
       refetchMembers();
       refetchDeclined();
+      
+      // Ensure we maintain the same tab that was active before the operation
+      setActiveTab(currentTab);
     } catch (error) {
       console.error("Error removing member:", error);
       toast.error("Failed to remove member. Please try again.");
@@ -246,6 +275,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       return;
     }
 
+    // Store the current tab before the async operation
+    const currentTab = selectedTabRef.current;
+    
     try {
       // First remove the user from approved members if they are in that list
       if (uniqueApprovedMembers.includes(pubkey)) {
@@ -256,6 +288,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       await banUser(pubkey);
       
       toast.success("User banned successfully!");
+      
+      // Ensure we maintain the same tab that was active before the operation
+      setActiveTab(currentTab);
     } catch (error) {
       console.error("Error banning user:", error);
       toast.error("Failed to ban user. Please try again.");
@@ -268,6 +303,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       return;
     }
 
+    // Store the current tab before the async operation
+    const currentTab = selectedTabRef.current;
+    
     try {
       // Create decline event (kind 14551)
       await publishEvent({
@@ -286,6 +324,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       // Refetch data
       refetchRequests();
       refetchDeclined();
+      
+      // Ensure we maintain the same tab that was active before the operation
+      setActiveTab(currentTab);
     } catch (error) {
       console.error("Error declining user:", error);
       toast.error("Failed to decline user. Please try again.");
@@ -298,6 +339,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       return;
     }
 
+    // Store the current tab before the async operation
+    const currentTab = selectedTabRef.current;
+    
     try {
       // 1. Find all declined events that include this pubkey
       const declinedEventsForUser = declinedUsersEvents?.filter(event => 
@@ -346,7 +390,8 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       refetchDeclined();
       refetchMembers();
       
-      // No tab switching - keep user on current tab
+      // Ensure we maintain the same tab that was active before the operation
+      setActiveTab(currentTab);
     } catch (error) {
       console.error("Error approving declined user:", error);
       toast.error("Failed to approve user. Please try again.");
@@ -366,9 +411,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <div className="mb-4 w-full">
-            <Select value={activeTab} onValueChange={setActiveTab}>
+            <Select value={activeTab} onValueChange={handleTabChange}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select member category" />
               </SelectTrigger>
