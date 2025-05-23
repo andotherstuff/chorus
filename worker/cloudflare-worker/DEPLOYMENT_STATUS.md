@@ -81,4 +81,3 @@ Before deploying, you need to:
 - <10MB KV storage per 1000 users
 
 Remember: We test on production, but we always clean up! 🧹
-EOF 2>&1

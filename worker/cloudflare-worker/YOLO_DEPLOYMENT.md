@@ -185,4 +185,3 @@ If something goes wrong (it won't, but just in case):
 4. Rollback if needed: `wrangler rollback`
 
 Happy YOLO deploying! 🎊
-EOF 2>&1

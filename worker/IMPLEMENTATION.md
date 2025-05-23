@@ -265,4 +265,3 @@ For issues and questions:
 2. Verify environment configuration  
 3. Test with minimal reproduction case
 4. Review server logs for API errors
-EOF 2>&1

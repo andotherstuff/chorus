@@ -272,4 +272,3 @@ npm run cleanup:test-events
 ```
 
 Remember: YOLO testing means we test on production relays but ALWAYS clean up after ourselves! 🚀
-EOF 2>&1

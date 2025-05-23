@@ -5,6 +5,7 @@
 
 import { NostrEvent, verifyEvent } from 'nostr-tools';
 import { NotificationSystem, NOTIFICATION_EVENT_KINDS } from './notification-system';
+import { WorkerAPI } from './worker-api';
 
 export interface Env {
   KV: KVNamespace;
@@ -32,6 +33,13 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     
+    // Handle API routes
+    if (url.pathname.startsWith('/api/')) {
+      const api = new WorkerAPI(env);
+      return api.handleRequest(request);
+    }
+    
+    // Handle other routes
     try {
       switch (url.pathname) {
         case '/heartbeat':
@@ -40,12 +48,6 @@ export default {
           return handleHealthCheck(env);
         case '/stats':
           return handleStats(env);
-        case '/register':
-          return handleUserRegistration(request, env);
-        case '/unregister':
-          return handleUserUnregistration(request, env);
-        case '/test-notification':
-          return handleTestNotification(request, env);
         default:
           return new Response('Not Found', { status: 404 });
       }

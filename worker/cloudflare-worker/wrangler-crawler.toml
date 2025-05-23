@@ -40,8 +40,9 @@ binding = "KV"
 id = "a4b796fae79440c2a9f534d340794dfe"
 
 # Resource limits
-[limits]
-cpu_ms = 50 # 50ms CPU time per request
+# Note: CPU limits require a paid plan
+# [limits]
+# cpu_ms = 50 # 50ms CPU time per request
 
 # Secrets (set via wrangler CLI or dashboard):
 # - WORKER_AUTH_TOKEN (optional, for manual trigger authentication)

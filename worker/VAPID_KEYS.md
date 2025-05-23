@@ -42,4 +42,3 @@ const subject = env.VAPID_SUBJECT;
 ```
 
 Never log or expose the private key!
-EOF 2>&1

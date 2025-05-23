@@ -97,4 +97,3 @@ cloudflare-worker/
 ```
 
 Remember: We're not reckless, we're just confident! 🎉
-EOF 2>&1
