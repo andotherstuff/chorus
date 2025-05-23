@@ -125,7 +125,9 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <CardTitle>Your Keys</CardTitle>
-            <CardDescription>Your public and private keys for Nostr</CardDescription>
+            <CardDescription>
+              Your Nostr identity consists of a public key (npub) and private key (nsec). Your public key is like your username - share it freely so others can find and follow you. Your private key is your password - never share it with anyone. With your private key, you can log into any Nostr app and access your identity, followers, and content.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
