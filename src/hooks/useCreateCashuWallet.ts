@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCashuWallet } from '@/hooks/useCashuWallet';
+import { useTrackEngagement } from "@/hooks/useTrackEngagement";
 import { useCashuStore } from '@/stores/cashuStore';
 import { derivePrivkeyFromNostrSignature } from '@/lib/nip60';
 import { defaultMints } from '@/lib/cashu';
@@ -14,6 +15,7 @@ export function useCreateCashuWallet() {
   const { user } = useCurrentUser();
   const { createWallet } = useCashuWallet();
   const cashuStore = useCashuStore();
+  const { trackSetWallet } = useTrackEngagement();
 
   return useMutation({
     mutationFn: async () => {
@@ -37,6 +39,9 @@ export function useCreateCashuWallet() {
           privkey,
           mints,
         });
+
+        // Track that the user has set up a wallet
+        trackSetWallet();
 
         return { success: true };
       } catch (error) {
