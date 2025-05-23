@@ -338,6 +338,21 @@ const encrypted = await user.signer.nip44.encrypt(user.pubkey, "hello world");
 const decrypted = await user.signer.nip44.decrypt(user.pubkey, encrypted) // "hello world"
 ```
 
+## NIP-29 Groups Implementation
+
+This project supports both NIP-72 public communities and NIP-29 private relay-based groups. 
+
+**IMPORTANT**: When working with NIP-29 groups, consult the `relay_nip29_notes.md` file for detailed documentation about:
+- How NIP-29 groups work with relay-specific events
+- Event kinds and their purposes (9xxx for user events, 39xxx for relay-generated events)
+- Authentication flow with NIP-42
+- Group creation and management
+- Member roles and permissions
+
+Key differences:
+- NIP-72: Public communities stored on general relays
+- NIP-29: Private groups with relay-enforced access control
+
 ## Development Practices
 
 - Uses React Query for data fetching and caching

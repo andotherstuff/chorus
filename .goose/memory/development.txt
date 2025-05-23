@@ -28,3 +28,17 @@ This is the standard workflow for completing feature implementation.
 # trending hashtags feature-request discovery
 User wants trending hashtag functionality added to the Chorus Nostr client. This would show popular/frequently used hashtags to help users discover what's trending in the network.
 
+# nip29-groups documentation relay-based-groups
+NIP-29 Groups Implementation - IMPORTANT: Always consult relay_nip29_notes.md for detailed documentation about:
+- How NIP-29 groups differ from NIP-72 communities
+- Relay-specific event kinds (9xxx for user actions, 39xxx for relay-generated)
+- NIP-42 authentication requirements
+- Group creation, management, and member permissions
+- EnhancedNostrProvider routing logic for NIP-29 events
+
+Key implementation files:
+- /src/components/EnhancedNostrProvider.tsx - Handles NIP-29 relay routing and NIP-42 auth
+- /src/hooks/useNip29Groups.ts - Fetches NIP-29 groups from relays
+- /src/lib/group-utils.ts - Unified Group type handling for both NIP-72 and NIP-29
+- /src/types/groups.ts - Type definitions for Group interfaces
+
