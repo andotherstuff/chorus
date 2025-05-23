@@ -12,7 +12,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { NoteContent } from "@/components/NoteContent";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { formatRelativeTime } from "@/lib/utils";
-import { ArrowLeft, Hash, MessageSquare, MoreVertical, Flag, Share2, Users } from "lucide-react";
+import { ArrowLeft, Hash, MessageSquare, MoreVertical, Flag, Share2, Users, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import type { NostrEvent } from "@nostrify/nostrify";
@@ -32,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { KINDS } from "@/lib/nostr-kinds";
 
 export default function Hashtag() {
   const { hashtag } = useParams<{ hashtag: string }>();
@@ -54,7 +55,7 @@ export default function Hashtag() {
         const [taggedPosts, contentPosts] = await Promise.all([
           // Query for posts with hashtag as a 't' tag
           nostr.query([{
-            kinds: [1, 11], // text notes and community posts
+            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_POST], // text notes and community posts
             "#t": [hashtag.toLowerCase()], 
             limit: 50
           }], { signal }),
@@ -62,7 +63,7 @@ export default function Hashtag() {
           // Query for posts containing hashtag in content
           // Note: This is less efficient but catches posts without proper tagging
           nostr.query([{
-            kinds: [1, 11],
+            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_POST],
             search: `#${hashtag}`,
             limit: 30
           }], { signal }).catch(() => []) // Some relays may not support search
@@ -141,22 +142,34 @@ export default function Hashtag() {
       <Header />
       
       {/* Header Section - Removed duplicate hashtag icon */}
-      <div className="flex items-center gap-4 mb-6 mt-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="h-8 w-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="sr-only">Go back</span>
-        </Button>
-        
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold flex items-center">
-            <Hash className="h-6 w-6 text-blue-500 mr-1" />
-            {hashtag}
-          </h1>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 mt-2">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Go back</span>
+          </Button>
+          
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold flex items-center">
+              <Hash className="h-6 w-6 text-blue-500 mr-1" />
+              {hashtag}
+            </h1>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <a 
+            href="/trending" 
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            Trending Hashtags
+          </a>
         </div>
       </div>
 
@@ -269,7 +282,7 @@ function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
       
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [pubkey],
         "#d": [identifier]
       }], { signal });

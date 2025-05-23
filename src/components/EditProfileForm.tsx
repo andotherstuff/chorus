@@ -21,6 +21,7 @@ import { NSchema as n, type NostrMetadata } from "@nostrify/nostrify";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUploadFile } from "@/hooks/useUploadFile";
 import { useNavigate } from "react-router-dom";
+import { KINDS } from "@/lib/nostr-kinds";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface EditProfileFormProps {
@@ -154,7 +155,7 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({
 
       // Prepare the kind 0 event
       const eventToPublish = {
-        kind: 0,
+        kind: KINDS.METADATA,
         content: JSON.stringify(data),
       };
 

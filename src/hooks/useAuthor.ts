@@ -1,6 +1,7 @@
 import { type NostrEvent, type NostrMetadata, NSchema as n } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
+import { KINDS } from "@/lib/nostr-kinds";
 
 export function useAuthor(pubkey: string | undefined) {
   const { nostr } = useNostr();
@@ -13,7 +14,7 @@ export function useAuthor(pubkey: string | undefined) {
       }
 
       const [event] = await nostr.query(
-        [{ kinds: [0], authors: [pubkey!], limit: 1 }],
+        [{ kinds: [KINDS.METADATA], authors: [pubkey!], limit: 1 }],
         { signal: AbortSignal.any([signal, AbortSignal.timeout(1500)]) },
       );
 

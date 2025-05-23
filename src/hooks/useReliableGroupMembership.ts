@@ -2,6 +2,7 @@ import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "./useCurrentUser";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to reliably check if the current user is a member of a group
@@ -37,7 +38,7 @@ export function useReliableGroupMembership(communityId?: string) {
       
       // Fetch the community event
       const communityEvents = await nostr.query([{ 
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier],
       }], { signal });
@@ -71,7 +72,7 @@ export function useReliableGroupMembership(communityId?: string) {
       
       // Check for approved members lists that include the user
       const memberEvents = await nostr.query([{ 
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });

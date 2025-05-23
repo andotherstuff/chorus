@@ -156,6 +156,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="my-1" />
+
         <DropdownMenuItem
           asChild
           className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"

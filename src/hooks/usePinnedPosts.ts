@@ -2,6 +2,7 @@ import { useNostr } from "./useNostr";
 import { useCurrentUser } from "./useCurrentUser";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNostrPublish } from "./useNostrPublish";
+import { KINDS } from "@/lib/nostr-kinds";
 
 export interface PinnedPost {
   eventId: string;
@@ -25,7 +26,7 @@ export function usePinnedPosts(communityId: string) {
       // Fetch pinned posts events (kind 14554) for this community from all moderators
       const events = await nostr.query([
         { 
-          kinds: [14554], 
+          kinds: [KINDS.PINNED_POSTS_LIST], 
           "#a": [communityId],
           limit: 50 
         }
@@ -64,7 +65,7 @@ export function usePinnedPosts(communityId: string) {
       const signal = AbortSignal.timeout(5000);
       const existingEvents = await nostr.query([
         { 
-          kinds: [14554], 
+          kinds: [KINDS.PINNED_POSTS_LIST], 
           authors: [user.pubkey],
           "#a": [communityId],
           limit: 1 
@@ -92,7 +93,7 @@ export function usePinnedPosts(communityId: string) {
 
       // Publish the kind 14554 event
       await publishEvent({
-        kind: 14554,
+        kind: KINDS.PINNED_POSTS_LIST,
         tags,
         content: ""
       });
@@ -116,7 +117,7 @@ export function usePinnedPosts(communityId: string) {
       const signal = AbortSignal.timeout(5000);
       const existingEvents = await nostr.query([
         { 
-          kinds: [14554], 
+          kinds: [KINDS.PINNED_POSTS_LIST], 
           authors: [user.pubkey],
           "#a": [communityId],
           limit: 1 
@@ -148,7 +149,7 @@ export function usePinnedPosts(communityId: string) {
       
       // Publish the updated kind 14554 event
       await publishEvent({
-        kind: 14554,
+        kind: KINDS.PINNED_POSTS_LIST,
         tags,
         content: ""
       });

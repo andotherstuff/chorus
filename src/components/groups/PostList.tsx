@@ -24,6 +24,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { ReplyList } from "./ReplyList";
 import { ReportDialog } from "./ReportDialog";
 import { shareContent } from "@/lib/share";
+import { KINDS } from "@/lib/nostr-kinds";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,7 +61,7 @@ function ReplyCount({ postId }: { postId: string }) {
 
       // Get all kind 1111 replies that reference this post
       const events = await nostr.query([{
-        kinds: [1111],
+        kinds: [KINDS.GROUP_POST_REPLY],
         "#e": [postId],
         limit: 100,
       }], { signal });
@@ -97,7 +98,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       const approvals = await nostr.query([{
-        kinds: [4550],
+        kinds: [KINDS.GROUP_POST_APPROVAL],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -110,14 +111,14 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           const kind = kindTag ? Number.parseInt(kindTag[1]) : null;
 
           // Skip this approval if it's for a reply (kind 1111)
-          if (kind === 1111) {
+          if (kind === KINDS.GROUP_POST_REPLY) {
             return null;
           }
 
           const approvedPost = JSON.parse(approval.content) as NostrEvent;
 
           // Skip if the post itself is a reply
-          if (approvedPost.kind === 1111) {
+          if (approvedPost.kind === KINDS.GROUP_POST_REPLY) {
             return null;
           }
 
@@ -156,7 +157,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       const removals = await nostr.query([{
-        kinds: [4551],
+        kinds: [KINDS.GROUP_POST_REMOVAL],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -175,7 +176,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const posts = await nostr.query([{
-        kinds: [11],
+        kinds: [KINDS.GROUP_POST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -183,7 +184,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       // Filter out replies (kind 1111) and any posts with a parent reference
       const filteredPosts = posts.filter(post => {
         // Exclude posts with kind 1111 (replies)
-        if (post.kind === 1111) {
+        if (post.kind === KINDS.GROUP_POST_REPLY) {
           return false;
         }
 
@@ -214,7 +215,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });
@@ -233,7 +234,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         : null;
       if (!parsedId) return null;
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier],
       }], { signal });
@@ -252,7 +253,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       
       // Fetch the actual pinned posts
       const posts = await nostr.query([{
-        kinds: [1, 11],
+        kinds: [1, KINDS.GROUP_POST],
         ids: pinnedPostIds,
       }], { signal });
 
@@ -293,7 +294,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     if ('approval' in post) return post;
 
     // Check if this is a reply by looking at the kind or tags
-    const isReply = post.kind === 1111 || post.tags.some(tag =>
+    const isReply = post.kind === KINDS.GROUP_POST_REPLY || post.tags.some(tag =>
       tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
     );
 
@@ -605,7 +606,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
     }
     try {
       await publishEvent({
-        kind: 4550,
+        kind: KINDS.GROUP_POST_APPROVAL,
         tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", String(post.kind)]],
         content: JSON.stringify(post),
       });
@@ -623,7 +624,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
     }
     try {
       await publishEvent({
-        kind: 4551,
+        kind: KINDS.GROUP_POST_REMOVAL,
         tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", String(post.kind)]],
         content: JSON.stringify({ reason: "Removed by moderator", timestamp: Date.now(), post: post }),
       });

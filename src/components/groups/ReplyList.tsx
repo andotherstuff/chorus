@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { KINDS } from "@/lib/nostr-kinds";
 import {
   Tooltip,
   TooltipContent,
@@ -297,7 +298,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
     try {
       // Create approval event (kind 4550)
       await publishEvent({
-        kind: 4550,
+        kind: KINDS.GROUP_POST_APPROVAL,
         tags: [
           ["a", communityId],
           ["e", reply.id],

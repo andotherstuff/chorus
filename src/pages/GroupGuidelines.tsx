@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, FileText, Edit } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
+import { KINDS } from "@/lib/nostr-kinds";
 
 export default function GroupGuidelines() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -31,7 +32,7 @@ export default function GroupGuidelines() {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier]
       }], { signal });

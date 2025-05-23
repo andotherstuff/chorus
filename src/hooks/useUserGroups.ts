@@ -3,11 +3,12 @@ import { useCurrentUser } from "./useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
 import type { NostrEvent, NostrFilter } from "@nostrify/nostrify";
 import { usePinnedGroups } from "./usePinnedGroups";
+import { KINDS } from "@/lib/nostr-kinds";
 
 // Helper function to get a unique community ID
 function getCommunityId(community: NostrEvent): string {
   const dTag = community.tags.find(tag => tag[0] === "d");
-  return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+  return `${KINDS.GROUP}:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 }
 
 export function useUserGroups() {
@@ -31,7 +32,7 @@ export function useUserGroups() {
       // Step 1: Directly fetch communities where the user is listed as a member
       // This query fetches approved members lists where the user is explicitly listed
       const membershipLists = await nostr.query(
-        [{ kinds: [14550], "#p": [user.pubkey], limit: 100 }],
+        [{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [user.pubkey], limit: 100 }],
         { signal }
       );
 
@@ -47,8 +48,8 @@ export function useUserGroups() {
       // Step 2: Fetch all communities the user owns or is moderating
       const ownedModeratedCommunities = await nostr.query(
         [
-          { kinds: [34550], authors: [user.pubkey] }, // Owned
-          { kinds: [34550], "#p": [user.pubkey] },    // Possibly moderated
+          { kinds: [KINDS.GROUP], authors: [user.pubkey] }, // Owned
+          { kinds: [KINDS.GROUP], "#p": [user.pubkey] },    // Possibly moderated
         ],
         { signal },
       );
@@ -106,7 +107,7 @@ export function useUserGroups() {
           const [kindStr, pubkey, identifier] = pinned.communityId.split(":");
           const kind = parseInt(kindStr, 10);
           return {
-            kinds: [isNaN(kind) ? 34550 : kind],
+            kinds: [isNaN(kind) ? KINDS.GROUP : kind],
             authors: [pubkey],
             "#d": [identifier],
             limit: 1
@@ -148,7 +149,7 @@ export function useUserGroups() {
       // Step 4: Fetch all approved members lists for the communities we've found
       const approvedMembersLists = await nostr.query([
         {
-          kinds: [14550],
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
           '#a': [...communityMap.keys()], // Use the community IDs
           '#p': [user.pubkey], // Only get lists that include the user
           limit: 200

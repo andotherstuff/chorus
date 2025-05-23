@@ -1,6 +1,7 @@
 import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "./useCurrentUser";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to check if the current user is a member of a group
@@ -19,7 +20,7 @@ export function useGroupMembership(communityId?: string) {
       
       // Check for approved members lists that include the user
       const events = await nostr.query([{ 
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         "#p": [user.pubkey],
         limit: 1,

@@ -2,6 +2,7 @@ import { useNostr } from "@/hooks/useNostr";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to manage banned users for a community
@@ -28,7 +29,7 @@ export function useBannedUsers(communityId?: string) {
         limit: number;
         "#a"?: string[];
       } = {
-        kinds: [14552],
+        kinds: [KINDS.GROUP_BANNED_MEMBERS_LIST],
         limit: 50,
       };
       
@@ -74,7 +75,7 @@ export function useBannedUsers(communityId?: string) {
 
       // Create banned users event (kind 14552)
       await publishEvent({
-        kind: 14552,
+        kind: KINDS.GROUP_BANNED_MEMBERS_LIST,
         tags,
         content: "",
       });
@@ -115,7 +116,7 @@ export function useBannedUsers(communityId?: string) {
 
       // Create updated banned users event (kind 14552)
       await publishEvent({
-        kind: 14552,
+        kind: KINDS.GROUP_BANNED_MEMBERS_LIST,
         tags,
         content: "",
       });

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Crown, Shield, User } from "lucide-react";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface CommonGroup {
   id: string;
@@ -26,7 +27,7 @@ interface CommonGroupsListProps {
 // Helper function to get community ID
 const getCommunityId = (community: NostrEvent) => {
   const dTag = community.tags.find(tag => tag[0] === "d");
-  return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+  return `${KINDS.GROUP}:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 };
 
 // Helper function to determine user's role in a group
@@ -146,19 +147,19 @@ export function CommonGroupsList({ profileUserPubkey }: CommonGroupsListProps) {
 
       // Get membership events for both users
       const [currentUserMemberships, profileUserMemberships] = await Promise.all([
-        nostr.query([{ kinds: [14550], "#p": [user.pubkey], limit: 100 }], { signal }),
-        nostr.query([{ kinds: [14550], "#p": [profileUserPubkey], limit: 100 }], { signal })
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [user.pubkey], limit: 100 }], { signal }),
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [profileUserPubkey], limit: 100 }], { signal })
       ]);
 
       // Get communities owned/moderated by both users
       const [currentUserCommunities, profileUserCommunities] = await Promise.all([
         nostr.query([
-          { kinds: [34550], authors: [user.pubkey] },
-          { kinds: [34550], "#p": [user.pubkey] }
+          { kinds: [KINDS.GROUP], authors: [user.pubkey] },
+          { kinds: [KINDS.GROUP], "#p": [user.pubkey] }
         ], { signal }),
         nostr.query([
-          { kinds: [34550], authors: [profileUserPubkey] },
-          { kinds: [34550], "#p": [profileUserPubkey] }
+          { kinds: [KINDS.GROUP], authors: [profileUserPubkey] },
+          { kinds: [KINDS.GROUP], "#p": [profileUserPubkey] }
         ], { signal })
       ]);
 

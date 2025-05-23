@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { KINDS } from "@/lib/nostr-kinds";
 
 import { CreatePostForm } from "@/components/groups/CreatePostForm";
 import { PostList } from "@/components/groups/PostList";
@@ -83,7 +84,7 @@ export default function GroupDetail() {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier]
       }], { signal });
@@ -100,7 +101,7 @@ export default function GroupDetail() {
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [groupId || ''],
         limit: 10,
       }], { signal });
@@ -135,7 +136,7 @@ export default function GroupDetail() {
       const modTags = communityEvent.tags.filter(tag =>
         tag[0] === "p" && (
           (tag.length > 3 && tag[3] === "moderator") ||
-          (communityEvent.kind === 34550)
+          (communityEvent.kind === KINDS.GROUP)
         )
       );
 
@@ -252,7 +253,7 @@ export default function GroupDetail() {
       }
 
       await publishEvent({
-        kind: 34550,
+        kind: KINDS.GROUP,
         tags,
         content: "",
       });
@@ -313,7 +314,7 @@ export default function GroupDetail() {
         }
 
         await publishEvent({
-          kind: 34550,
+          kind: KINDS.GROUP,
           tags,
           content: "",
         });
@@ -375,7 +376,7 @@ export default function GroupDetail() {
       }
 
       await publishEvent({
-        kind: 34550,
+        kind: KINDS.GROUP,
         tags,
         content: "",
       });
@@ -551,7 +552,7 @@ export default function GroupDetail() {
             <div className="h-8">
               {user && community && (
                 <GroupNutzapButton
-                  groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                  groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
                   ownerPubkey={community.pubkey}
                   variant="outline"
                   className="w-full h-full"
@@ -561,7 +562,7 @@ export default function GroupDetail() {
             {/* Ensure consistent height for GroupNutzapTotal - always show for all users */}
             <div className="h-8 flex items-center">
               <GroupNutzapTotal 
-                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
                 className="w-full"
               />
             </div>
@@ -688,14 +689,14 @@ export default function GroupDetail() {
               {user && community && (
                 <div className="flex-shrink-0">
                   <GroupNutzapButton
-                    groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                    groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
                     ownerPubkey={community.pubkey}
                     className="w-auto"
                   />
                 </div>
               )}
             </div>
-            <GroupNutzapList groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+            <GroupNutzapList groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`} />
           </div>
         </TabsContent>
 

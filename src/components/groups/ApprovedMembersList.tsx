@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthor } from "@/hooks/useAuthor";
 import { Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface ApprovedMembersListProps {
   communityId: string;
@@ -21,7 +22,7 @@ export function ApprovedMembersList({ communityId }: ApprovedMembersListProps) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });

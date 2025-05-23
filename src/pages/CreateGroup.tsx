@@ -21,6 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { KINDS } from "@/lib/nostr-kinds";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Create a schema for form validation
@@ -123,7 +124,7 @@ export default function CreateGroup() {
 
       // Publish the community event
       await publishEvent({
-        kind: 34550,
+        kind: KINDS.GROUP,
         tags,
         content: "",
       });

@@ -53,6 +53,7 @@ import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { NutzapInterface } from "@/components/groups/NutzapInterface";
 import { ReplyList } from "@/components/groups/ReplyList";
+import { KINDS } from "@/lib/nostr-kinds";
 import { nip19 } from 'nostr-tools';
 import {
   DropdownMenu,
@@ -85,19 +86,19 @@ function useSharedGroupIds(profileUserPubkey: string): string[] {
 
       // Get membership events for both users
       const [currentUserMemberships, profileUserMemberships] = await Promise.all([
-        nostr.query([{ kinds: [14550], "#p": [user.pubkey], limit: 100 }], { signal }),
-        nostr.query([{ kinds: [14550], "#p": [profileUserPubkey], limit: 100 }], { signal })
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [user.pubkey], limit: 100 }], { signal }),
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [profileUserPubkey], limit: 100 }], { signal })
       ]);
 
       // Get communities owned/moderated by both users
       const [currentUserCommunities, profileUserCommunities] = await Promise.all([
         nostr.query([
-          { kinds: [34550], authors: [user.pubkey] },
-          { kinds: [34550], "#p": [user.pubkey] }
+          { kinds: [KINDS.GROUP], authors: [user.pubkey] },
+          { kinds: [KINDS.GROUP], "#p": [user.pubkey] }
         ], { signal }),
         nostr.query([
-          { kinds: [34550], authors: [profileUserPubkey] },
-          { kinds: [34550], "#p": [profileUserPubkey] }
+          { kinds: [KINDS.GROUP], authors: [profileUserPubkey] },
+          { kinds: [KINDS.GROUP], "#p": [profileUserPubkey] }
         ], { signal })
       ]);
 
@@ -197,7 +198,7 @@ function GroupNameDisplay({ groupId }: { groupId: string }) {
 
       // Query for the group event
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedAddress.pubkey],
         "#d": [parsedAddress.identifier],
         limit: 1,
@@ -867,7 +868,7 @@ export default function Profile() {
 
       // Get posts by this user
       const userPosts = await nostr.query([{
-        kinds: [11],
+        kinds: [KINDS.GROUP_POST],
         authors: [pubkey],
         limit: 20,
       }], { signal });
@@ -895,7 +896,7 @@ export default function Profile() {
 
         // Get communities where user is owner or moderator
         const ownedOrModeratedEvents = await nostr.query([{
-          kinds: [34550],
+          kinds: [KINDS.GROUP],
           authors: [pubkey], // Communities they created
           limit: 50,
         }], { signal });
@@ -904,7 +905,7 @@ export default function Profile() {
 
         // Get communities where user is a moderator but not owner
         const moderatedEvents = await nostr.query([{
-          kinds: [34550],
+          kinds: [KINDS.GROUP],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
@@ -923,7 +924,7 @@ export default function Profile() {
 
         // Get communities where user is a member
         const membershipEvents = await nostr.query([{
-          kinds: [14550],
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
@@ -946,7 +947,7 @@ export default function Profile() {
 
           if (!existingGroup) {
             const [groupEvent] = await nostr.query([{
-              kinds: [34550],
+              kinds: [KINDS.GROUP],
               authors: [parsedGroup.pubkey],
               "#d": [parsedGroup.identifier],
               limit: 1,
@@ -960,7 +961,7 @@ export default function Profile() {
       } else {
         // For other users, get membership events
         const membershipEvents = await nostr.query([{
-          kinds: [14550],
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
@@ -977,7 +978,7 @@ export default function Profile() {
 
           // Fetch the group details
           const [groupEvent] = await nostr.query([{
-            kinds: [34550],
+            kinds: [KINDS.GROUP],
             authors: [parsedGroup.pubkey],
             "#d": [parsedGroup.identifier],
             limit: 1,
@@ -990,7 +991,7 @@ export default function Profile() {
 
         // Also get communities they created
         const ownedEvents = await nostr.query([{
-          kinds: [34550],
+          kinds: [KINDS.GROUP],
           authors: [pubkey],
           limit: 50,
         }], { signal });

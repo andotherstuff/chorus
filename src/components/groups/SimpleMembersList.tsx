@@ -10,6 +10,7 @@ import { parseNostrAddress } from "@/lib/nostr-utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { UserNutzapDialog } from "./UserNutzapDialog";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface SimpleMembersListProps {
   communityId: string;
@@ -29,7 +30,7 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier]
       }], { signal });
@@ -47,7 +48,7 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 50,
       }], { signal });

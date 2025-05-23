@@ -1,6 +1,7 @@
 import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to fetch and check approved members for a community
@@ -16,7 +17,7 @@ export function useApprovedMembers(communityId: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });
@@ -40,7 +41,7 @@ export function useApprovedMembers(communityId: string) {
       if (!parsedId) return null;
       
       const events = await nostr.query([{ 
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier],
       }], { signal });

@@ -3,6 +3,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery } from '@tanstack/react-query';
 import { useUserGroups } from '@/hooks/useUserGroups';
 import { NostrEvent } from '@nostrify/nostrify';
+import { KINDS } from '@/lib/nostr-kinds';
 
 export interface Notification {
   id: string;
@@ -20,7 +21,7 @@ export interface Notification {
 // Helper function to get community ID
 const getCommunityId = (community: NostrEvent) => {
   const dTag = community.tags.find(tag => tag[0] === "d");
-  return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+  return `${KINDS.GROUP}:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 };
 
 export function useNotifications() {
@@ -36,7 +37,14 @@ export function useNotifications() {
       const notifications: Notification[] = [];
       const readNotifications = JSON.parse(localStorage.getItem(`notifications:${user.pubkey}`) || '{}');
 
-      const kinds = [11, 7, 1111, 4550, 4551, 34550];
+      const kinds = [
+        KINDS.GROUP_POST,
+        KINDS.REACTION,
+        KINDS.GROUP_POST_REPLY,
+        KINDS.GROUP_POST_APPROVAL,
+        KINDS.GROUP_POST_REMOVAL,
+        KINDS.GROUP
+      ];
 
       const events = await nostr.query(
         [{ kinds, '#p': [user.pubkey], limit: 20 }],
@@ -47,10 +55,10 @@ export function useNotifications() {
         // Extract group ID from 'a' tag if present (for all notification types)
         const communityRef = event.tags.find(tag => tag[0] === 'a')?.[1];
         const communityParts = communityRef?.split(':');
-        const groupId = communityParts && communityParts[0] === '34550' ? communityRef : undefined;
+        const groupId = communityParts && communityParts[0] === String(KINDS.GROUP) ? communityRef : undefined;
         
         switch (event.kind) {
-          case 11: {
+          case KINDS.GROUP_POST: {
             notifications.push({
               id: event.id,
               type: 'tag_post',
@@ -63,7 +71,7 @@ export function useNotifications() {
             });
             break;
           }
-          case 7: {
+          case KINDS.REACTION: {
             const targetEventId = event.tags.find(tag => tag[0] === 'e')?.[1];
             
             notifications.push({
@@ -78,7 +86,7 @@ export function useNotifications() {
             });
             break;
           }
-          case 1111: {
+          case KINDS.GROUP_POST_REPLY: {
             notifications.push({
               id: event.id,
               type: 'tag_reply',
@@ -91,7 +99,7 @@ export function useNotifications() {
             });
             break;
           }
-          case 4550: {
+          case KINDS.GROUP_POST_APPROVAL: {
             // For post approval events, we already have the full community reference in the 'a' tag
             const communityRef = event.tags.find(tag => tag[0] === 'a')?.[1];
             
@@ -107,7 +115,7 @@ export function useNotifications() {
             });
             break;
           }
-          case 4551: {
+          case KINDS.GROUP_POST_REMOVAL: {
             // For post removal events, we already have the full community reference in the 'a' tag
             const communityRef = event.tags.find(tag => tag[0] === 'a')?.[1];
             
@@ -123,11 +131,11 @@ export function useNotifications() {
             });
             break;
           }
-          case 34550: {
+          case KINDS.GROUP: {
             const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
             const groupName = event.tags.find(tag => tag[0] === 'name')?.[1] || 'Unknown group';
             // Create the full community reference in the format "34550:pubkey:identifier"
-            const fullGroupId = `34550:${event.pubkey}:${dTag}`;
+            const fullGroupId = `${KINDS.GROUP}:${event.pubkey}:${dTag}`;
             
             notifications.push({
               id: event.id,
@@ -157,7 +165,7 @@ export function useNotifications() {
         // Fetch all relevant moderation events for these groups
         const reportEvents = await nostr.query(
           [{ 
-            kinds: [1984], // Report events
+            kinds: [KINDS.REPORT], // Report events
             '#a': groupIds,
             limit: 20 
           }],
@@ -166,7 +174,7 @@ export function useNotifications() {
 
         const reportActionEvents = await nostr.query(
           [{ 
-            kinds: [4554], // Report action events
+            kinds: [KINDS.GROUP_CLOSE_REPORT], // Report action events
             '#a': groupIds,
             limit: 20 
           }],
@@ -175,7 +183,7 @@ export function useNotifications() {
 
         const joinRequestEvents = await nostr.query(
           [{ 
-            kinds: [4552], // Join request events
+            kinds: [KINDS.GROUP_JOIN_REQUEST], // Join request events
             '#a': groupIds,
             limit: 20 
           }],
@@ -184,7 +192,7 @@ export function useNotifications() {
 
         const leaveRequestEvents = await nostr.query(
           [{ 
-            kinds: [4553], // Leave request events
+            kinds: [KINDS.GROUP_LEAVE_REQUEST], // Leave request events
             '#a': groupIds,
             limit: 20 
           }],

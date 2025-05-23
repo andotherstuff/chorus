@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Image, Loader2, Send, XCircle, Mic, Square } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { Link } from "react-router-dom";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface CreatePostFormProps {
   communityId: string;
@@ -223,7 +224,7 @@ ${mediaUrl}`;
       ];
 
       await publishEvent({
-        kind: 11,
+        kind: KINDS.GROUP_POST,
         tags,
         content: finalContent,
       });

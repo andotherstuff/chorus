@@ -1,6 +1,7 @@
 import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 import { NostrEvent } from "@nostrify/nostrify";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to fetch replies to a specific post
@@ -17,7 +18,7 @@ export function useReplies(postId: string, communityId: string) {
       
       // Get replies using kind 1111 with the post as the parent
       const replies = await nostr.query([{ 
-        kinds: [1111],
+        kinds: [KINDS.GROUP_POST_REPLY],
         "#e": [postId],
         limit: 100,
       }], { signal });
@@ -43,7 +44,7 @@ export function useNestedReplies(replyId: string) {
       
       // Get nested replies using kind 1111 with the reply as the parent
       const replies = await nostr.query([{ 
-        kinds: [1111],
+        kinds: [KINDS.GROUP_POST_REPLY],
         "#e": [replyId],
         limit: 50,
       }], { signal });

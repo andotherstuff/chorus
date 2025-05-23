@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNostrPublish } from "./useNostrPublish";
 import { useCurrentUser } from "./useCurrentUser";
 import { toast } from "sonner";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to get likes for a post and handle liking/unliking
@@ -20,7 +21,7 @@ export function useLikes(eventId: string) {
       
       // Get all kind 7 reactions with "+" content that reference this event
       const events = await nostr.query([{ 
-        kinds: [7],
+        kinds: [KINDS.REACTION],
         "#e": [eventId],
         limit: 100,
       }], { signal });
@@ -49,10 +50,10 @@ export function useLikes(eventId: string) {
     try {
       // Create a like event (kind 7)
       await publishEvent({
-        kind: 7,
+        kind: KINDS.REACTION,
         tags: [
           ["e", eventId],
-          ["k", "11"], // Assuming we're liking a kind 11 post
+          ["k", String(KINDS.GROUP_POST)], // Assuming we're liking a kind 11 post
         ],
         content: "+", // "+" means like
       });

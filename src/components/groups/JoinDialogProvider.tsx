@@ -7,6 +7,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { JoinDialogContext } from "./JoinDialogContext";
+import { KINDS } from "@/lib/nostr-kinds";
 
 // Create a provider component
 export function JoinDialogProvider({ children }: { children: React.ReactNode }) {
@@ -33,7 +34,7 @@ export function JoinDialogProvider({ children }: { children: React.ReactNode }) 
     try {
       // Create join request event (kind 4552)
       await publishEvent({
-        kind: 4552,
+        kind: KINDS.GROUP_JOIN_REQUEST,
         tags: [
           ["a", currentCommunityId],
         ],

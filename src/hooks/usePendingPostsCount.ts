@@ -1,6 +1,7 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to fetch the count of pending posts in a community
@@ -25,35 +26,35 @@ export function usePendingPostsCount(communityId: string) {
 
       // Get posts that tag the community
       const posts = await nostr.query([{
-        kinds: [11],
+        kinds: [KINDS.GROUP_POST],
         "#a": [communityId],
         limit: 100,
       }], { signal });
 
       // Get approval events
       const approvals = await nostr.query([{
-        kinds: [4550],
+        kinds: [KINDS.GROUP_POST_APPROVAL],
         "#a": [communityId],
         limit: 100,
       }], { signal });
 
       // Get removal events
       const removals = await nostr.query([{
-        kinds: [4551],
+        kinds: [KINDS.GROUP_POST_REMOVAL],
         "#a": [communityId],
         limit: 100,
       }], { signal });
 
       // Get approved members list
       const approvedMembersEvents = await nostr.query([{
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });
 
       // Get community details to get moderators
       const communityEvent = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier],
       }], { signal });
@@ -92,7 +93,7 @@ export function usePendingPostsCount(communityId: string) {
       // 6. Replies (kind 1111)
       const pendingPosts = posts.filter(post => {
         // Skip if post is a reply
-        if (post.kind === 1111) {
+        if (post.kind === KINDS.GROUP_POST_REPLY) {
           return false;
         }
 

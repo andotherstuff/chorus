@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useNostr } from "@/hooks/useNostr";
 import { Badge } from "@/components/ui/badge";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface GroupReferenceProps {
   groupId: string;
@@ -19,7 +20,7 @@ export function GroupReference({ groupId }: GroupReferenceProps) {
         setIsLoading(true);
         const parsedAddress = parseNostrAddress(groupId);
         
-        if (!parsedAddress || parsedAddress.kind !== 34550) {
+        if (!parsedAddress || parsedAddress.kind !== KINDS.GROUP) {
           console.error("Invalid group ID format:", groupId);
           setIsLoading(false);
           return;
@@ -27,7 +28,7 @@ export function GroupReference({ groupId }: GroupReferenceProps) {
 
         const events = await nostr.query(
           [{ 
-            kinds: [34550], 
+            kinds: [KINDS.GROUP], 
             authors: [parsedAddress.pubkey], 
             "#d": [parsedAddress.identifier] 
           }],

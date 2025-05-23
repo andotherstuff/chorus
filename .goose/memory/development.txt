@@ -25,3 +25,6 @@ User workflow shorthand: When user says "you know what to do" or "ykwtd" it mean
 
 This is the standard workflow for completing feature implementation.
 
+# trending hashtags feature-request discovery
+User wants trending hashtag functionality added to the Chorus Nostr client. This would show popular/frequently used hashtags to help users discover what's trending in the network.
+

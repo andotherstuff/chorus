@@ -1,5 +1,6 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
+import { KINDS } from "@/lib/nostr-kinds";
 
 export function usePendingJoinRequests(communityId: string) {
   const { nostr } = useNostr();
@@ -10,7 +11,7 @@ export function usePendingJoinRequests(communityId: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [4552],
+        kinds: [KINDS.GROUP_JOIN_REQUEST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -27,7 +28,7 @@ export function usePendingJoinRequests(communityId: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14550],
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 10,
       }], { signal });
@@ -44,7 +45,7 @@ export function usePendingJoinRequests(communityId: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14551],
+        kinds: [KINDS.GROUP_DECLINED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -61,7 +62,7 @@ export function usePendingJoinRequests(communityId: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14552],
+        kinds: [KINDS.GROUP_BANNED_MEMBERS_LIST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
