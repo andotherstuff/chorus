@@ -59,7 +59,26 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Try to use audio-specific MIME types in order of preference
+      const audioMimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/ogg;codecs=opus', 
+        'audio/mp4',
+        'audio/webm'  // fallback
+      ];
+      
+      let selectedMimeType = 'audio/webm';
+      for (const mimeType of audioMimeTypes) {
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          selectedMimeType = mimeType;
+          break;
+        }
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: selectedMimeType
+      });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -70,8 +89,19 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], `voice_memo_${Date.now()}.webm`, { type: 'audio/webm' });
+        // Get the MIME type that was actually used
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        
+        // Determine file extension based on MIME type
+        let extension = 'webm';
+        if (mimeType.includes('ogg')) {
+          extension = 'ogg';
+        } else if (mimeType.includes('mp4')) {
+          extension = 'm4a';
+        }
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const audioFile = new File([audioBlob], `voice_memo_${Date.now()}.${extension}`, { type: mimeType });
         
         // Clean up previous media if any
         if (previewUrl && (mediaFile?.type.startsWith('video/') || mediaFile?.type.startsWith('audio/'))) {
