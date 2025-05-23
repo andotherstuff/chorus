@@ -2,6 +2,9 @@ import type { NostrEvent } from "@nostrify/nostrify";
 
 export type GroupType = "nip72" | "nip29";
 
+// User roles in groups - using main branch compatible types
+export type UserRole = "owner" | "admin" | "moderator" | "member";
+
 // Common interface for all groups with discriminated union
 export interface GroupBase {
   id: string;
@@ -26,14 +29,13 @@ export interface Nip29Group extends GroupBase {
   admins: string[];
   moderators: string[];
   members?: string[];
-  isOpen?: boolean;      // Whether anyone can join without approval
-  isPublic?: boolean;    // Whether the group is publicly discoverable
+  isOpen?: boolean;
+  isPublic?: boolean;
   tags: string[][];
 }
 
 export type Group = Nip72Group | Nip29Group;
 
-// Group creation data
 export interface CreateGroupData {
   name: string;
   description?: string;
@@ -42,21 +44,16 @@ export interface CreateGroupData {
   identifier?: string;
   relay?: string;
   isPrivate?: boolean;
-  isOpen?: boolean;      // For NIP-29: whether the group accepts anyone
-  isPublic?: boolean;    // For NIP-29: whether the group is discoverable
+  isOpen?: boolean;
+  isPublic?: boolean;
 }
 
-// User roles in groups
-export type UserRole = "owner" | "admin" | "moderator" | "member";
-
-// Group member info
 export interface GroupMember {
   pubkey: string;
   relay?: string;
   role: string;
 }
 
-// Parsed group route ID
 export type GroupRouteId = 
   | { type: "nip72"; pubkey: string; identifier: string }
   | { type: "nip29"; relay: string; groupId: string }
