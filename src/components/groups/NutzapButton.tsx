@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Bitcoin } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostr } from "@/hooks/useNostr";
@@ -126,7 +126,11 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
       className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
       onClick={handleZapClick}
     >
-      <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-orange-500' : ''}`} />
+      {showSats ? (
+        <Bitcoin className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
+      ) : (
+        <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
+      )}
       {showText && <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span>}
     </Button>
   );

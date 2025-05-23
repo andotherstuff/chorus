@@ -1,7 +1,7 @@
 // Types and utilities for Cashu wallet (NIP-60)
 
 import { useCashuStore } from "@/stores/cashuStore";
-import { CashuMint, Proof, CashuWallet, GetInfoResponse, MintKeyset, MintKeys } from "@cashu/cashu-ts";
+import { CashuMint, Proof, CashuWallet, GetInfoResponse, MintKeyset, MintKeys, getDecodedToken } from "@cashu/cashu-ts";
 export interface CashuProof {
   id: string;
   amount: number;
@@ -108,4 +108,9 @@ export async function updateMintKeys(mintUrl: string, keysets: MintKeyset[]): Pr
   } else {
     return { keys: keysLocal };
   }
+}
+
+export function getTokenAmount(token: string): number {
+  const tokenObj = getDecodedToken(token);
+  return tokenObj.proofs.reduce((acc, proof) => acc + proof.amount, 0);
 }

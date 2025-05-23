@@ -1,7 +1,7 @@
 import { useGroupNutzapTotal } from "@/hooks/useGroupNutzaps";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { formatBalance } from "@/lib/cashu";
-import { Zap, DollarSign } from "lucide-react";
+import { Zap, DollarSign, Bitcoin, ArrowLeftRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useRef } from "react";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
@@ -41,13 +41,18 @@ export function GroupNutzapTotal({ groupId, className = "" }: GroupNutzapTotalPr
   return (
     <button
       onClick={() => toggleCurrency()}
-      className={`flex items-center text-amber-500 hover:text-amber-600 transition-colors cursor-pointer ${className}`}
+      className={`flex items-center justify-center w-full text-amber-500 hover:text-amber-600 transition-colors cursor-pointer border border-input rounded-md px-3 py-1.5 bg-transparent hover:bg-accent/50 ${className}`}
       title="Click to toggle between USD and sats"
     >
-      <DollarSign className="h-4 w-4 mr-1" />
+      {showSats ? (
+        <Bitcoin className="h-4 w-4 mr-1" />
+      ) : (
+        <DollarSign className="h-4 w-4 mr-1" />
+      )}
       <span className={`tabular-nums ${isFlashing ? 'flash-update' : ''}`}>
         {currentValue}
       </span>
+      <ArrowLeftRight className="h-3 w-3 ml-1.5" />
     </button>
   );
 }

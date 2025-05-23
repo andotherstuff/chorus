@@ -5,7 +5,7 @@ import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, DollarSign } from "lucide-react";
+import { Zap, DollarSign, Bitcoin, ArrowLeftRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
@@ -61,9 +61,21 @@ export function GroupNutzapList({ groupId }: GroupNutzapListProps) {
       <div className="text-right">
         <button
           onClick={() => toggleCurrency()}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
         >
-          Show in {showSats ? 'USD' : 'sats'}
+          {showSats ? (
+            <>
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>Show in USD</span>
+              <ArrowLeftRight className="h-3 w-3" />
+            </>
+          ) : (
+            <>
+              <Bitcoin className="h-3.5 w-3.5" />
+              <span>Show in sats</span>
+              <ArrowLeftRight className="h-3 w-3" />
+            </>
+          )}
         </button>
       </div>
       {nutzaps.map((event) => (

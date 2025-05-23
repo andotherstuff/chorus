@@ -19,6 +19,7 @@ interface CashuStore {
   proofs: ProofWithEventId[];
   privkey?: string;
   activeMintUrl?: string;
+  pendingOnboardingToken?: string;
 
   addMint: (url: string) => void;
   setMintInfo: (url: string, mintInfo: GetInfoResponse) => void;
@@ -41,6 +42,8 @@ interface CashuStore {
   getMeltQuote: (mintUrl: string, quoteId: string) => MeltQuoteResponse;
   setActiveMintUrl: (url: string) => void;
   getActiveMintUrl: () => string | undefined;
+  setPendingOnboardingToken: (token: string | undefined) => void;
+  getPendingOnboardingToken: () => string | undefined;
   clearStore: () => void;
 }
 
@@ -56,6 +59,7 @@ export const useCashuStore = create<CashuStore>()(
       proofs: [],
       isLoading: false,
       activeMintUrl: undefined,
+      pendingOnboardingToken: undefined,
 
       addMint(url) {
         const existingMints = get().mints.map((mint) => mint.url)
@@ -180,8 +184,16 @@ export const useCashuStore = create<CashuStore>()(
         return get().activeMintUrl;
       },
 
+      setPendingOnboardingToken(token: string | undefined) {
+        set({ pendingOnboardingToken: token });
+      },
+
+      getPendingOnboardingToken() {
+        return get().pendingOnboardingToken;
+      },
+
       clearStore() {
-        set({ mints: [], proofs: [], privkey: undefined, activeMintUrl: undefined });
+        set({ mints: [], proofs: [], privkey: undefined, activeMintUrl: undefined, pendingOnboardingToken: undefined });
       },
     }),
     { name: 'cashu' },

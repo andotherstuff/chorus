@@ -192,6 +192,17 @@ export function useSendNutzap() {
         queryKey: ['nutzap', 'received', recipientInfo.event.pubkey]
       });
 
+      // Check if this is a group nutzap and invalidate group queries
+      const groupTag = additionalTags.find(tag => tag[0] === 'a');
+      if (groupTag && groupTag[1]) {
+        const groupId = groupTag[1];
+        queryClient.invalidateQueries({ queryKey: ['nutzaps', 'group', groupId] });
+      }
+
+      // Invalidate sender's wallet queries to update balance
+      queryClient.invalidateQueries({ queryKey: ['cashu', 'tokens', user.pubkey] });
+      queryClient.invalidateQueries({ queryKey: ['cashu', 'wallet', user.pubkey] });
+
       // Return the event
       return {
         event,
