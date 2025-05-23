@@ -192,7 +192,17 @@ export default function GroupDetail() {
 
             <div className="flex flex-row items-start justify-between gap-4 mb-2">
               <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold">{name}</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold">{name}</h1>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setShowQRCode(true)}
+                  >
+                    <QrCode className="h-4 w-4" />
+                  </Button>
+                </div>
                 {hasGuidelines && (
                   <Button
                     variant="ghost"
@@ -216,30 +226,12 @@ export default function GroupDetail() {
           <div className="flex flex-col justify-between min-w-[140px] h-36">
             {!isModerator ? (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 mb-2"
-                  onClick={() => setShowQRCode(true)}
-                >
-                  <QrCode className="h-4 w-4" />
-                  QR Code
-                </Button>
                 <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
                 <div className="flex-1" />
                 <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
               </>
             ) : (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 mb-2"
-                  onClick={() => setShowQRCode(true)}
-                >
-                  <QrCode className="h-4 w-4" />
-                  QR Code
-                </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
