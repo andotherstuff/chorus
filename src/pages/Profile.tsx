@@ -250,7 +250,7 @@ function UserGroupsList({
 
   if (!groups || groups.length === 0) {
     return (
-      <div className="p-6 text-center bg-muted/30 rounded-lg">
+      <div className="p-8 text-center border border-border/30 rounded-md bg-card">
         <p className="text-muted-foreground">This user is not a member of any groups yet</p>
       </div>
     );

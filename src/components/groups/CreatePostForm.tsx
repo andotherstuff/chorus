@@ -14,9 +14,10 @@ import { Link } from "react-router-dom";
 
 interface CreatePostFormProps {
   communityId: string;
+  onPostSuccess?: () => void;
 }
 
-export function CreatePostForm({ communityId }: CreatePostFormProps) {
+export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormProps) {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending: isPublishing } = useNostrPublish();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
@@ -88,6 +89,11 @@ ${imageUrl}`;
       setPreviewUrl(null);
 
       toast.success("Post published successfully!");
+      
+      // Call the onPostSuccess callback if provided
+      if (onPostSuccess) {
+        onPostSuccess();
+      }
     } catch (error) {
       console.error("Error publishing post:", error);
       toast.error("Failed to publish post. Please try again.");

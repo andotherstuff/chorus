@@ -73,10 +73,42 @@ export default function GroupDetail() {
     enabled: !!nostr && !!parsedId,
   });
 
+  // Query for approved members list
+  const { data: approvedMembersEvents } = useQuery({
+    queryKey: ["approved-members-list", groupId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const events = await nostr.query([{
+        kinds: [14550],
+        "#a": [groupId || ''],
+        limit: 10,
+      }], { signal });
+      return events;
+    },
+    enabled: !!nostr && !!groupId,
+  });
+
+  // Get approved members' pubkeys
+  const approvedMembers = approvedMembersEvents?.flatMap(event =>
+    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
+  ) || [];
+
   const isOwner = user && community && user.pubkey === community.pubkey;
-  const isModerator = isOwner || (user && community?.tags
+  
+  // Get moderators from community event
+  const moderators = community?.tags
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
-    .some(tag => tag[1] === user.pubkey));
+    .map(tag => tag[1]) || [];
+  
+  const isModerator = isOwner || (user && moderators.includes(user.pubkey));
+
+  // Handler to ensure unapproved posts are visible when user posts
+  const handlePostSuccess = () => {
+    // If the user is not an approved member or moderator, show all posts
+    if (user && !isModerator && approvedMembers && !approvedMembers.includes(user.pubkey)) {
+      setShowOnlyApproved(false);
+    }
+  };
 
   const { data: pendingPostsCount = 0 } = usePendingPostsCount(groupId || '');
   const { data: pendingReplies = [] } = usePendingReplies(groupId || '');
@@ -345,7 +377,7 @@ export default function GroupDetail() {
         <TabsContent value="posts" className="space-y-4">
           {user && (
             <div className="max-w-3xl mx-auto">
-              <CreatePostForm communityId={groupId || ''} />
+              <CreatePostForm communityId={groupId || ''} onPostSuccess={handlePostSuccess} />
             </div>
           )}
 

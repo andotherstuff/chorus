@@ -1,31 +1,55 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useUploadFile } from "@/hooks/useUploadFile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/useToast";
 import Header from "@/components/ui/Header";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2, Upload } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// Create a schema for form validation
+const formSchema = z.object({
+  name: z.string().min(1, "Group name is required"),
+  description: z.string().optional(),
+  guidelines: z.string().optional(),
+  imageUrl: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function CreateGroup() {
   const navigate = useNavigate();
   const { user } = useCurrentUser();
-  const { mutateAsync: publishEvent } = useNostrPublish();
+  const { mutateAsync: publishEvent, isPending: isSubmitting } = useNostrPublish();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    guidelines: "",
+  // Initialize the form with react-hook-form
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      guidelines: "",
+      imageUrl: "",
+    },
   });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Generate a unique identifier based on the group name and timestamp
   const generateUniqueIdentifier = (name: string): string => {
@@ -48,65 +72,50 @@ export default function CreateGroup() {
     );
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.name) {
-      toast.error("Please enter a group name");
-      return;
-    }
-
+  // Handle file uploads for group image
+  const uploadGroupImage = async (file: File) => {
     try {
-      setIsSubmitting(true);
+      // The first tuple in the array contains the URL
+      const [[_, url]] = await uploadFile(file);
+      form.setValue('imageUrl', url);
+      toast({
+        title: 'Success',
+        description: 'Group image uploaded successfully',
+      });
+    } catch (error) {
+      console.error('Failed to upload group image:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to upload group image. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
+  const onSubmit = async (values: FormValues) => {
+    try {
       // Generate unique identifier
-      const identifier = generateUniqueIdentifier(formData.name);
-
-      // Upload image if selected
-      let imageUrl = "";
-      if (imageFile) {
-        const [[_, uploadedUrl]] = await uploadFile(imageFile);
-        imageUrl = uploadedUrl;
-      }
+      const identifier = generateUniqueIdentifier(values.name);
 
       // Create community event (kind 34550)
       const tags = [
         ["d", identifier],
-        ["name", formData.name],
+        ["name", values.name],
       ];
 
       // Add description tag if provided
-      if (formData.description) {
-        tags.push(["description", formData.description]);
+      if (values.description) {
+        tags.push(["description", values.description]);
       }
 
       // Add guidelines tag if provided
-      if (formData.guidelines) {
-        tags.push(["guidelines", formData.guidelines]);
+      if (values.guidelines) {
+        tags.push(["guidelines", values.guidelines]);
       }
 
       // Add image tag if available
-      if (imageUrl) {
-        tags.push(["image", imageUrl]);
+      if (values.imageUrl) {
+        tags.push(["image", values.imageUrl]);
       }
 
       // Add current user as moderator
@@ -119,110 +128,164 @@ export default function CreateGroup() {
         content: "",
       });
 
-      toast.success("Group created successfully!");
+      toast({
+        title: 'Success',
+        description: 'Group created successfully!',
+      });
       navigate("/groups");
     } catch (error) {
       console.error("Error creating community:", error);
-      toast.error("Failed to create group. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+      toast({
+        title: 'Error',
+        description: 'Failed to create group. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
   return (
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Create a Group</CardTitle>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Group Name *</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="My Awesome Group"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Tell people what your group is about..."
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="guidelines">Group Guidelines</Label>
-              <Textarea
-                id="guidelines"
-                name="guidelines"
-                value={formData.guidelines}
-                onChange={handleInputChange}
-                placeholder="Set community rules and guidelines for members to follow..."
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional: Define rules and expectations for group members
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Group Image</Label>
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
-                  <Input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Upload an image for your group banner
-                  </p>
-                </div>
-
-                {previewUrl && (
-                  <div className="w-24 h-24 rounded overflow-hidden flex-shrink-0">
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+      <div className="my-6 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Create a Group</h1>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="flex flex-col items-center mb-6">
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <div className="text-center">
+                    <div className="mb-4 relative mx-auto">
+                      <Avatar className="h-24 w-24 rounded-full mx-auto">
+                        <AvatarImage src={field.value} />
+                        <AvatarFallback className="text-xl">
+                          {form.getValues().name?.slice(0, 2).toUpperCase() || 'GP'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="secondary"
+                          className="h-8 w-8 rounded-full shadow"
+                          onClick={() => document.getElementById('image-upload')?.click()}
+                        >
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              uploadGroupImage(file);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <FormDescription className="text-center text-sm">
+                      Upload a group image
+                    </FormDescription>
+                    <FormMessage />
                   </div>
                 )}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Group Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="My Awesome Group" {...field} className="bg-background" />
+                    </FormControl>
+                    <FormDescription>
+                      This is the name that will be displayed to others.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Tell people what your group is about..." 
+                        {...field}
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Provide a brief description of what your group is about.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="guidelines"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Group Guidelines</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Set community rules and guidelines for members to follow..." 
+                        {...field}
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Define rules and expectations for group members. This is optional.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2 pt-4">
+              <Button
+                type="submit"
+                className="w-full max-w-[200px] flex items-center justify-center gap-2 mx-auto"
+                disabled={isSubmitting || isUploading || !form.watch('name')?.trim()}
+              >
+                {(isSubmitting || isUploading) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Create Group
+              </Button>
+              
+              <div className="text-center mt-2">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-muted-foreground"
+                  onClick={() => navigate("/groups")}
+                >
+                  Cancel
+                </Button>
               </div>
             </div>
-          </CardContent>
-
-          <CardFooter className="flex justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/groups")}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || isUploading || !formData.name}
-            >
-              {isSubmitting || isUploading ? "Creating..." : "Create Group"}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </Form>
+      </div>
     </div>
   );
 }
