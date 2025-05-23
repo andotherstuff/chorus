@@ -54,8 +54,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
     defaultValues: {
       name: '',
       picture: '',
-      about: '',
-      website: '',
     },
   });
 
@@ -65,8 +63,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
       form.reset({
         name: metadata.name || '',
         picture: metadata.picture || '',
-        about: metadata.about || '',
-        website: metadata.website || '',
       });
     }
   }, [metadata, form]);
@@ -243,44 +239,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
                   </FormControl>
                   <FormDescription>
                     This is the name that will be displayed to others.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="about"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>About</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Tell others about yourself" 
-                      {...field} 
-                      className="bg-background resize-none min-h-[100px]" 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    A short bio that describes who you are.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://yourwebsite.com" {...field} className="bg-background" />
-                  </FormControl>
-                  <FormDescription>
-                    Your personal website or social media profile.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
