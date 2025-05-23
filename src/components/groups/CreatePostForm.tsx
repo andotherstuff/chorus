@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Image, Loader2, Send, XCircle } from "lucide-react"; // Added XCircle
+import { Image, Loader2, Send, XCircle, Mic } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { Link } from "react-router-dom";
+import { AudioRecorder } from "@/components/AudioRecorder";
+import { AudioPlayer } from "@/components/AudioPlayer";
 
 interface CreatePostFormProps {
   communityId: string;
@@ -31,6 +33,10 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
 
   if (!user) return null;
 
@@ -47,9 +53,31 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
     }
   };
 
+  const handleAudioRecording = (audioBlob: Blob, duration: number) => {
+    const file = new File([audioBlob], `voice-memo-${Date.now()}.webm`, {
+      type: 'audio/webm'
+    });
+    setAudioFile(file);
+    setAudioDuration(duration);
+    
+    // Create preview URL for the audio
+    const url = URL.createObjectURL(audioBlob);
+    setAudioUrl(url);
+    setShowAudioRecorder(false);
+  };
+
+  const removeAudio = () => {
+    setAudioFile(null);
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+      setAudioUrl(null);
+    }
+    setAudioDuration(0);
+  };
+
   const handleSubmit = async () => {
-    if (!content.trim() && !imageFile) {
-      toast.error("Please enter some content or add an image");
+    if (!content.trim() && !imageFile && !audioFile) {
+      toast.error("Please enter some content, add an image, or record a voice memo");
       return;
     }
 
@@ -62,6 +90,7 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
 
       let finalContent = content;
       let imageTags: string[][] = [];
+      let audioTags: string[][] = [];
 
       if (imageFile) {
         const tags = await uploadFile(imageFile);
@@ -70,6 +99,15 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
 
 ${imageUrl}`;
         imageTags = tags;
+      }
+
+      if (audioFile) {
+        const tags = await uploadFile(audioFile);
+        const [[_, audioUrl]] = tags;
+        finalContent += `
+
+${audioUrl}`;
+        audioTags = tags;
       }
 
       // Extract hashtags from content and create 't' tags
@@ -82,6 +120,7 @@ ${imageUrl}`;
         ["a", communityId],
         ["subject", `Post in ${parsedId?.identifier || 'group'}`],
         ...imageTags,
+        ...audioTags,
         ...hashtagTags,
       ];
 
@@ -94,6 +133,12 @@ ${imageUrl}`;
       setContent("");
       setImageFile(null);
       setPreviewUrl(null);
+      setAudioFile(null);
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+        setAudioUrl(null);
+      }
+      setAudioDuration(0);
 
       toast.success("Post published successfully!");
       
@@ -146,12 +191,41 @@ ${imageUrl}`;
                 </Button>
               </div>
             )}
+
+            {audioUrl && (
+              <div className="mt-1.5 relative">
+                <AudioPlayer 
+                  audioUrl={audioUrl} 
+                  duration={audioDuration}
+                  title="Voice Memo"
+                  showDownload={false}
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-1 right-1 h-5 w-5"
+                  onClick={removeAudio}
+                >
+                  <XCircle className="h-3 w-3"/>
+                </Button>
+              </div>
+            )}
+
+            {showAudioRecorder && (
+              <div className="mt-1.5">
+                <AudioRecorder
+                  onRecordingComplete={handleAudioRecording}
+                  onCancel={() => setShowAudioRecorder(false)}
+                  maxDuration={300}
+                />
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
 
       <CardFooter className="flex justify-between items-center border-t px-3 py-2">
-        <div>
+        <div className="flex gap-1">
           <Button variant="ghost" size="sm" className="text-muted-foreground h-8 px-2 text-xs" asChild>
             <label htmlFor="image-upload" className="cursor-pointer flex items-center">
               <Image className="h-3.5 w-3.5 mr-1" />
@@ -165,11 +239,22 @@ ${imageUrl}`;
               />
             </label>
           </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-muted-foreground h-8 px-2 text-xs"
+            onClick={() => setShowAudioRecorder(!showAudioRecorder)}
+            disabled={isPublishing || isUploading}
+          >
+            <Mic className="h-3.5 w-3.5 mr-1" />
+            Voice
+          </Button>
         </div>
 
         <Button
           onClick={handleSubmit}
-          disabled={isPublishing || isUploading || (!content.trim() && !imageFile)}
+          disabled={isPublishing || isUploading || (!content.trim() && !imageFile && !audioFile)}
           size="sm"
           className="h-8 px-3 text-xs"
         >

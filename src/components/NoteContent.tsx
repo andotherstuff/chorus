@@ -8,6 +8,7 @@ import { PostImage } from '@/components/PostImage';
 import { DebugImageDisplay } from '@/components/DebugImageDisplay';
 import { DirectImageDisplay } from '@/components/DirectImageDisplay';
 import { LinkPreview } from '@/components/LinkPreview';
+import { AudioPlayer } from '@/components/AudioPlayer';
 import { useExtractUrls } from '@/hooks/useExtractUrls';
 import { DEBUG_IMAGES } from '@/lib/debug';
 
@@ -22,11 +23,12 @@ export function NoteContent({
 }: NoteContentProps) {
   const [processedContent, setProcessedContent] = useState<React.ReactNode[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [audioUrls, setAudioUrls] = useState<string[]>([]);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const { getFirstUrl } = useExtractUrls();
 
   // Process text content with links, mentions, etc. - memoized with useCallback
-  const processTextContent = useCallback((text: string, currentImageUrls: string[]) => {
+  const processTextContent = useCallback((text: string, currentImageUrls: string[], currentAudioUrls: string[]) => {
     // Regular expressions for different patterns
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const nostrRegex = /nostr:(npub1|note1|nprofile1|nevent1)([a-z0-9]+)/g;
@@ -72,9 +74,12 @@ export function NoteContent({
 
       // Check if this URL is an image URL that will be displayed separately
       const isImageUrl = currentImageUrls.includes(url);
+      
+      // Check if this URL is an audio URL that will be displayed separately
+      const isAudioUrl = currentAudioUrls.includes(url);
 
-      if (isImageUrl) {
-        // Return null for image URLs - they'll be displayed as images below
+      if (isImageUrl || isAudioUrl) {
+        // Return null for image/audio URLs - they'll be displayed as media below
         return null;
       }
 
@@ -179,12 +184,13 @@ export function NoteContent({
     return parts;
   }, []);
 
-  // Process the content to extract text, images, and links
+  // Process the content to extract text, images, audio, and links
   useEffect(() => {
     if (!event) return;
 
     // Extract images from content
     const extractedImages: string[] = [];
+    const extractedAudio: string[] = [];
 
     // 1. Extract images from tags
     const tagImages = event.tags
@@ -199,13 +205,20 @@ export function NoteContent({
     // Add all tag-based images
     extractedImages.push(...tagImages, ...imetaImages);
 
-    // 3. Extract images from content
+    // 3. Extract images and audio from content
     if (event.content) {
       // Match image URLs with common extensions
       const imageExtensionRegex = /https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|bmp|tiff|avif|heic)(\?\S*)?/gi;
       let match;
       while ((match = imageExtensionRegex.exec(event.content)) !== null) {
         extractedImages.push(match[0]);
+      }
+
+      // Match audio URLs with common extensions
+      const audioExtensionRegex = /https?:\/\/\S+\.(mp3|wav|ogg|webm|m4a|aac|flac|opus)(\?\S*)?/gi;
+      audioExtensionRegex.lastIndex = 0;
+      while ((match = audioExtensionRegex.exec(event.content)) !== null) {
+        extractedAudio.push(match[0]);
       }
 
       // Match URLs from common image hosting services
@@ -219,18 +232,24 @@ export function NoteContent({
         }
       }
 
-      // Extract the first non-image URL for link preview
+      // Extract the first non-image/audio URL for link preview
+      const allMediaUrls = [...extractedImages, ...extractedAudio];
       const firstUrl = getFirstUrl(event.content);
-      setLinkUrl(firstUrl);
+      if (firstUrl && !allMediaUrls.includes(firstUrl)) {
+        setLinkUrl(firstUrl);
+      } else {
+        setLinkUrl(null);
+      }
     }
 
-    // Set the extracted image URLs
+    // Set the extracted URLs
     setImageUrls(extractedImages);
+    setAudioUrls(extractedAudio);
 
     // Process the text content
     if (event.content) {
       // Process the content and update state in one go to prevent multiple renders
-      const processed = processTextContent(event.content, extractedImages);
+      const processed = processTextContent(event.content, extractedImages, extractedAudio);
       setProcessedContent(processed);
     }
   }, [event, getFirstUrl, processTextContent]);
@@ -245,6 +264,19 @@ export function NoteContent({
       {/* Link Preview */}
       {linkUrl && (
         <LinkPreview url={linkUrl} />
+      )}
+
+      {/* Audio files */}
+      {audioUrls.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {audioUrls.map((url, index) => (
+            <AudioPlayer
+              key={`audio-${index}`}
+              audioUrl={url}
+              title="Voice Memo"
+            />
+          ))}
+        </div>
       )}
 
       {/* Images */}
