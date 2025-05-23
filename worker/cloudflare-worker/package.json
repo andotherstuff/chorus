@@ -1,0 +1,37 @@
+{
+  "name": "nostr-notification-worker",
+  "version": "1.0.0",
+  "description": "YOLO Notification System for Nostr Groups",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "npm run test:all",
+    "test:all": "tsx src/test-scenarios.ts",
+    "test:notifications": "tsx src/test-scenarios.ts --scenario=notifications",
+    "test:mention-detection": "tsx src/test-scenarios.ts --scenario=mentions",
+    "test:cleanup": "tsx src/cleanup-orphaned-events.ts",
+    "monitor:notifications": "tsx src/monitor-notifications.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "dependencies": {
+    "nostr-tools": "^2.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.5",
+    "web-push": "^3.6.7",
+    "wrangler": "^3.57.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

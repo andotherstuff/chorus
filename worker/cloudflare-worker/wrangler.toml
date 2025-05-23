@@ -1,0 +1,52 @@
+# Cloudflare Worker configuration - All-in-One Solution
+name = "chorus-notifications"
+main = "src/worker-all-in-one.ts"
+compatibility_date = "2023-05-18"
+node_compat = true # Required for WebSocket
+
+# KV Namespace binding
+[[kv_namespaces]]
+binding = "KV"
+id = "YOUR_KV_NAMESPACE_ID" # Will be replaced by setup workflow
+preview_id = "YOUR_KV_PREVIEW_ID" # Will be replaced by setup workflow
+
+# Durable Objects (optional - for queue management)
+[[durable_objects.bindings]]
+name = "PUSH_QUEUE"
+class_name = "PushQueue"
+script_name = "chorus-notifications"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["PushQueue"]
+
+# Environment variables (non-sensitive)
+[vars]
+RELAY_URLS = "wss://relay.primal.net,wss://relay.damus.io,wss://relay.nostr.band"
+
+# Cron trigger for scheduled polling
+[triggers]
+crons = ["*/5 * * * *"] # Every 5 minutes
+
+# Production environment
+[env.production]
+name = "chorus-notifications-prod"
+vars = { 
+  RELAY_URLS = "wss://relay.chorus.community/,wss://relay.primal.net" 
+}
+
+# Staging environment (optional)
+[env.staging]
+name = "chorus-notifications-staging"
+vars = { 
+  RELAY_URLS = "wss://relay.primal.net" 
+}
+
+# Resource limits
+[limits]
+cpu_ms = 50 # 50ms CPU time per request
+
+# Secrets must be set via wrangler CLI or GitHub Actions:
+# - BOT_TOKEN (for internal API auth)
+# - VAPID_PUBLIC_KEY
+# - VAPID_PRIVATE_KEY
