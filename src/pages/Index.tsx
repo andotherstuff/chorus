@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import LoginDialog from "@/components/auth/LoginDialog";
@@ -13,6 +13,11 @@ import { useCreateCashuWallet } from "@/hooks/useCreateCashuWallet";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { Smartphone } from "lucide-react";
 
+// Create context for storing generated name during onboarding
+export const OnboardingContext = React.createContext<{ generatedName: string | null }>({ 
+  generatedName: null 
+});
+
 const Index = () => {
   const { currentUser } = useLoggedInAccounts();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -22,6 +27,7 @@ const Index = () => {
   const { mutateAsync: publishEvent } = useNostrPublish();
   const [newUser, setNewUser] = useState(false);
   const { mutateAsync: createCashuWallet } = useCreateCashuWallet();
+  const [generatedName, setGeneratedName] = useState<string | null>(null);
 
   // Redirect to /groups after user is logged in
   useEffect(() => {
@@ -43,6 +49,9 @@ const Index = () => {
       addLogin(login);
       // Generate fake name and publish kind:0 metadata
       const fakeName = generateFakeName();
+      // Store the generated name in state immediately
+      setGeneratedName(fakeName);
+      
       // Wait for login to be available (since addLogin is sync but state update is async)
       setTimeout(async () => {
         try {
@@ -123,15 +132,17 @@ const Index = () => {
   // Onboarding step 2: New user (just created account) or user without metadata
   if (currentUser && newUser) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background">
-        <div className="w-full max-w-lg mx-auto p-8 bg-card dark:bg-dark-card rounded-2xl shadow-lg">
-          <h2 className="text-2xl font-bold mb-4 text-center">Set up your profile</h2>
-          <p className="text-gray-600 mb-6 text-center">
-            Add your display name and picture. You can always update them later.
-          </p>
-          <EditProfileForm showSkipLink={true} />
+      <OnboardingContext.Provider value={{ generatedName }}>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background">
+          <div className="w-full max-w-lg mx-auto p-8 bg-card dark:bg-dark-card rounded-2xl shadow-lg">
+            <h2 className="text-2xl font-bold mb-4 text-center">Set up your profile</h2>
+            <p className="text-gray-600 mb-6 text-center">
+              Add your display name and picture. You can always update them later.
+            </p>
+            <EditProfileForm showSkipLink={true} initialName={generatedName} />
+          </div>
         </div>
-      </div>
+      </OnboardingContext.Provider>
     );
   }
 
