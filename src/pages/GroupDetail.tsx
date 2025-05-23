@@ -21,9 +21,10 @@ import { SimpleMembersList } from "@/components/groups/SimpleMembersList";
 import { GroupNutzapButton } from "@/components/groups/GroupNutzapButton";
 import { GroupNutzapTotal } from "@/components/groups/GroupNutzapTotal";
 import { GroupNutzapList } from "@/components/groups/GroupNutzapList";
-import { Users, Settings, MessageSquare, CheckCircle, DollarSign } from "lucide-react";
+import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
+import { QRCodeModal } from "@/components/QRCodeModal";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +39,7 @@ export default function GroupDetail() {
   const [currentPostCount, setCurrentPostCount] = useState(0);
   const [activeTab, setActiveTab] = useState("posts");
   const [imageLoading, setImageLoading] = useState(true);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   
   const searchParams = new URLSearchParams(location.search);
@@ -128,7 +130,7 @@ export default function GroupDetail() {
 
   const name = nameTag ? nameTag[1] : (parsedId?.identifier || "Unnamed Group");
   const description = descriptionTag ? descriptionTag[1] : "No description available";
-  const image = imageTag ? imageTag[1] : "/placeholder-community.svg";
+  const image = imageTag ? imageTag[1] : undefined;
 
   useEffect(() => {
     if (name && name !== "Unnamed Group") {
@@ -213,12 +215,30 @@ export default function GroupDetail() {
           <div className="flex flex-col justify-between min-w-[140px] h-36">
             {!isModerator ? (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 mb-2"
+                  onClick={() => setShowQRCode(true)}
+                >
+                  <QrCode className="h-4 w-4" />
+                  QR Code
+                </Button>
                 <JoinRequestButton communityId={groupId || ''} isModerator={isModerator} />
                 <div className="flex-1" />
                 <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
               </>
             ) : (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 mb-2"
+                  onClick={() => setShowQRCode(true)}
+                >
+                  <QrCode className="h-4 w-4" />
+                  QR Code
+                </Button>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -356,6 +376,14 @@ export default function GroupDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* QR Code Modal */}
+      <QRCodeModal
+        isOpen={showQRCode}
+        onClose={() => setShowQRCode(false)}
+        profileUrl={`${window.location.origin}/group/${encodeURIComponent(groupId || '')}`}
+        displayName={name}
+      />
     </div>
   );
 }

@@ -55,8 +55,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
     defaultValues: {
       name: initialName || '',
       picture: '',
-      about: '',
-      website: '',
     },
   });
 
@@ -70,8 +68,6 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
       form.reset({
         name: metadata.name || '',
         picture: metadata.picture || '',
-        about: metadata.about || '',
-        website: metadata.website || '',
       });
     }
   }, [metadata, form, initialName]);
@@ -242,50 +238,11 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Your name" {...field} className="bg-background" />
                   </FormControl>
                   <FormDescription>
                     This is the name that will be displayed to others.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="about"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>About</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Tell others about yourself" 
-                      {...field} 
-                      className="bg-background resize-none min-h-[100px]" 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    A short bio that describes who you are.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://yourwebsite.com" {...field} className="bg-background" />
-                  </FormControl>
-                  <FormDescription>
-                    Your personal website or social media profile.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -297,12 +254,12 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({ showSkipLink = false
             <Button
               type="submit"
               className="w-full max-w-[200px] flex items-center justify-center gap-2 mx-auto"
-              disabled={isPending || isUploading}
+              disabled={isPending || isUploading || !form.watch('name')?.trim()}
             >
               {(isPending || isUploading) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Save Profile
+              Save
             </Button>
 
             {showSkipLink && (

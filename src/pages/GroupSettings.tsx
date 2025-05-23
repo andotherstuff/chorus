@@ -499,7 +499,7 @@ export default function GroupSettings() {
                         alt="Group preview"
                         className="w-full h-auto"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder-community.svg";
+                          e.currentTarget.style.display = "none";
                         }}
                       />
                     </div>

@@ -12,6 +12,10 @@ import { toast } from "@/hooks/useToast";
 import { useCreateCashuWallet } from "@/hooks/useCreateCashuWallet";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { Smartphone } from "lucide-react";
+import { useCashuStore } from "@/stores/cashuStore";
+import { getTokenAmount } from "@/lib/cashu";
+import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
+import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 
 // Create context for storing generated name during onboarding
 export const OnboardingContext = React.createContext<{ generatedName: string | null }>({ 
@@ -28,6 +32,62 @@ const Index = () => {
   const [newUser, setNewUser] = useState(false);
   const { mutateAsync: createCashuWallet } = useCreateCashuWallet();
   const [generatedName, setGeneratedName] = useState<string | null>(null);
+  const cashuStore = useCashuStore();
+  const { showSats } = useCurrencyDisplayStore();
+  const { data: btcPrice, isLoading: btcPriceLoading } = useBitcoinPrice();
+  const [tokenProcessed, setTokenProcessed] = useState(false);
+
+  // Check for token in URL on mount
+  useEffect(() => {
+    // Don't process if already processed
+    if (tokenProcessed) return;
+
+    const hash = window.location.hash;
+    if (hash && hash.includes("token=")) {
+      const tokenMatch = hash.match(/token=([^&]+)/);
+      if (tokenMatch && tokenMatch[1]) {
+        const token = tokenMatch[1];
+
+        // If USD mode and price is still loading, wait
+        if (!showSats && btcPriceLoading) {
+          return;
+        }
+
+        try {
+          // Get the token amount
+          const amount = getTokenAmount(token);
+
+          // Store the token for later redemption
+          cashuStore.setPendingOnboardingToken(token);
+
+          // Clean up the URL
+          window.history.replaceState(null, "", window.location.pathname);
+
+          // Format the amount based on user preference
+          let displayAmount: string;
+          if (showSats) {
+            displayAmount = `${amount.toLocaleString()} sats`;
+          } else {
+            const usd = satsToUSD(amount, btcPrice?.USD || null);
+            displayAmount =
+              usd !== null ? formatUSD(usd) : `${amount.toLocaleString()} sats`;
+          }
+
+          // Show notification with animated icon
+          toast({
+            title: "✅ Ecash waiting for you!",
+            description: `Complete signup to receive ${displayAmount} in your wallet`,
+          });
+
+          // Mark as processed
+          setTokenProcessed(true);
+        } catch (error) {
+          console.error("Error processing token:", error);
+          setTokenProcessed(true);
+        }
+      }
+    }
+  }, [cashuStore, showSats, btcPrice, btcPriceLoading, tokenProcessed]);
 
   // Redirect to /groups after user is logged in
   useEffect(() => {
@@ -64,10 +124,17 @@ const Index = () => {
           // fallthrough
         }
       }, 100);
-      toast({ title: "Account created", description: "You are now logged in." });
+      toast({
+        title: "Account created",
+        description: "You are now logged in.",
+      });
       setNewUser(true); // Mark as new user
     } catch (e) {
-      toast({ title: "Error", description: "Failed to create account. Please try again.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to create account. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setCreating(false);
     }
@@ -86,10 +153,14 @@ const Index = () => {
           <div className="w-full max-w-md mx-auto px-8 text-center mb-8">
             <h1 className="text-4xl font-extralight mb-4">
               <div className="flex flex-row items-baseline justify-center flex-wrap">
-                <span className="font-extralight mr-2 whitespace-nowrap">welcome to</span>
+                <span className="font-extralight mr-2 whitespace-nowrap">
+                  welcome to
+                </span>
                 <div className="flex flex-row items-baseline">
                   <span className="text-red-500 font-extrabold">+</span>
-                  <span className="text-black dark:text-white font-extrabold">chorus</span>
+                  <span className="text-black dark:text-white font-extrabold">
+                    chorus
+                  </span>
                 </div>
               </div>
             </h1>
@@ -107,24 +178,39 @@ const Index = () => {
           </Button>
           <div className="text-sm text-muted-foreground flex items-center justify-center mt-3">
             <span>Have a Nostr/+chorus account?</span>&nbsp;
-            <Button variant="link" size="sm" className="text-primary font-medium hover:underline p-0 h-auto" onClick={() => setLoginOpen(true)}>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-primary font-medium hover:underline p-0 h-auto"
+              onClick={() => setLoginOpen(true)}
+            >
               Sign in
             </Button>
           </div>
-          
+
           {/* PWA Install Section */}
           <div className="mt-8 p-4 bg-muted/50 rounded-lg text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Smartphone className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Get the App</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Get the App
+              </span>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
               Install +chorus for the best experience
             </p>
-            <PWAInstallButton variant="outline" size="sm" className="w-full max-w-[200px]" />
+            <PWAInstallButton
+              variant="outline"
+              size="sm"
+              className="w-full max-w-[200px]"
+            />
           </div>
         </div>
-        <LoginDialog isOpen={loginOpen} onClose={() => setLoginOpen(false)} onLogin={handleLogin} />
+        <LoginDialog
+          isOpen={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          onLogin={handleLogin}
+        />
       </>
     );
   }

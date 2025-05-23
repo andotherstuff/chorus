@@ -125,7 +125,9 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <CardTitle>Your Keys</CardTitle>
-            <CardDescription>Your public and private keys for Nostr</CardDescription>
+            <CardDescription>
+              Your Nostr identity consists of a public key (npub) and private key (nsec). Your public key is like your username - share it freely so others can find and follow you. Your private key is your password - never share it with anyone. With your private key, you can log into any Nostr app and access your identity, followers, and content.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -141,6 +143,9 @@ export default function Settings() {
                   {copyPublicSuccess ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Share this with others so they can find and follow you on Nostr.
+              </p>
             </div>
             <div>
               <div className="flex items-center justify-between">
@@ -181,6 +186,28 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Disappearing posts Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Disappearing posts</CardTitle>
+            <CardDescription>Set how long your posts should remain before expiring and not being served by relays</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select value={postExpiration} onValueChange={(value) => setPostExpiration(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select expiration period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">No expiration</SelectItem>
+                <SelectItem value="1-week">1 week</SelectItem>
+                <SelectItem value="1-month">1 month</SelectItem>
+                <SelectItem value="3-months">3 months</SelectItem>
+                <SelectItem value="12-months">12 months</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
         {/* PWA Install Section */}
         <Card>
           <CardHeader>
@@ -203,28 +230,6 @@ export default function Settings() {
               </ul>
               <PWAInstallButton variant="default" className="w-full sm:w-auto" />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Disappearing posts Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Disappearing posts</CardTitle>
-            <CardDescription>Set how long your posts should remain before expiring and not being served by relays</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={postExpiration} onValueChange={(value) => setPostExpiration(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select expiration period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="off">No expiration</SelectItem>
-                <SelectItem value="1-week">1 week</SelectItem>
-                <SelectItem value="1-month">1 month</SelectItem>
-                <SelectItem value="3-months">3 months</SelectItem>
-                <SelectItem value="12-months">12 months</SelectItem>
-              </SelectContent>
-            </Select>
           </CardContent>
         </Card>
       </div>
