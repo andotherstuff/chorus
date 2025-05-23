@@ -131,7 +131,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
       ) : (
         <DollarSign className={`h-3.5 w-3.5 ${nutzapTotal > 0 ? 'text-amber-500' : ''}`} />
       )}
-      {showText && <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span>}
+      {showText && nutzapTotal > 0 && <span className="text-xs ml-0.5">{formatAmount(nutzapTotal)}</span>}
     </Button>
   );
 }
