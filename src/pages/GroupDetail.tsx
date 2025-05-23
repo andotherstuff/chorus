@@ -505,36 +505,27 @@ export default function GroupDetail() {
           </div>
 
           <div className="flex flex-col min-w-[140px] h-40 space-y-2">
-            {!isModerator ? (
-              <>
-                <div className="h-8">
-                  <JoinRequestButton communityId={groupId || ''} isModerator={isModerator || false} />
-                </div>
-                {/* If there are more buttons than these, they will flow from top to bottom */}
-                {/* Ensure consistent height for GroupNutzapTotal */}
-                <div className="h-8 flex items-center">
-                  <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Ensure consistent height for GroupNutzapButton */}
-                <div className="h-8">
-                  {user && community && (
-                    <GroupNutzapButton
-                      groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                      ownerPubkey={community.pubkey}
-                      variant="outline"
-                      className="w-full h-full"
-                    />
-                  )}
-                </div>
-                {/* Ensure consistent height for GroupNutzapTotal */}
-                <div className="h-8 flex items-center">
-                  <GroupNutzapTotal groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`} />
-                </div>
-              </>
-            )}
+            <div className="h-8">
+              <JoinRequestButton communityId={groupId || ''} isModerator={isModerator || false} />
+            </div>
+            {/* Ensure consistent height for GroupNutzapButton */}
+            <div className="h-8">
+              {user && community && (
+                <GroupNutzapButton
+                  groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                  ownerPubkey={community.pubkey}
+                  variant="outline"
+                  className="w-full h-full"
+                />
+              )}
+            </div>
+            {/* Ensure consistent height for GroupNutzapTotal - always show for all users */}
+            <div className="h-8 flex items-center">
+              <GroupNutzapTotal 
+                groupId={`34550:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                className="w-full"
+              />
+            </div>
           </div>
         </div>
 
