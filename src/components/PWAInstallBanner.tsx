@@ -19,10 +19,28 @@ export function PWAInstallBanner() {
 
     // Check if we're on a mobile device or if PWA is installable
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     
-    // Show banner if on mobile, not in standalone mode, and not dismissed
-    if ((isMobile || isInstallable) && !isStandalone && !dismissed) {
+    // Enhanced PWA detection - check multiple methods
+    const isStandalone = 
+      window.matchMedia('(display-mode: standalone)').matches || // Standard PWA detection
+      (window.navigator as Navigator & { standalone?: boolean }).standalone || // iOS detection
+      document.referrer.includes('android-app://'); // Android TWA detection
+    
+    // Check if launched from homescreen (additional Android signal)
+    const isLaunchedFromHomescreen = document.referrer === '';
+    const hasManifestLink = !!document.querySelector('link[rel="manifest"]');
+    const isFromAppIntent = window.location.href.includes('?source=pwa') || 
+                           window.location.href.includes('?utm_source=pwa') || 
+                           window.location.href.includes('?utm_source=homescreen');
+    
+    // Only show the banner if:
+    // 1. Not already in PWA mode (not standalone)
+    // 2. Either a mobile device or has the install prompt
+    // 3. Not dismissed already
+    if ((isMobile || isInstallable) && 
+        !isStandalone && 
+        !dismissed && 
+        !(isLaunchedFromHomescreen && hasManifestLink && isFromAppIntent)) {
       setIsVisible(true);
     }
   }, [isInstallable]);

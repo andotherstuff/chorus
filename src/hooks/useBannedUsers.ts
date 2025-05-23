@@ -141,6 +141,7 @@ export function useBannedUsers(communityId?: string) {
       queryClient.invalidateQueries({ queryKey: ["approved-posts"] });
       queryClient.invalidateQueries({ queryKey: ["pending-posts"] });
       queryClient.invalidateQueries({ queryKey: ["pending-posts-count"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-replies"] });
       return;
     }
     
@@ -151,8 +152,10 @@ export function useBannedUsers(communityId?: string) {
     queryClient.invalidateQueries({ queryKey: ["approved-posts", effectiveCommunityId] });
     queryClient.invalidateQueries({ queryKey: ["pending-posts", effectiveCommunityId] });
     queryClient.invalidateQueries({ queryKey: ["pending-posts-count", effectiveCommunityId] });
+    queryClient.invalidateQueries({ queryKey: ["banned-users-count", effectiveCommunityId] });
     
     // Refetch the current query if we have a communityId
+    queryClient.invalidateQueries({ queryKey: ["pending-replies", effectiveCommunityId] });
     if (communityId) {
       refetch();
     }

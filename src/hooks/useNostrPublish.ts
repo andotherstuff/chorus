@@ -154,19 +154,26 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
           case 14551: // Declined members list
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["approved-members-list", communityId] });
+              queryClient.invalidateQueries({ queryKey: ["approved-members-count", communityId] });
               queryClient.invalidateQueries({ queryKey: ["declined-users", communityId] });
+              queryClient.invalidateQueries({ queryKey: ["declined-users-count", communityId] });
               queryClient.invalidateQueries({ queryKey: ["group-membership", communityId] });
               queryClient.invalidateQueries({ queryKey: ["reliable-group-membership", communityId] });
+              // Member changes affect pending posts/replies counts since auto-approval depends on membership
+              queryClient.invalidateQueries({ queryKey: ["pending-posts-count", communityId] });
+              queryClient.invalidateQueries({ queryKey: ["pending-replies", communityId] });
             }
             break;
             
           case 14552: // Ban user
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["banned-users", communityId] });
+              queryClient.invalidateQueries({ queryKey: ["banned-users-count", communityId] });
               // Also invalidate posts since banned users' posts should be hidden
               queryClient.invalidateQueries({ queryKey: ["approved-posts", communityId] });
               queryClient.invalidateQueries({ queryKey: ["pending-posts", communityId] });
               queryClient.invalidateQueries({ queryKey: ["pending-posts-count", communityId] });
+              queryClient.invalidateQueries({ queryKey: ["pending-replies", communityId] });
             }
             break;
             
@@ -214,6 +221,7 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
           case 4553: {
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["join-requests", communityId] });
+              queryClient.invalidateQueries({ queryKey: ["join-requests-count", communityId] });
               queryClient.invalidateQueries({ queryKey: ["join-request", communityId] });
               queryClient.invalidateQueries({ queryKey: ["group-membership", communityId] });
             }

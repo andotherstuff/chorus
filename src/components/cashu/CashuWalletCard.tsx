@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCashuToken } from "@/hooks/useCashuToken";
 import { useCreateCashuWallet } from "@/hooks/useCreateCashuWallet";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
+import { useWalletUiStore } from "@/stores/walletUiStore";
 
 export function CashuWalletCard() {
   const { user } = useCurrentUser();
@@ -42,6 +43,8 @@ export function CashuWalletCard() {
   const { cleanSpentProofs } = useCashuToken();
   const { data: btcPrice } = useBitcoinPrice();
   const { showSats, toggleCurrency } = useCurrencyDisplayStore();
+  const walletUiStore = useWalletUiStore();
+  const isExpanded = walletUiStore.expandedCards.mints;
   const [newMint, setNewMint] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [expandedMint, setExpandedMint] = useState<string | null>(null);
@@ -49,6 +52,7 @@ export function CashuWalletCard() {
 
   // Calculate total balance across all mints
   const balances = calculateBalance(cashuStore.proofs);
+  const totalBalance = Object.values(balances).reduce((sum, balance) => sum + balance, 0);
   const prevBalances = useRef<Record<string, string>>({});
 
   // Track balance changes for flash effect
@@ -173,8 +177,10 @@ export function CashuWalletCard() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Cashu Wallet</CardTitle>
-          <CardDescription>Loading wallet...</CardDescription>
+          <div>
+            <CardTitle>Mints</CardTitle>
+            <CardDescription>Loading wallet...</CardDescription>
+          </div>
         </CardHeader>
       </Card>
     );
@@ -184,8 +190,10 @@ export function CashuWalletCard() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Cashu Wallet</CardTitle>
-          <CardDescription>You don't have a Cashu wallet yet</CardDescription>
+          <div>
+            <CardTitle>Mints</CardTitle>
+            <CardDescription>You don't have a Cashu wallet yet</CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <Button onClick={() => handleCreateWallet()} disabled={!user}>
@@ -206,11 +214,26 @@ export function CashuWalletCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Cashu Wallet</CardTitle>
-        <CardDescription>Manage your Cashu ecash</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Mints</CardTitle>
+          <CardDescription>Manage your Cashu mints</CardDescription>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => walletUiStore.toggleCardExpansion("mints")}
+          aria-label={isExpanded ? "Collapse" : "Expand"}
+        >
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </Button>
       </CardHeader>
-      <CardContent>
+      {isExpanded && (
+        <CardContent>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">Mints</h3>
@@ -235,7 +258,7 @@ export function CashuWalletCard() {
           </div>
           <div>
             {wallet.mints && wallet.mints.length > 0 ? (
-              <div className="mt-2 space-y-2">
+              <div className="space-y-2">
                 {wallet.mints.map((mint) => {
                   const amount = balances[mint] || 0;
                   const isActive = cashuStore.activeMintUrl === mint;
@@ -343,6 +366,7 @@ export function CashuWalletCard() {
           </div>
         </div>
       </CardContent>
+      )}
     </Card>
   );
 }

@@ -1,8 +1,9 @@
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { useAuthor } from "@/hooks/useAuthor";
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useState, useEffect } from "react";
 import { 
   Avatar, 
   AvatarFallback, 
@@ -24,19 +25,34 @@ import {
   Pencil,
   Calendar, 
   MessageCircle,
+  MessageSquare,
   Heart,
   Share2,
-  LinkIcon
+  LinkIcon,
+  MoreVertical,
+  Flag
 } from "lucide-react";
 import { toast } from "sonner";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import { VerifiedNip05 } from "@/components/VerifiedNip05";
-import { cn } from "@/lib/utils";
+import { useNip05Verification } from "@/hooks/useNip05Verification";
+import { cn, formatRelativeTime } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { EmojiReactionButton } from "@/components/EmojiReactionButton";
+import { NutzapButton } from "@/components/groups/NutzapButton";
+import { NutzapInterface } from "@/components/groups/NutzapInterface";
+import { ReplyList } from "@/components/groups/ReplyList";
+import { nip19 } from 'nostr-tools';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Helper function to extract group information from a post
 function extractGroupInfo(post: NostrEvent): { groupId: string; groupName: string } | null {
@@ -74,6 +90,54 @@ function extractGroupInfo(post: NostrEvent): { groupId: string; groupName: strin
   };
 }
 
+// Component to fetch and display group name
+function GroupNameDisplay({ groupId }: { groupId: string }) {
+  const { nostr } = useNostr();
+
+  const { data: groupName, isLoading } = useQuery({
+    queryKey: ["group-name", groupId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      
+      // Parse the group ID to get the components
+      const parsedAddress = parseNostrAddress(groupId);
+      if (!parsedAddress || parsedAddress.kind !== 34550) {
+        return "Group";
+      }
+
+      // Query for the group event
+      const events = await nostr.query([{
+        kinds: [34550],
+        authors: [parsedAddress.pubkey],
+        "#d": [parsedAddress.identifier],
+        limit: 1,
+      }], { signal });
+
+      if (events.length === 0) {
+        return parsedAddress.identifier; // Fallback to identifier
+      }
+
+      const groupEvent = events[0];
+      
+      // Look for the name tag
+      const nameTag = groupEvent.tags.find(tag => tag[0] === "name");
+      if (nameTag && nameTag[1]) {
+        return nameTag[1];
+      }
+
+      // Fallback to identifier
+      return parsedAddress.identifier;
+    },
+    enabled: !!nostr && !!groupId,
+  });
+
+  if (isLoading) {
+    return <span>Loading...</span>;
+  }
+
+  return <span className="font-medium">{groupName || "Group"}</span>;
+}
+
 // Component to display group information on a post
 function PostGroupLink({ post }: { post: NostrEvent }) {
   const groupInfo = extractGroupInfo(post);
@@ -87,7 +151,7 @@ function PostGroupLink({ post }: { post: NostrEvent }) {
     >
       <div className="flex items-center px-2 py-1 rounded-full bg-muted/70 hover:bg-muted transition-colors">
         <Users className="h-3 w-3 md:h-4 md:w-4 mr-1.5" />
-        <span className="font-medium">{groupInfo.groupName}</span>
+        <GroupNameDisplay groupId={groupInfo.groupId} />
       </div>
     </Link>
   );
@@ -164,6 +228,8 @@ function UserGroupsList({
   groups: UserGroup[] | undefined;
   isLoading: boolean;
 }) {
+  const { user } = useCurrentUser();
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -200,98 +266,273 @@ function UserGroupsList({
     }
   }
 
+  // Helper function to determine user's role in a group
+  const getUserRole = (group: UserGroup, userPubkey: string) => {
+    // Check if user is the owner (creator) of the group
+    if (group.groupEvent.pubkey === userPubkey) {
+      return 'owner';
+    }
+
+    // Check if user is a moderator
+    const moderatorTags = group.groupEvent.tags.filter(
+      tag => tag[0] === "p" && tag[3] === "moderator"
+    );
+    const isModerator = moderatorTags.some(tag => tag[1] === userPubkey);
+    
+    if (isModerator) {
+      return 'moderator';
+    }
+
+    return 'member';
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4">
-      {Array.from(uniqueGroups.values()).map((group) => (
-        <Link
-          key={group.id}
-          to={`/group/${encodeURIComponent(group.id)}`}
-          className="block"
-        >
-          <Card className="overflow-hidden border border-border/40 hover:border-border hover:shadow-sm transition-all duration-200">
-            <div className="flex p-4">
-              <div className="h-14 w-14 rounded-lg overflow-hidden mr-4 flex-shrink-0 bg-muted">
-                <img
-                  src={group.image}
-                  alt={group.name}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder-community.svg";
-                  }}
-                />
+      {Array.from(uniqueGroups.values()).map((group) => {
+        const userRole = user ? getUserRole(group, user.pubkey) : 'member';
+        
+        return (
+          <Link
+            key={group.id}
+            to={`/group/${encodeURIComponent(group.id)}`}
+            className="block"
+          >
+            <Card className="overflow-hidden border border-border/40 hover:border-border hover:shadow-sm transition-all duration-200">
+              <div className="flex p-4">
+                <div className="h-14 w-14 rounded-lg overflow-hidden mr-4 flex-shrink-0 bg-muted">
+                  <img
+                    src={group.image}
+                    alt={group.name}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder-community.svg";
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h3 className="font-medium text-sm">{group.name}</h3>
+                    {userRole !== 'member' && (
+                      <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                        userRole === 'owner' 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                      }`}>
+                        {userRole === 'owner' ? 'Owner' : 'Moderator'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs leading-snug text-muted-foreground line-clamp-2">
+                    {group.description || "No description available"}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-sm mb-0.5">{group.name}</h3>
-                <p className="text-xs leading-snug text-muted-foreground line-clamp-2">
-                  {group.description || "No description available"}
-                </p>
-              </div>
-            </div>
-          </Card>
-        </Link>
-      ))}
+            </Card>
+          </Link>
+        );
+      })}
     </div>
   );
 }
 
-function PostCard({ post, profileImage, displayName, displayNameFull }: { 
+function PostCard({ post, profileImage, displayName, displayNameFull, isLastItem = false }: { 
   post: NostrEvent; 
   profileImage?: string;
   displayName: string;
   displayNameFull: string;
+  isLastItem?: boolean;
 }) {
+  const { user } = useCurrentUser();
+  const [showReplies, setShowReplies] = useState(false);
+  const [showZaps, setShowZaps] = useState(false);
+
+  // Handle toggle between replies and zaps
+  const handleShowReplies = () => {
+    const newState = !showReplies;
+    setShowReplies(newState);
+    if (newState) {
+      setShowZaps(false); // Close zaps if opening replies
+    }
+  };
+
+  const handleZapToggle = (isOpen: boolean) => {
+    setShowZaps(isOpen);
+    if (isOpen) {
+      setShowReplies(false); // Close replies if opening zaps
+    }
+  };
+
+  // Format the timestamp as relative time
+  const relativeTime = formatRelativeTime(post.created_at);
+
+  // Keep the absolute time as a tooltip
+  const postDate = new Date(post.created_at * 1000);
+  const formattedAbsoluteTime = `${postDate.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })} ${postDate.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit'
+  })}`;
+
+  // Format author identifier
+  let authorIdentifier = post.pubkey;
+  if (post.pubkey.match(/^[0-9a-fA-F]{64}$/)) {
+    try {
+      const npub = nip19.npubEncode(post.pubkey);
+      authorIdentifier = `${npub.slice(0,10)}...${npub.slice(-4)}`;
+    } catch (e) {
+      authorIdentifier = `${post.pubkey.slice(0,8)}...${post.pubkey.slice(-4)}`;
+    }
+  }
+
   return (
-    <Card className="overflow-hidden border border-border/40 hover:border-border hover:shadow-sm transition-all duration-300 mb-5">
-      <CardContent className="p-5">
-        <div className="flex items-start gap-4">
-          <Avatar className="h-10 w-10 rounded-full">
-            <AvatarImage src={profileImage} />
-            <AvatarFallback className="bg-primary/10">{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+    <div className={`py-4 hover:bg-muted/5 transition-colors ${!isLastItem ? 'border-b-2 border-border/70' : ''}`}>
+      <div className="flex flex-row items-start px-3">
+        <Link to={`/profile/${post.pubkey}`} className="flex-shrink-0 mr-2.5">
+          <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
+            <AvatarImage src={profileImage} alt={displayName} />
+            <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
           </Avatar>
-          
-          <div className="flex-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 mb-0.5">
-              <span className="font-medium text-base">{displayNameFull}</span>
-              <FormattedDate timestamp={post.created_at} />
-            </div>
-            
-            <div className="mt-2 whitespace-pre-wrap break-words">
-              <NoteContent event={post} className="text-base leading-relaxed" />
-            </div>
-            
-            {extractGroupInfo(post) && (
-              <div className="mt-2">
-                <PostGroupLink post={post} />
+        </Link>
+
+        <div className="flex-1">
+          <div className="flex items-start justify-between">
+            <div>
+              <Link to={`/profile/${post.pubkey}`} className="hover:underline">
+                <span className="font-semibold text-sm leading-tight block">{displayNameFull}</span>
+              </Link>
+              <div className="flex items-center text-xs text-muted-foreground mt-0 flex-row">
+                <span
+                  className="mr-1.5 hover:underline truncate max-w-[12rem] overflow-hidden whitespace-nowrap"
+                  title={authorIdentifier}
+                >
+                  {authorIdentifier}
+                </span>
+                <span className="mr-1.5">·</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="mr-1.5 whitespace-nowrap hover:underline">{relativeTime}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{formattedAbsoluteTime}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
-            )}
-            
-            <div className="mt-2 pt-3 border-t flex items-center justify-between text-muted-foreground">
-              <div className="flex items-center gap-5">
-                <Button variant="ghost" size="sm" className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground">
-                  <MessageCircle className="h-4 w-4" />
-                  <span className="text-xs">Reply</span>
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground">
-                  <Heart className="h-4 w-4" />
-                  <span className="text-xs">Like</span>
-                </Button>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                <Share2 className="h-4 w-4" />
-              </Button>
+            </div>
+
+            <div className="flex items-center gap-2 ml-1 flex-shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="More options">
+                    <MoreVertical className="h-3.5 w-3.5" />
+                    <span className="sr-only">More options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`)} className="text-xs">
+                    <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share Post
+                  </DropdownMenuItem>
+                  {user && user.pubkey !== post.pubkey && (
+                    <DropdownMenuItem className="text-xs">
+                      <Flag className="h-3.5 w-3.5 mr-1.5" /> Report Post
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Content Section - takes full width */}
+      <div className="pt-1 pb-1.5 pl-3 pr-3">
+        <div className="whitespace-pre-wrap break-words text-sm mt-1">
+          <NoteContent event={post} />
+        </div>
+        
+        {extractGroupInfo(post) && (
+          <div className="mt-2">
+            <PostGroupLink post={post} />
+          </div>
+        )}
+      </div>
+
+      {/* Footer Section - aligned with icons */}
+      <div className="flex-col pt-1.5 pl-3 pr-3">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-12">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
+              onClick={handleShowReplies}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </Button>
+            <EmojiReactionButton postId={post.id} showText={false} />
+            <NutzapButton 
+              postId={post.id} 
+              authorPubkey={post.pubkey} 
+              showText={true} 
+              onToggle={handleZapToggle}
+              isOpen={showZaps}
+            />
+          </div>
+        </div>
+
+        {showReplies && (
+          <div className="w-full mt-2.5">
+            <ReplyList
+              postId={post.id}
+              communityId=""
+              postAuthorPubkey={post.pubkey}
+            />
+          </div>
+        )}
+
+        {showZaps && (
+          <div className="w-full mt-2.5">
+            <NutzapInterface
+              postId={post.id}
+              authorPubkey={post.pubkey}
+              relayHint={undefined}
+              onSuccess={() => {
+                // Call the refetch function if available
+                const refetchFn = (window as any)[`zapRefetch_${post.id}`];
+                if (refetchFn) refetchFn();
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 export default function Profile() {
   const { pubkey } = useParams<{ pubkey: string }>();
+  const location = useLocation();
   const author = useAuthor(pubkey);
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const [activeTab, setActiveTab] = useState("posts");
+
+  const hash = location.hash.replace('#', '');
+
+  // Set active tab based on URL hash
+  useEffect(() => {
+    const validTabs = ["posts", "groups"];
+    
+    if (hash && validTabs.includes(hash)) {
+      setActiveTab(hash);
+    } else if (!activeTab || !validTabs.includes(activeTab)) {
+      setActiveTab("posts");
+    }
+  }, [hash, activeTab]);
 
   // Query for user's posts
   const { data: posts, isLoading: isLoadingPosts } = useQuery({
@@ -473,6 +714,9 @@ export default function Profile() {
   const nip05 = metadata?.nip05;
   const banner = metadata?.banner;
 
+  // Check NIP05 verification status
+  const { data: nip05Verification } = useNip05Verification(nip05, pubkey || "");
+
   // Check if this is the current user's profile
   const isCurrentUser = user && pubkey === user.pubkey;
 
@@ -482,6 +726,17 @@ export default function Profile() {
       toast.success("Public key copied to clipboard");
     }
   };
+
+  useEffect(() => {
+    if (displayNameFull && displayNameFull !== "Unnamed User") {
+      document.title = `+chorus - ${displayNameFull}`;
+    } else {
+      document.title = "+chorus";
+    }
+    return () => {
+      document.title = "+chorus";
+    };
+  }, [displayNameFull]);
 
   if (author.isLoading) {
     return (
@@ -572,204 +827,162 @@ export default function Profile() {
   return (
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
-      
-      {/* Profile Banner */}
-      <div className="w-full h-48 md:h-64 rounded-xl bg-muted/50 overflow-hidden mt-3 mb-8">
-        {banner ? (
-          <img 
-            src={banner} 
-            alt={`${displayNameFull}'s banner`} 
-            className="w-full h-full object-cover" 
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-primary/5 to-primary/10" />
-        )}
-      </div>
-      
-      {/* Profile Info Card - Elevated above content */}
-      <div className="relative max-w-5xl mx-auto -mt-24 mb-8">
-        <div className="bg-background rounded-xl border shadow-md p-6 md:p-8">
-          <div className="flex flex-col md:flex-row md:items-end gap-6">
-            {/* Large Avatar that overlaps the top of the card */}
-            <Avatar className="h-32 w-32 rounded-full border-4 border-background -mt-20 md:-mt-28 shadow-md">
-              <AvatarImage src={profileImage} />
-              <AvatarFallback className="text-2xl bg-primary/10">
-                {displayName.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 space-y-1.5 md:space-y-2">
-              {/* Name and verification */}
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl md:text-3xl font-bold">{displayNameFull}</h1>
-                {nip05 && (
-                  <VerifiedNip05 nip05={nip05} pubkey={pubkey || ""} />
-                )}
-              </div>
-              
-              {/* Username */}
-              {displayName !== displayNameFull && (
-                <p className="text-base text-muted-foreground">@{displayName}</p>
+
+      <div className="relative mb-6 mt-4">
+        {/* Top row: Avatar and name/username side by side */}
+        <div className="flex items-center gap-4 mb-4">
+          <Avatar className="h-20 w-20 rounded-full border-4 border-background shadow-md">
+            <AvatarImage src={profileImage} />
+            <AvatarFallback className="text-xl bg-primary/10">
+              {displayName.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold">{displayNameFull}</h1>
+              {nip05 && nip05Verification?.isVerified && (
+                <VerifiedNip05 nip05={nip05} pubkey={pubkey || ""} />
               )}
-              
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2 mt-2">
-                {isCurrentUser ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full gap-1.5"
-                    asChild
-                  >
-                    <Link to="/settings/profile">
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit Profile
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    Follow
-                  </Button>
-                )}
-                
-                {/* Copy Public Key button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full gap-1.5"
-                  onClick={copyPubkeyToClipboard}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Copy</span>
-                  <span className="hidden sm:inline truncate max-w-[60px] md:max-w-[120px]">
-                    {pubkey?.slice(0, 8)}...
-                  </span>
-                </Button>
-                
-                {/* Website link */}
-                {website && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full gap-1.5"
-                    asChild
-                  >
-                    <a
-                      href={website.startsWith('http') ? website : `https://${website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center"
-                    >
-                      <LinkIcon className="h-3.5 w-3.5" />
-                      <span className="truncate max-w-[140px]">{website}</span>
-                    </a>
-                  </Button>
-                )}
-              </div>
             </div>
+            {displayName !== displayNameFull && (
+              <p className="text-sm text-muted-foreground">@{displayName}</p>
+            )}
           </div>
+        </div>
+        
+        {/* Middle row: Bio */}
+        {about && (
+          <div className="w-full mb-4">
+            <p className="text-base text-muted-foreground whitespace-pre-wrap">{about}</p>
+          </div>
+        )}
+
+        {/* Bottom row: Action buttons */}
+        <div className="flex flex-wrap gap-2">
+          {/* Npub button - always first */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={copyPubkeyToClipboard}
+          >
+            <Copy className="h-4 w-4" />
+            Npub
+          </Button>
           
-          {/* About section */}
-          {about && (
-            <div className="mt-3 text-base whitespace-pre-wrap max-w-3xl">
-              {about}
-            </div>
+          {/* Website button - second if exists */}
+          {website && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              asChild
+            >
+              <a
+                href={website.startsWith('http') ? website : `https://${website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center"
+              >
+                <LinkIcon className="h-4 w-4" />
+                Website
+              </a>
+            </Button>
+          )}
+
+          {/* Edit Profile button - only for current user */}
+          {isCurrentUser && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              asChild
+            >
+              <Link to="/settings/profile">
+                <Pencil className="h-4 w-4" />
+                Edit Profile
+              </Link>
+            </Button>
           )}
         </div>
       </div>
-      
-      {/* Content Tabs - Posts and Groups */}
-      <div className="max-w-5xl mx-auto">
-        <Tabs defaultValue="posts" className="mb-8">
-          <TabsList className="mb-8 border-b rounded-none w-full justify-start h-auto p-0 bg-transparent">
-            <TabsTrigger 
-              value="posts"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-1 px-4 text-base"
-            >
+
+      <Tabs value={activeTab} defaultValue="posts" onValueChange={(value) => {
+        setActiveTab(value);
+        // Update URL hash without full page reload
+        window.history.pushState(null, '', `#${value}`);
+      }} className="w-full">
+        <div className="md:flex md:justify-start">
+          <TabsList className="mb-4 w-full md:w-auto flex">
+            <TabsTrigger value="posts" className="flex-1 md:flex-none">
+              <MessageCircle className="h-4 w-4 mr-2" />
               Posts
             </TabsTrigger>
-            <TabsTrigger 
-              value="groups"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-1 px-4 text-base"
-            >
+
+            <TabsTrigger value="groups" className="flex-1 md:flex-none">
+              <Users className="h-4 w-4 mr-2" />
               Groups
             </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="posts" className="mt-0">
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Posts Column - Wider */}
-              <div className="md:col-span-2">
-                {isLoadingPosts ? (
-                  <div className="space-y-6">
-                    {[1, 2, 3].map((i) => (
-                      <Card key={i} className="overflow-hidden border border-border/40">
-                        <CardContent className="p-5">
-                          <div className="flex items-start gap-4">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="flex-1 space-y-2">
-                              <div className="flex justify-between">
-                                <Skeleton className="h-5 w-32" />
-                                <Skeleton className="h-4 w-20" />
-                              </div>
-                              <Skeleton className="h-4 w-full" />
-                              <Skeleton className="h-4 w-5/6" />
-                              <Skeleton className="h-4 w-2/3" />
-                              <div className="pt-3 flex justify-between">
-                                <Skeleton className="h-8 w-20" />
-                                <Skeleton className="h-8 w-20" />
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+        </div>
+
+        <TabsContent value="posts" className="space-y-4">
+          <div className="max-w-3xl mx-auto">
+            {isLoadingPosts ? (
+              <div className="space-y-0">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className={`py-4 ${i < 3 ? 'border-b-2 border-border/70' : ''}`}>
+                    <div className="px-3">
+                      <div className="flex flex-row items-center pb-2">
+                        <Skeleton className="h-9 w-9 rounded-md mr-2.5" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                      <div className="pt-1 pb-2 pl-[2.875rem]">
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </div>
+                      <div className="pt-1.5 pl-[2.875rem]">
+                        <div className="flex gap-4">
+                          <Skeleton className="h-7 w-7" />
+                          <Skeleton className="h-7 w-7" />
+                          <Skeleton className="h-7 w-7" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : posts && posts.length > 0 ? (
-                  <div className="space-y-5">
-                    {posts.map((post) => (
-                      <PostCard 
-                        key={post.id} 
-                        post={post} 
-                        profileImage={profileImage}
-                        displayName={displayName}
-                        displayNameFull={displayNameFull}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="overflow-hidden border border-border/40">
-                    <CardContent className="p-8 text-center">
-                      <p className="text-muted-foreground">No posts from this user yet</p>
-                    </CardContent>
-                  </Card>
-                )}
+                ))}
               </div>
-              
-              {/* Sidebar */}
-              <div>
-                <div className="sticky top-4">
-                  <h2 className="text-xl font-semibold mb-4">Groups</h2>
-                  <UserGroupsList groups={userGroups} isLoading={isLoadingGroups} />
-                </div>
+            ) : posts && posts.length > 0 ? (
+              <div className="space-y-0">
+                {posts.map((post, index) => (
+                  <PostCard 
+                    key={post.id} 
+                    post={post} 
+                    profileImage={profileImage}
+                    displayName={displayName}
+                    displayNameFull={displayNameFull}
+                    isLastItem={index === posts.length - 1}
+                  />
+                ))}
               </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="groups" className="mt-0">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">All Groups</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <UserGroupsList groups={userGroups} isLoading={isLoadingGroups} />
+            ) : (
+              <div className="p-8 text-center border border-border/30 rounded-md bg-card">
+                <p className="text-muted-foreground">No posts from this user yet</p>
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="groups" className="space-y-4">
+          <div className="max-w-3xl mx-auto">
+            <UserGroupsList groups={userGroups} isLoading={isLoadingGroups} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

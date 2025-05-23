@@ -247,23 +247,54 @@ export function PWAInstallInstructions({ isOpen, onClose }: PWAInstallInstructio
   );
 }
 
-// Hook to detect if PWA is installable
+// Hook to detect if PWA is installable and check if already in PWA mode
 export function usePWAInstall() {
   const [isInstallable, setIsInstallable] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isRunningAsPwa, setIsRunningAsPwa] = useState(false);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
+    // Check if already running as a PWA
+    const checkIfPwa = () => {
+      // Standard web app manifest display mode
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      // iOS specific detection
+      const isIOSStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone;
+      // Android TWA detection
+      const isAndroidTwa = document.referrer.includes('android-app://');
+      // Check other indicators
+      const isLaunchedFromHomescreen = document.referrer === '';
+      const hasManifestLink = !!document.querySelector('link[rel="manifest"]');
+      const isFromAppIntent = window.location.href.includes('?source=pwa') || 
+                             window.location.href.includes('?utm_source=pwa') || 
+                             window.location.href.includes('?utm_source=homescreen');
+      
+      // If any of these conditions is true, we're likely running as a PWA
+      const pwaMode = isStandalone || isIOSStandalone || isAndroidTwa || 
+                      (isLaunchedFromHomescreen && hasManifestLink && isFromAppIntent);
+                      
+      setIsRunningAsPwa(pwaMode);
+      
+      // Don't show install prompt if already running as PWA
+      return pwaMode;
     };
-
-    window.addEventListener('beforeinstallprompt', handler);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-    };
+    
+    const isPwa = checkIfPwa();
+    
+    // Only attach the beforeinstallprompt handler if not already a PWA
+    if (!isPwa) {
+      const handler = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e as BeforeInstallPromptEvent);
+        setIsInstallable(true);
+      };
+  
+      window.addEventListener('beforeinstallprompt', handler);
+  
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handler);
+      };
+    }
   }, []);
 
   const promptInstall = async () => {
@@ -280,5 +311,5 @@ export function usePWAInstall() {
     return false;
   };
 
-  return { isInstallable, promptInstall };
+  return { isInstallable, promptInstall, isRunningAsPwa };
 }

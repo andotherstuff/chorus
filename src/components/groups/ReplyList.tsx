@@ -184,7 +184,8 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
     invalidateQueries: [
       { queryKey: ["reply-approvals", communityId] },
       { queryKey: ["replies", postId] },
-      { queryKey: ["nested-replies", reply.id] }
+      { queryKey: ["nested-replies", reply.id] },
+      { queryKey: ["pending-replies", communityId] }
     ]
   });
   const [showReplyForm, setShowReplyForm] = useState(false);
