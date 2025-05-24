@@ -577,7 +577,7 @@ export function CashuWalletLightningCard() {
                   <p className="text-sm font-medium">Invoice Amount</p>
                   <p className="text-2xl font-bold">
                     {formatBalance(invoiceAmount)}
-                    {invoiceFeeReserve && (
+                    {invoiceFeeReserve && invoiceFeeReserve > 0 && (
                       <>
                         <span className="text-xs font-bold pl-2 text-muted-foreground">
                           + max {formatBalance(invoiceFeeReserve)} fee

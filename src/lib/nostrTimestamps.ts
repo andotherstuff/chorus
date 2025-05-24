@@ -31,4 +31,12 @@ export function getLastEventTimestamp(pubkey: string, kind: number): number | un
   }
 
   return undefined;
+}
+
+/**
+ * Update the stored timestamp for a specific event kind and pubkey
+ */
+export function updateLastEventTimestamp(pubkey: string, kind: number, timestamp: number): void {
+  const key = getStorageKey(pubkey, kind);
+  localStorage.setItem(key, timestamp.toString());
 } 

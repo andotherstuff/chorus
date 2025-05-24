@@ -5,7 +5,7 @@ import { CASHU_EVENT_KINDS, CashuWalletStruct, CashuToken, activateMint, updateM
 import { nip44, NostrEvent, getPublicKey } from 'nostr-tools';
 import { useCashuStore, Nip60TokenEvent } from '@/stores/cashuStore';
 import { Proof } from '@cashu/cashu-ts';
-import { getLastEventTimestamp } from '@/lib/nostrTimestamps';
+import { getLastEventTimestamp, updateLastEventTimestamp } from '@/lib/nostrTimestamps';
 import { NSchema as n } from '@nostrify/nostrify';
 import { z } from 'zod';
 import { useNutzaps } from '@/hooks/useNutzaps';
@@ -190,8 +190,12 @@ export function useCashuWallet() {
       }
 
       const nip60TokenEvents: Nip60TokenEvent[] = [];
+      let maxTimestamp = lastTimestamp || 0;
 
-      for (const event of events) {
+      // Sort events by created_at to process them in order
+      const sortedEvents = events.sort((a, b) => a.created_at - b.created_at);
+
+      for (const event of sortedEvents) {
         try {
           if (!user.signer.nip44) {
             throw new Error('NIP-44 encryption not supported by your signer');
@@ -200,17 +204,46 @@ export function useCashuWallet() {
           const decrypted = await user.signer.nip44.decrypt(user.pubkey, event.content);
           const tokenData = JSON.parse(decrypted) as CashuToken;
 
+          // Handle deletions first if present
+          if (tokenData.del && Array.isArray(tokenData.del)) {
+            for (const eventIdToDelete of tokenData.del) {
+              // Get all proofs associated with this event ID
+              const proofsToCheck = cashuStore.getProofsByEventId(eventIdToDelete);
+              
+              // Filter out proofs that are NOT in the new token's proofs
+              const proofsToRemove = proofsToCheck.filter(oldProof => 
+                !tokenData.proofs.some(newProof => 
+                  newProof.secret === oldProof.secret && 
+                  newProof.C === oldProof.C
+                )
+              );
+              
+              if (proofsToRemove.length > 0) {
+                cashuStore.removeProofs(proofsToRemove);
+              }
+            }
+          }
+
           nip60TokenEvents.push({
             id: event.id,
             token: tokenData,
             createdAt: event.created_at
           });
+          
           // add proofs to store
           cashuStore.addProofs(tokenData.proofs, event.id);
+
+          // Track the maximum timestamp
+          maxTimestamp = Math.max(maxTimestamp, event.created_at);
 
         } catch (error) {
           console.error('Failed to decrypt token data:', error);
         }
+      }
+
+      // Update the last timestamp if we processed any events
+      if (sortedEvents.length > 0 && maxTimestamp > (lastTimestamp || 0)) {
+        updateLastEventTimestamp(user.pubkey, CASHU_EVENT_KINDS.TOKEN, maxTimestamp);
       }
 
       return nip60TokenEvents;
