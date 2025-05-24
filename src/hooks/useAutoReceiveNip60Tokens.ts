@@ -3,12 +3,16 @@ import { useNostr } from '@/hooks/useNostr';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCashuWallet } from '@/hooks/useCashuWallet';
 import { useCashuStore, Nip60TokenEvent } from '@/stores/cashuStore';
-import { CASHU_EVENT_KINDS, CashuToken } from '@/lib/cashu';
+import { CASHU_EVENT_KINDS, CashuToken, calculateBalance } from '@/lib/cashu';
 import { getLastEventTimestamp, updateLastEventTimestamp } from '@/lib/nostrTimestamps';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Proof } from '@cashu/cashu-ts';
 import { NostrEvent, NostrFilter } from '@nostrify/nostrify';
+import { useCashuToken } from '@/hooks/useCashuToken';
+import { formatBalance } from '@/lib/cashu';
+import { useBitcoinPrice, satsToUSD, formatUSD } from '@/hooks/useBitcoinPrice';
+import { useCurrencyDisplayStore } from '@/stores/currencyDisplayStore';
 
 /**
  * Hook that automatically receives NIP-60 token events (kind 7375) when the wallet is loaded
@@ -20,10 +24,23 @@ export function useAutoReceiveNip60Tokens() {
   const { wallet } = useCashuWallet();
   const cashuStore = useCashuStore();
   const queryClient = useQueryClient();
+  const { cleanSpentProofs } = useCashuToken();
+  const { showSats } = useCurrencyDisplayStore();
+  const { data: btcPrice } = useBitcoinPrice();
 
   // Keep track of processed event IDs to avoid duplicates
   const processedEventIds = useRef<Set<string>>(new Set());
   const subscriptionController = useRef<AbortController | null>(null);
+
+  // Format amount based on user preference
+  const formatAmount = useCallback((sats: number) => {
+    if (showSats) {
+      return formatBalance(sats);
+    } else if (btcPrice) {
+      return formatUSD(satsToUSD(sats, btcPrice.USD));
+    }
+    return formatBalance(sats);
+  }, [showSats, btcPrice]);
 
   // Process a new token event
   const processTokenEvent = useCallback(async (event: NostrEvent) => {
@@ -43,6 +60,10 @@ export function useAutoReceiveNip60Tokens() {
       const tokenData = JSON.parse(decrypted) as CashuToken;
 
       console.log('Processing NIP-60 token event:', event.id, tokenData);
+
+      // Calculate balance before changes
+      const balancesBefore = calculateBalance(cashuStore.proofs);
+      const totalBefore = Object.values(balancesBefore).reduce((sum, balance) => sum + balance, 0);
 
       // Handle deletions first if present
       if (tokenData.del && Array.isArray(tokenData.del)) {
@@ -70,17 +91,42 @@ export function useAutoReceiveNip60Tokens() {
       // Add the new proofs to the store
       cashuStore.addProofs(tokenData.proofs, event.id);
 
+      // Clean spent proofs for the mint
+      if (tokenData.mint) {
+        try {
+          await cleanSpentProofs(tokenData.mint);
+        } catch (error) {
+          console.error('Error cleaning spent proofs:', error);
+        }
+      }
+
+      // Calculate balance after changes
+      const balancesAfter = calculateBalance(cashuStore.proofs);
+      const totalAfter = Object.values(balancesAfter).reduce((sum, balance) => sum + balance, 0);
+      const balanceChange = totalAfter - totalBefore;
+
       // Update the last processed timestamp
       updateLastEventTimestamp(user.pubkey, CASHU_EVENT_KINDS.TOKEN, event.created_at);
 
-      // Calculate the amount
-      const amount = tokenData.proofs.reduce((sum, p) => sum + p.amount, 0);
+      // // Show notification with balance change
+      // if (balanceChange !== 0) {
+      //   const changeText = balanceChange > 0 
+      //     ? `You have received ${formatAmount(balanceChange)}`
+      //     : `You have sent ${formatAmount(Math.abs(balanceChange))}`;
 
-      // Show a subtle notification
-      toast.info(`Wallet synchronized`, {
-        description: `${tokenData.proofs.length} proofs updated${tokenData.del ? `, ${tokenData.del.length} old events cleaned up` : ''}`,
-        duration: 3000,
-      });
+      //   toast.info('Wallet synchronized', {
+      //     description: changeText,
+      //     duration: 3000,
+      //   });
+      // } else {
+      //   // Only show sync message if proofs were updated but balance didn't change
+      //   if (tokenData.proofs.length > 0 || (tokenData.del && tokenData.del.length > 0)) {
+      //     toast.info('Wallet synchronized', {
+      //       description: `${tokenData.proofs.length} proofs updated`,
+      //       duration: 3000,
+      //     });
+      //   }
+      // }
 
       // Invalidate the tokens query to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['cashu', 'tokens', user.pubkey] });
@@ -88,7 +134,7 @@ export function useAutoReceiveNip60Tokens() {
     } catch (error) {
       console.error('Failed to process NIP-60 token event:', error);
     }
-  }, [user, cashuStore, queryClient]);
+  }, [user, cashuStore, queryClient, cleanSpentProofs, formatAmount]);
 
   // Set up real-time subscription
   useEffect(() => {
