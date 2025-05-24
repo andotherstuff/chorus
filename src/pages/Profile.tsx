@@ -1064,7 +1064,7 @@ export default function Profile() {
         <Header />
         <div className="space-y-6 my-6">
           {/* Profile info skeleton - matches new layout */}
-          <div className="relative mb-6 mt-4">
+          <div className="max-w-3xl mx-auto relative mb-6 mt-4">
             {/* Top row: Avatar and name/username side by side */}
             <div className="flex items-center gap-4 mb-4">
               <Skeleton className="h-20 w-20 rounded-full border-4 border-background shadow-md" />
@@ -1080,9 +1080,9 @@ export default function Profile() {
             {/* Middle row: Bio */}
             <div className="w-full mb-4">
               <div className="space-y-2">
-                <Skeleton className="h-4 w-full max-w-2xl" />
-                <Skeleton className="h-4 w-5/6 max-w-2xl" />
-                <Skeleton className="h-4 w-4/6 max-w-xl" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
               </div>
             </div>
 
@@ -1143,7 +1143,7 @@ export default function Profile() {
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
 
-      <div className="relative mb-6 mt-4">
+      <div className="max-w-3xl mx-auto relative mb-6 mt-4">
         {/* Top row: Avatar and name/username side by side */}
         <div className="flex items-center gap-4 mb-4">
           <Avatar className="h-20 w-20 rounded-full border-4 border-background shadow-md">
@@ -1230,87 +1230,89 @@ export default function Profile() {
         displayName={displayNameFull}
       />
 
-      <Tabs value={activeTab} defaultValue="posts" onValueChange={(value) => {
-        setActiveTab(value);
-        // Update URL hash without full page reload
-        window.history.pushState(null, '', `#${value}`);
-      }} className="w-full">
-        <div className="md:flex md:justify-start">
-          <TabsList className="mb-4 w-full md:w-auto flex">
-            <TabsTrigger value="posts" className="flex-1 md:flex-none">
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Posts
-            </TabsTrigger>
+      <div className="max-w-3xl mx-auto">
+        <Tabs value={activeTab} defaultValue="posts" onValueChange={(value) => {
+          setActiveTab(value);
+          // Update URL hash without full page reload
+          window.history.pushState(null, '', `#${value}`);
+        }} className="w-full">
+          <div className="md:flex md:justify-start">
+            <TabsList className="mb-4 w-full md:w-auto flex">
+              <TabsTrigger value="posts" className="flex-1 md:flex-none">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Posts
+              </TabsTrigger>
 
-            <TabsTrigger value="groups" className="flex-1 md:flex-none">
-              <Users className="h-4 w-4 mr-2" />
-              Groups
-            </TabsTrigger>
-          </TabsList>
-        </div>
+              <TabsTrigger value="groups" className="flex-1 md:flex-none">
+                <Users className="h-4 w-4 mr-2" />
+                Groups
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="posts" className="space-y-4">
-          <div className="max-w-3xl mx-auto">
-            {isLoadingPosts ? (
-              <div className="space-y-0">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className={`py-4 ${i < 3 ? 'border-b-2 border-border/70' : ''}`}>
-                    <div className="px-3">
-                      <div className="flex flex-row items-center pb-2">
-                        <Skeleton className="h-9 w-9 rounded-md mr-2.5" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-24" />
+          <TabsContent value="posts" className="space-y-4">
+            <div className="w-full">
+              {isLoadingPosts ? (
+                <div className="space-y-0">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className={`py-4 ${i < 3 ? 'border-b-2 border-border/70' : ''}`}>
+                      <div className="px-3">
+                        <div className="flex flex-row items-center pb-2">
+                          <Skeleton className="h-9 w-9 rounded-md mr-2.5" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="pt-1 pb-2 pl-[2.875rem]">
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-2/3" />
-                      </div>
-                      <div className="pt-1.5 pl-[2.875rem]">
-                        <div className="flex gap-4">
-                          <Skeleton className="h-7 w-7" />
-                          <Skeleton className="h-7 w-7" />
-                          <Skeleton className="h-7 w-7" />
+                        <div className="pt-1 pb-2 pl-[2.875rem]">
+                          <Skeleton className="h-4 w-full mb-2" />
+                          <Skeleton className="h-4 w-full mb-2" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="pt-1.5 pl-[2.875rem]">
+                          <div className="flex gap-4">
+                            <Skeleton className="h-7 w-7" />
+                            <Skeleton className="h-7 w-7" />
+                            <Skeleton className="h-7 w-7" />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : posts && posts.length > 0 ? (
-              <div className="space-y-0">
-                {posts.map((post, index) => (
-                  <PostCard 
-                    key={post.id} 
-                    post={post} 
-                    profileImage={profileImage}
-                    displayName={displayName}
-                    displayNameFull={displayNameFull}
-                    isLastItem={index === posts.length - 1}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center border border-border/30 rounded-md bg-card">
-                <p className="text-muted-foreground">No posts from this user yet</p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
+                  ))}
+                </div>
+              ) : posts && posts.length > 0 ? (
+                <div className="space-y-0">
+                  {posts.map((post, index) => (
+                    <PostCard 
+                      key={post.id} 
+                      post={post} 
+                      profileImage={profileImage}
+                      displayName={displayName}
+                      displayNameFull={displayNameFull}
+                      isLastItem={index === posts.length - 1}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center border border-border/30 rounded-md bg-card">
+                  <p className="text-muted-foreground">No posts from this user yet</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
 
-        <TabsContent value="groups" className="space-y-4">
-          <div className="max-w-3xl mx-auto pb-6">
-            <UserGroupsList 
-              groups={userGroups} 
-              isLoading={isLoadingGroups} 
-              profileUserPubkey={pubkey || ""} 
-              sharedGroupIds={sharedGroupIds}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="groups" className="space-y-4">
+            <div className="w-full pb-6">
+              <UserGroupsList 
+                groups={userGroups} 
+                isLoading={isLoadingGroups} 
+                profileUserPubkey={pubkey || ""} 
+                sharedGroupIds={sharedGroupIds}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
