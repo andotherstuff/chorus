@@ -1069,12 +1069,10 @@ export default function Profile() {
             <div className="flex items-center gap-4 mb-4">
               <Skeleton className="h-20 w-20 rounded-full border-4 border-background shadow-md" />
               <div className="flex flex-col gap-1 flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Skeleton className="h-8 w-48" />
                   <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
                 </div>
                 <Skeleton className="h-4 w-32" />
               </div>
@@ -1155,23 +1153,21 @@ export default function Profile() {
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col gap-1 flex-1">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold">{displayNameFull}</h1>
-                {nip05 && nip05Verification?.isVerified && (
-                  <VerifiedNip05 nip05={nip05} pubkey={pubkey || ""} />
-                )}
-              </div>
-              {/* QR Code button - icon only, positioned to the right */}
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold">{displayNameFull}</h1>
+              {/* QR Code button - icon only, right next to name */}
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="h-8 w-8 ml-2"
+                className="h-8 w-8"
                 onClick={() => setShowQRCode(true)}
               >
                 <QrCode className="h-4 w-4" />
                 <span className="sr-only">Show QR Code</span>
               </Button>
+              {nip05 && nip05Verification?.isVerified && (
+                <VerifiedNip05 nip05={nip05} pubkey={pubkey || ""} />
+              )}
             </div>
             {displayName !== displayNameFull && (
               <p className="text-sm text-muted-foreground">@{displayName}</p>
