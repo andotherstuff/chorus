@@ -1068,10 +1068,13 @@ export default function Profile() {
             {/* Top row: Avatar and name/username side by side */}
             <div className="flex items-center gap-4 mb-4">
               <Skeleton className="h-20 w-20 rounded-full border-4 border-background shadow-md" />
-              <div className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Skeleton className="h-8 w-48" />
-                  <Skeleton className="h-5 w-16 rounded-full" />
+              <div className="flex flex-col gap-1 flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-md" />
                 </div>
                 <Skeleton className="h-4 w-32" />
               </div>
@@ -1088,7 +1091,6 @@ export default function Profile() {
 
             {/* Bottom row: Action buttons */}
             <div className="flex flex-wrap gap-2">
-              <Skeleton className="h-8 w-20 rounded-md" />
               <Skeleton className="h-8 w-20 rounded-md" />
               <Skeleton className="h-8 w-24 rounded-md" />
             </div>
@@ -1152,12 +1154,24 @@ export default function Profile() {
               {displayName.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold">{displayNameFull}</h1>
-              {nip05 && nip05Verification?.isVerified && (
-                <VerifiedNip05 nip05={nip05} pubkey={pubkey || ""} />
-              )}
+          <div className="flex flex-col gap-1 flex-1">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold">{displayNameFull}</h1>
+                {nip05 && nip05Verification?.isVerified && (
+                  <VerifiedNip05 nip05={nip05} pubkey={pubkey || ""} />
+                )}
+              </div>
+              {/* QR Code button - icon only, positioned to the right */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 ml-2"
+                onClick={() => setShowQRCode(true)}
+              >
+                <QrCode className="h-4 w-4" />
+                <span className="sr-only">Show QR Code</span>
+              </Button>
             </div>
             {displayName !== displayNameFull && (
               <p className="text-sm text-muted-foreground">@{displayName}</p>
@@ -1193,17 +1207,6 @@ export default function Profile() {
               </a>
             </Button>
           )}
-
-          {/* QR Code button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setShowQRCode(true)}
-          >
-            <QrCode className="h-4 w-4" />
-            QR Code
-          </Button>
 
           {/* Edit Profile button - only for current user */}
           {isCurrentUser && (
