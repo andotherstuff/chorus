@@ -60,16 +60,16 @@ export function parseNip29Group(event: NostrEvent, relay: string): Nip29Group | 
   
   // For kind 39000 (group metadata), parse the group information
   if (event.kind === 39000) {
-    const hTag = event.tags.find(tag => tag[0] === "h"); // group id
+    const dTag = event.tags.find(tag => tag[0] === "d"); // group id for addressable events
     const nameTag = event.tags.find(tag => tag[0] === "name");
     const aboutTag = event.tags.find(tag => tag[0] === "about");
     const pictureTag = event.tags.find(tag => tag[0] === "picture");
     const closedTag = event.tags.find(tag => tag[0] === "closed");
     const privateTag = event.tags.find(tag => tag[0] === "private");
     
-    if (!hTag || !hTag[1]) return null;
+    if (!dTag || !dTag[1]) return null;
     
-    const groupId = hTag[1];
+    const groupId = dTag[1];
     const name = nameTag?.[1] || groupId;
     const description = aboutTag?.[1];
     const image = pictureTag?.[1];

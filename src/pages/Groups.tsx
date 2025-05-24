@@ -292,7 +292,15 @@ export default function Groups() {
           </div>
 
           {isLoading ? (
-            renderSkeletons()
+            <div>
+              <div className="text-center py-8">
+                <h2 className="text-xl font-semibold mb-2">Searching for Groups</h2>
+                <p className="text-muted-foreground mb-4">
+                  Finding communities and groups across the network... This might take a moment.
+                </p>
+              </div>
+              {renderSkeletons()}
+            </div>
           ) : allGroups &&
             sortedAndFilteredGroups &&
             sortedAndFilteredGroups.length > 0 ? (

@@ -63,7 +63,7 @@ export function EnhancedNostrProvider({
   // Preconnect to known NIP-29 relays
   const nip29Relays = useMemo(() => [
     nip29DefaultRelay,
-    'wss://relays.groups.nip29.com',
+    // 'wss://relays.groups.nip29.com', // Temporarily disabled - causing crashes
     'wss://groups.fiatjaf.com'
   ], [nip29DefaultRelay]);
   
