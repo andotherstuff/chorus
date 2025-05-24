@@ -22,7 +22,7 @@ interface CashuStore {
   pendingOnboardingToken?: string;
 
   addMint: (url: string) => void;
-  getMint: (url: string) => { url: string, mintInfo?: GetInfoResponse, keysets?: MintKeyset[], keys?: Record<string, MintKeys>[], events?: Nip60TokenEvent[], mintQuotes?: Record<string, MintQuoteResponse>, meltQuotes?: Record<string, MeltQuoteResponse> };
+  getMint: (url: string) => { url: string, mintInfo?: GetInfoResponse, keysets?: MintKeyset[], keys?: Record<string, MintKeys>[], events?: Nip60TokenEvent[], mintQuotes?: Record<string, MintQuoteResponse>, meltQuotes?: Record<string, MeltQuoteResponse>, error?: string };
   setMintInfo: (url: string, mintInfo: GetInfoResponse) => void;
   setKeysets: (url: string, keysets: MintKeyset[]) => void;
   setKeys: (url: string, keys: Record<string, MintKeys>[]) => void;

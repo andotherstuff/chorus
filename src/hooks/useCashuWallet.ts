@@ -75,21 +75,36 @@ export function useCashuWallet() {
 
         // fetch the mint info and keysets for each mint
         await Promise.all(walletData.mints.map(async (mint) => {
+          // Check if this mint has already failed before
+          const existingMint = cashuStore.getMint(mint);
+          if (existingMint.error) {
+            console.log(`Skipping ${mint} - previously failed with: ${existingMint.error}`);
+            return;
+          }
+
+          // Check if mint is already activated
+          if (existingMint.mintInfo && existingMint.keysets) {
+            console.log(`Mint ${mint} already activated, skipping`);
+            return;
+          }
+
           try {
+            console.log(`Activating mint: ${mint}`);
             const { mintInfo, keysets } = await activateMint(mint);
             cashuStore.addMint(mint);
             cashuStore.setMintInfo(mint, mintInfo);
             cashuStore.setKeysets(mint, keysets);
             const { keys } = await updateMintKeys(mint, keysets);
             cashuStore.setKeys(mint, keys);
+            console.log(`Successfully activated mint: ${mint}`);
           } catch (error) {
             console.error(`Failed to activate mint ${mint}:`, error);
             // Check if it's a CORS error
             const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
             if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
               console.log(`Skipping ${mint} due to CORS policy`);
-              // Don't store CORS errors as they're expected for some mints
-              // Just skip this mint silently
+              // Store CORS errors so we don't retry them
+              cashuStore.setMintError(mint, 'CORS: Cannot access from browser');
             } else {
               // Store other errors
               cashuStore.setMintError(mint, errorMessage);
@@ -115,10 +130,19 @@ export function useCashuWallet() {
       }
     },
     enabled: !!user,
-    retry: 1, // Only retry once on failure
-    retryDelay: 1000, // Wait 1 second before retry
-    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    retry: (failureCount, error) => {
+      // Don't retry if it's a decryption error or user-related error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('decrypt') || errorMessage.includes('not logged in') || errorMessage.includes('NIP-44')) {
+        return false;
+      }
+      // Only retry once for other errors
+      return failureCount < 1;
+    },
+    retryDelay: 2000, // Wait 2 seconds before retry
+    staleTime: 10 * 60 * 1000, // Consider data stale after 10 minutes (increased)
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid repeated attempts
+    refetchOnMount: false, // Don't automatically refetch on component mount
   });
 
   // Create or update wallet
