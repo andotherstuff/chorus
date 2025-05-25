@@ -113,8 +113,8 @@ const Index = () => {
       // Query the wallet when user logs in
       if (wallet) {
         console.log("User wallet found:", wallet);
-        // Wallet exists, redirect to posts
-        navigate("/posts", { replace: true });
+        // Wallet exists, redirect to groups
+        navigate("/groups", { replace: true });
       } else if (isLoading) {
         // Wait for wallet query to complete
         console.log("Fetching wallet data...");
@@ -123,11 +123,11 @@ const Index = () => {
         console.log("No wallet found for user");
         createCashuWallet()
           .then(() => {
-            navigate("/posts", { replace: true });
+            navigate("/groups", { replace: true });
           })
           .catch((error) => {
             console.error("Failed to create wallet:", error);
-            navigate("/posts", { replace: true });
+            navigate("/groups", { replace: true });
           });
       }
     }
@@ -284,10 +284,10 @@ const Index = () => {
     );
   }
 
-  // Fallback (should redirect to /posts in most cases)
+  // Fallback (should redirect to /groups in most cases)
   return (
     <div className="min-h-[calc(100vh-3rem)] md:min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
-      <div>Loading posts...</div>
+      <div>Loading groups...</div>
     </div>
   );
 };
