@@ -34,7 +34,7 @@ interface NotificationTarget {
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     console.log('Scheduled event triggered:', event.scheduledTime);
-    
+
     try {
       await pollRelayForUpdates(env, ctx);
     } catch (error) {
@@ -44,7 +44,7 @@ export default {
 
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    
+
     try {
       switch (url.pathname) {
         case '/heartbeat': {
@@ -69,50 +69,50 @@ export default {
 async function pollRelayForUpdates(env: Env, ctx: ExecutionContext): Promise<void> {
   const relayUrl = env.RELAY_URL;
   const relayId = new URL(relayUrl).hostname;
-  
+
   // Get the last seen timestamp for this relay
   const lastSeenKey = `relay_last_seen:${relayId}`;
   const lastSeen = await env.KV.get(lastSeenKey);
   const since = lastSeen ? parseInt(lastSeen) : Math.floor(Date.now() / 1000) - 3600; // Default to 1 hour ago
-  
+
   console.log(`Polling ${relayUrl} for events since ${since}`);
-  
+
   try {
     // Connect to relay and fetch new events
     const events = await fetchEventsFromRelay(relayUrl, since);
     console.log(`Fetched ${events.length} new events from relay`);
-    
+
     let newestTimestamp = since;
-    
+
     for (const event of events) {
       // Track newest event timestamp
       if (event.created_at > newestTimestamp) {
         newestTimestamp = event.created_at;
       }
-      
+
       // Check if we've already processed this event (deduplication)
       const eventCacheKey = `event_cache:${event.id}`;
       const cached = await env.KV.get(eventCacheKey);
-      
+
       if (cached) {
         console.log(`Skipping already processed event: ${event.id}`);
         continue;
       }
-      
+
       // Process the event for notifications
       ctx.waitUntil(processEventForNotifications(event, env));
-      
+
       // Cache the event to prevent reprocessing
       ctx.waitUntil(
         env.KV.put(eventCacheKey, JSON.stringify(event), { expirationTtl: 3600 })
       );
     }
-    
+
     // Update the last seen timestamp
     if (events.length > 0) {
       await env.KV.put(lastSeenKey, newestTimestamp.toString());
     }
-    
+
   } catch (error) {
     console.error('Error polling relay:', error);
   }
@@ -123,19 +123,19 @@ async function pollRelayForUpdates(env: Env, ctx: ExecutionContext): Promise<voi
  */
 async function fetchEventsFromRelay(relayUrl: string, since: number): Promise<RelayEvent[]> {
   const events: RelayEvent[] = [];
-  
+
   // Create WebSocket connection to relay
   const ws = new WebSocket(relayUrl);
-  
+
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       ws.close();
       reject(new Error('WebSocket timeout'));
     }, 10000); // 10 second timeout
-    
+
     ws.onopen = () => {
       console.log('Connected to relay:', relayUrl);
-      
+
       // Request events from relay
       // NIP-72 public groups are kind 34550, and we want events in/about groups
       const filter = {
@@ -143,18 +143,18 @@ async function fetchEventsFromRelay(relayUrl: string, since: number): Promise<Re
         since: since,
         limit: 100
       };
-      
+
       const subscription = JSON.stringify(['REQ', 'sub1', filter]);
       ws.send(subscription);
     };
-    
+
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        
+
         if (message[0] === 'EVENT' && message[2]) {
           const nostrEvent = message[2] as RelayEvent;
-          
+
           // Verify event signature
           if (verifyEvent(nostrEvent)) {
             events.push(nostrEvent);
@@ -171,13 +171,13 @@ async function fetchEventsFromRelay(relayUrl: string, since: number): Promise<Re
         console.error('Error parsing relay message:', error);
       }
     };
-    
+
     ws.onerror = (error) => {
       clearTimeout(timeout);
       console.error('WebSocket error:', error);
       reject(error);
     };
-    
+
     ws.onclose = () => {
       clearTimeout(timeout);
     };
@@ -189,13 +189,13 @@ async function fetchEventsFromRelay(relayUrl: string, since: number): Promise<Re
  */
 async function processEventForNotifications(event: RelayEvent, env: Env): Promise<void> {
   const targets = await determineNotificationTargets(event, env);
-  
+
   if (targets.length === 0) {
     return;
   }
-  
+
   console.log(`Event ${event.id} has ${targets.length} notification targets`);
-  
+
   // Queue push notifications for each target
   for (const target of targets) {
     await queuePushNotification(target, event, env);
@@ -207,10 +207,10 @@ async function processEventForNotifications(event: RelayEvent, env: Env): Promis
  */
 async function determineNotificationTargets(event: RelayEvent, env: Env): Promise<NotificationTarget[]> {
   const targets: NotificationTarget[] = [];
-  
+
   // Get currently online users (for normal priority events)
   const onlineUsers = await getCurrentlyOnlineUsers(env);
-  
+
   switch (event.kind) {
     case 1: // Text note {
     { // Text note
@@ -223,7 +223,7 @@ async function determineNotificationTargets(event: RelayEvent, env: Env): Promis
           reason: 'mention'
         });
       }
-      
+
       // Check if this is posted in a group context
       const groupTag = event.tags.find(tag => tag[0] === 'a');
       if (groupTag) {
@@ -240,7 +240,7 @@ async function determineNotificationTargets(event: RelayEvent, env: Env): Promis
         }
       }
       break;
-      
+
     case 7: // Reaction {
     { // Reaction
 }      // Notify the author of the reacted-to event
@@ -256,7 +256,7 @@ async function determineNotificationTargets(event: RelayEvent, env: Env): Promis
         }
       }
       break;
-      
+
     case 4550: // Group admission {
 }    case 4551: // Group removal {
 }      // Notify group moderators
@@ -272,7 +272,7 @@ async function determineNotificationTargets(event: RelayEvent, env: Env): Promis
         }
       }
       break;
-      
+
     case 1984: // Report {
 }      // Notify group moderators
       const reportGroupRef = event.tags.find(tag => tag[0] === 'a')?.[1];
@@ -288,12 +288,12 @@ async function determineNotificationTargets(event: RelayEvent, env: Env): Promis
       }
       break;
   }
-  
+
   // Remove duplicates
-  const uniqueTargets = targets.filter((target, index) => 
+  const uniqueTargets = targets.filter((target, index) =>
     targets.findIndex(t => t.userId === target.userId) === index
   );
-  
+
   return uniqueTargets;
 }
 
@@ -303,7 +303,7 @@ async function determineNotificationTargets(event: RelayEvent, env: Env): Promis
 async function queuePushNotification(target: NotificationTarget, event: RelayEvent, env: Env): Promise<void> {
   try {
     const notificationPayload = createNotificationPayload(target, event);
-    
+
     const response = await fetch(`${env.PUSH_DISPATCH_API}/push/dispatch`, {
       method: 'POST',
       headers: {
@@ -315,13 +315,13 @@ async function queuePushNotification(target: NotificationTarget, event: RelayEve
         event: notificationPayload
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error(`Push dispatch failed: ${response.status} ${response.statusText}`);
     }
-    
+
     console.log(`Push notification queued for user ${target.userId}`);
-    
+
   } catch (error) {
     console.error('Error queueing push notification:', error);
     // Could implement retry logic here
@@ -334,10 +334,10 @@ async function queuePushNotification(target: NotificationTarget, event: RelayEve
 function createNotificationPayload(target: NotificationTarget, event: RelayEvent): any {
   let title = 'New Activity';
   let body = 'You have new activity on +chorus';
-  
+
   const groupTag = event.tags.find(tag => tag[0] === 'a');
   const groupId = groupTag?.[1];
-  
+
   switch (event.kind) {
     case 1: {
     { // Text note
@@ -349,34 +349,34 @@ function createNotificationPayload(target: NotificationTarget, event: RelayEvent
         body = 'New activity in a group you follow';
       }
       break;
-      
+
     case 7: {
     { // Reaction
 }      title = 'New reaction';
       body = 'Someone reacted to your post';
       break;
-      
+
     case 4550: {
 }      title = 'Post approved';
       body = 'A post was approved in your group';
       break;
-      
+
     case 4551: {
 }      title = 'Post removed';
       body = 'A post was removed from your group';
       break;
-      
+
     case 1984: {
 }      title = 'New report';
       body = 'A new report needs your attention';
       break;
   }
-  
+
   return {
     title,
     body,
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
+    icon: '/web-app-manifest-192x192.png',
+    badge: '/web-app-manifest-192x192.png',
     data: {
       eventId: event.id,
       groupId,
@@ -415,19 +415,19 @@ async function handleHeartbeat(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'PUT') {
     return new Response('Method not allowed', { status: 405 });
   }
-  
+
   try {
     const { userId } = await request.json() as { userId: string };
-    
+
     if (!userId) {
       return new Response('Missing userId', { status: 400 });
     }
-    
+
     // Update user's online status with 15-minute TTL
-    await env.KV.put(`online_users:${userId}`, Date.now().toString(), { 
-      expirationTtl: 900 
+    await env.KV.put(`online_users:${userId}`, Date.now().toString(), {
+      expirationTtl: 900
     });
-    
+
     return new Response('OK');
   } catch (error) {
     console.error('Error handling heartbeat:', error);
@@ -445,7 +445,7 @@ async function handleHealthCheck(env: Env): Promise<Response> {
     relay: env.RELAY_URL,
     version: '1.0.0'
   };
-  
+
   return new Response(JSON.stringify(health), {
     headers: { 'Content-Type': 'application/json' }
   });
@@ -457,12 +457,12 @@ async function handleHealthCheck(env: Env): Promise<Response> {
 async function handleStats(env: Env): Promise<Response> {
   // Get some basic stats from KV
   const onlineUsersCount = await getCurrentlyOnlineUsers(env).then(users => users.size);
-  
+
   const stats = {
     onlineUsers: onlineUsersCount,
     timestamp: Date.now()
   };
-  
+
   return new Response(JSON.stringify(stats), {
     headers: { 'Content-Type': 'application/json' }
   });
@@ -495,7 +495,7 @@ async function getEventById(eventId: string, env: Env): Promise<RelayEvent | nul
   if (cached) {
     return JSON.parse(cached);
   }
-  
+
   // Would need to query relay if not cached
   return null;
 }

@@ -99,7 +99,7 @@ self.addEventListener('push', evt => {
     Promise.all([
       self.registration.showNotification(data.title, {
         body: data.body,
-        icon: '/icons/icon-192.png',
+        icon: '/web-app-manifest-192x192.png',
         data
       }),
       self.clients.matchAll({ type: 'window', includeUncontrolled: true })

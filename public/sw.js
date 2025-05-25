@@ -20,12 +20,12 @@ self.addEventListener('fetch', (event) => {
 // Push event - handle incoming push notifications
 self.addEventListener('push', (event) => {
   console.log('Push event received:', event);
-  
+
   let notificationData = {
     title: 'New activity',
     body: 'You have new activity on +chorus',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
+    icon: '/web-app-manifest-192x192.png',
+    badge: '/web-app-manifest-192x192.png',
     data: {}
   };
 
@@ -57,14 +57,14 @@ self.addEventListener('push', (event) => {
   );
 
   // Notify any open tabs about the new notification
-  const notifyTabsPromise = self.clients.matchAll({ 
-    type: 'window', 
-    includeUncontrolled: true 
+  const notifyTabsPromise = self.clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true
   }).then(clients => {
     clients.forEach(client => {
-      client.postMessage({ 
+      client.postMessage({
         type: 'NEW_NOTIFICATION',
-        data: notificationData 
+        data: notificationData
       });
     });
   });
@@ -77,22 +77,22 @@ self.addEventListener('push', (event) => {
 // Notification click event - handle clicks on notifications
 self.addEventListener('notificationclick', (event) => {
   console.log('Notification click event:', event);
-  
+
   event.notification.close();
 
   const notificationData = event.notification.data || {};
-  
+
   // Determine the URL to open based on notification data
   let urlToOpen = '/notifications';
-  
+
   if (notificationData.groupId) {
     urlToOpen = `/group/${notificationData.groupId}`;
-    
+
     // Add specific parameters based on notification type
     if (notificationData.eventId) {
       urlToOpen += `?post=${notificationData.eventId}`;
     }
-    
+
     if (notificationData.type === 'join_request') {
       urlToOpen += '#members?membersTab=requests';
     } else if (notificationData.type === 'report') {
@@ -115,7 +115,7 @@ self.addEventListener('notificationclick', (event) => {
         return client.focus();
       }
     }
-    
+
     // No window open, open a new one
     const fullUrl = new URL(urlToOpen, self.location.origin).href;
     return self.clients.openWindow(fullUrl);
@@ -140,7 +140,7 @@ async function syncNotifications() {
 // Handle push subscription changes
 self.addEventListener('pushsubscriptionchange', (event) => {
   console.log('Push subscription changed:', event);
-  
+
   const resubscribePromise = self.registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: null // Will need to be set with VAPID key

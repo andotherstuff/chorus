@@ -32,8 +32,8 @@ webpush.setVapidDetails(
 const payload = JSON.stringify({
   title: 'Test Push Notification',
   body: 'If you can see this, push notifications are working!',
-  icon: '/icons/icon-192x192.png',
-  badge: '/icons/icon-192x192.png',
+  icon: '/web-app-manifest-192x192.png',
+  badge: '/web-app-manifest-192x192.png',
   data: {
     eventId: 'test-' + Date.now(),
     type: 'test',
@@ -45,7 +45,7 @@ const payload = JSON.stringify({
 async function sendTestNotification() {
   try {
     console.log('Sending test notification...');
-    
+
     const response = await webpush.sendNotification(
       pushSubscription,
       payload,
@@ -54,17 +54,17 @@ async function sendTestNotification() {
         urgency: 'normal'
       }
     );
-    
+
     console.log('✓ Notification sent successfully!');
     console.log('Response:', response.statusCode, response.headers);
-    
+
   } catch (error) {
     console.error('✗ Failed to send notification:', error.message);
-    
+
     if (error.statusCode) {
       console.error('Status Code:', error.statusCode);
     }
-    
+
     if (error.body) {
       console.error('Response Body:', error.body);
     }

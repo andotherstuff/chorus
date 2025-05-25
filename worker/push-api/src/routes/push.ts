@@ -58,13 +58,13 @@ router.post('/test', async (req: AuthRequest, res, next) => {
 
   try {
     const { title, body } = testNotificationSchema.parse(req.body);
-    
+
     // For testing, we'll send to all subscriptions
     const testEvent = {
       title,
       body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
+      icon: '/web-app-manifest-192x192.png',
+      badge: '/web-app-manifest-192x192.png',
       data: {
         eventId: 'test-' + Date.now(),
         type: 'test',
