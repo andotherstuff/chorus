@@ -477,9 +477,9 @@ export default function Posts() {
 
   // Query for posts from user's groups
   const { data: posts, isLoading: isLoadingPosts } = useQuery({
-    queryKey: ["user-group-posts", userGroupIds],
+    queryKey: ["user-group-posts", userGroupIds, user?.pubkey],
     queryFn: async (c) => {
-      if (!userGroupIds.length) return [];
+      if (!userGroupIds.length || !user) return [];
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
 
@@ -490,8 +490,16 @@ export default function Posts() {
         limit: 100,
       }], { signal });
 
+      // Get user's own posts from their groups
+      const userPosts = await nostr.query([{
+        kinds: [KINDS.GROUP_POST],
+        authors: [user.pubkey],
+        "#a": userGroupIds,
+        limit: 50,
+      }], { signal });
+
       // Extract the approved posts from the content field and filter out replies
-      const processedPosts = approvedPosts.map(approval => {
+      const processedApprovedPosts = approvedPosts.map(approval => {
         try {
           // Get the kind tag to check if it's a reply
           const kindTag = approval.tags.find(tag => tag[0] === "k");
@@ -527,8 +535,40 @@ export default function Posts() {
         approval: { id: string; pubkey: string; created_at: number; kind: number }
       } => post !== null);
 
+      // Process user's own posts - filter out replies and add auto-approval
+      const processedUserPosts = userPosts
+        .filter(post => {
+          // Exclude posts with kind 1111 (replies)
+          if (post.kind === KINDS.GROUP_POST_REPLY) {
+            return false;
+          }
+
+          // Exclude posts that have an 'e' tag with a 'reply' marker
+          const replyTags = post.tags.filter(tag =>
+            tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
+          );
+
+          return replyTags.length === 0;
+        })
+        .map(post => ({
+          ...post,
+          approval: {
+            id: `user-post-${post.id}`,
+            pubkey: user.pubkey,
+            created_at: post.created_at,
+            autoApproved: true,
+            kind: post.kind
+          }
+        }));
+
+      // Combine all posts and deduplicate by ID
+      const allPosts = [...processedApprovedPosts, ...processedUserPosts];
+      const uniquePosts = allPosts.filter((post, index, self) =>
+        index === self.findIndex(p => p.id === post.id)
+      );
+
       // Sort by creation time (most recent first)
-      return processedPosts.sort((a, b) => b.created_at - a.created_at);
+      return uniquePosts.sort((a, b) => b.created_at - a.created_at);
     },
     enabled: !!nostr && !!user && userGroupIds.length > 0,
   });
@@ -542,7 +582,7 @@ export default function Posts() {
             <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h2 className="text-xl font-semibold mb-2">Welcome to Posts</h2>
             <p className="text-muted-foreground mb-6">
-              See posts from all the groups you're a member of in one place.
+              See all posts from your groups in one place, including your own posts.
             </p>
             <LoginArea />
           </Card>
@@ -635,7 +675,7 @@ export default function Posts() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">Posts</h1>
           <p className="text-muted-foreground">
-            Latest posts from your {userGroups.allGroups.length} group{userGroups.allGroups.length !== 1 ? 's' : ''}
+            Latest posts from your {userGroups.allGroups.length} group{userGroups.allGroups.length !== 1 ? 's' : ''}, including your own posts
           </p>
         </div>
         
