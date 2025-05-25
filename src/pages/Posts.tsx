@@ -675,7 +675,7 @@ export default function Posts() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">Posts</h1>
           <p className="text-muted-foreground">
-            Latest posts from your {userGroups.allGroups.length} group{userGroups.allGroups.length !== 1 ? 's' : ''}, including your own posts
+            Latest posts from your {userGroups.allGroups.length} group{userGroups.allGroups.length !== 1 ? 's' : ''}
           </p>
         </div>
         
