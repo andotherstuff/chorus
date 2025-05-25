@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, Users, Bell } from "lucide-react";
+import { MessageCircle, Users, Bell } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useUnreadNotificationsCount } from "@/hooks/useNotifications";
@@ -18,10 +18,10 @@ export function MobileNavigation() {
 
   const navItems: NavItem[] = [
     {
-      icon: Home,
-      label: "Home",
-      href: "/",
-      isActive: location.pathname === "/",
+      icon: MessageCircle,
+      label: "Posts",
+      href: "/posts",
+      isActive: location.pathname === "/posts",
     },
     {
       icon: Users,

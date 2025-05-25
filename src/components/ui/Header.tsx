@@ -6,7 +6,7 @@ import { useOnboardingStore } from "@/stores/onboardingStore";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type React from "react";
 import { Link } from "react-router-dom";
-import { Home } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 interface HeaderProps {
   className?: string;
@@ -32,8 +32,8 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           </h1>
         </Link>
         {user && (
-          <Link to="/" className="text-gray-500/60 hover:text-gray-700 dark:text-gray-400/60 dark:hover:text-gray-200 transition-all">
-            <Home className="w-5 h-5" />
+          <Link to="/posts" className="text-gray-500/60 hover:text-gray-700 dark:text-gray-400/60 dark:hover:text-gray-200 transition-all">
+            <MessageCircle className="w-5 h-5" />
           </Link>
         )}
       </div>
