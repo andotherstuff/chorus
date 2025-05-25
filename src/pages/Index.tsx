@@ -107,14 +107,14 @@ const Index = () => {
     tokenProcessed,
   ]);
 
-  // Redirect to /groups after user is logged in
+  // Redirect to home feed after user is logged in
   useEffect(() => {
     if (currentUser && !newUser) {
       // Query the wallet when user logs in
       if (wallet) {
         console.log("User wallet found:", wallet);
-        // Wallet exists, redirect to groups
-        navigate("/groups", { replace: true });
+        // Wallet exists, redirect to home feed
+        navigate("/", { replace: true });
       } else if (isLoading) {
         // Wait for wallet query to complete
         console.log("Fetching wallet data...");
@@ -123,11 +123,11 @@ const Index = () => {
         console.log("No wallet found for user");
         createCashuWallet()
           .then(() => {
-            navigate("/groups", { replace: true });
+            navigate("/", { replace: true });
           })
           .catch((error) => {
             console.error("Failed to create wallet:", error);
-            navigate("/groups", { replace: true });
+            navigate("/", { replace: true });
           });
       }
     }
@@ -284,10 +284,10 @@ const Index = () => {
     );
   }
 
-  // Fallback (should redirect to /groups in most cases)
+  // Fallback (should redirect to home feed in most cases)
   return (
     <div className="min-h-[calc(100vh-3rem)] md:min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
-      <div>Loading groups...</div>
+      <div>Loading...</div>
     </div>
   );
 };

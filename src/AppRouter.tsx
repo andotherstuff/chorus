@@ -5,6 +5,7 @@ import { MobileNavigation } from "@/components/MobileNavigation";
 
 // Eagerly load the main pages
 import Index from "./pages/Index";
+import HomeFeed from "./pages/HomeFeed";
 import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import Profile from "./pages/Profile";
@@ -43,7 +44,8 @@ export function AppRouter() {
     <BrowserRouter>
       <div className="min-h-screen pb-12 md:pb-0">
         <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={<HomeFeed />} />
+        <Route path="/onboarding" element={<Index />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/group/:groupId" element={<GroupDetail />} />
         <Route path="/profile/:pubkey" element={<Profile />} />

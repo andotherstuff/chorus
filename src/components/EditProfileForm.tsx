@@ -192,9 +192,9 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({
         Object.keys(data)
       );
 
-      // If this was part of onboarding, navigate to groups page
+      // If this was part of onboarding, navigate to home feed
       if (showSkipLink) {
-        navigate("/groups");
+        navigate("/");
       }
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -299,7 +299,7 @@ export const EditProfileForm: FC<EditProfileFormProps> = ({
                   type="button"
                   variant="link"
                   className="text-muted-foreground"
-                  onClick={() => navigate("/groups")}
+                  onClick={() => navigate("/")}
                 >
                   Skip for now
                 </Button>
