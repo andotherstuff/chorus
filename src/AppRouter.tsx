@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MobileNavigation } from "@/components/MobileNavigation";
 
 // Eagerly load the main pages
 import Index from "./pages/Index";
@@ -40,7 +41,8 @@ function PageLoader() {
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
+      <div className="min-h-screen pb-16 md:pb-0">
+        <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/group/:groupId" element={<GroupDetail />} />
@@ -105,7 +107,9 @@ export function AppRouter() {
             <NotFound />
           </Suspense>
         } />
-      </Routes>
+        </Routes>
+        <MobileNavigation />
+      </div>
     </BrowserRouter>
   );
 }

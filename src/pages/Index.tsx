@@ -182,7 +182,7 @@ const Index = () => {
   if (!currentUser) {
     return (
       <>
-        <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background p-8">
+        <div className="min-h-[calc(100vh-4rem)] md:min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background p-8">
           <div className="w-full max-w-md mx-auto px-8 text-center mb-8">
             <h1 className="text-4xl font-extralight mb-4">
               <div className="flex flex-row items-baseline justify-center flex-wrap">
@@ -269,7 +269,7 @@ const Index = () => {
   if (currentUser && newUser) {
     return (
       <OnboardingContext.Provider value={{ generatedName }}>
-        <div className="min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background">
+        <div className="min-h-[calc(100vh-4rem)] md:min-h-screen flex flex-col items-center justify-center bg-background dark:bg-dark-background">
           <div className="w-full max-w-lg mx-auto p-8">
             <h2 className="text-2xl font-bold mb-4 text-center">
               Set your name and pic
@@ -286,7 +286,7 @@ const Index = () => {
 
   // Fallback (should redirect to /groups in most cases)
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
+    <div className="min-h-[calc(100vh-4rem)] md:min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
       <div>Loading groups...</div>
     </div>
   );
