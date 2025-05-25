@@ -41,7 +41,7 @@ function PageLoader() {
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen pb-16 md:pb-0">
+      <div className="min-h-screen pb-12 md:pb-0">
         <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/groups" element={<Groups />} />
