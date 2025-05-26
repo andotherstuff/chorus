@@ -85,12 +85,12 @@ export default function GroupDetail() {
   const { approvedMembers } = useApprovedMembers(groupId || '');
 
   const isOwner = user && community && user.pubkey === community.pubkey;
-  
+
   // Get moderators from community event
   const moderators = community?.tags
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
     .map(tag => tag[1]) || [];
-  
+
   const isModerator = isOwner || (user && moderators.includes(user.pubkey));
 
   // Initialize form state from community data
@@ -231,7 +231,7 @@ export default function GroupDetail() {
       queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
-      
+
       toast.success("Group settings updated successfully!");
     } catch (error) {
       console.error("Error updating community settings:", error);
@@ -289,12 +289,12 @@ export default function GroupDetail() {
         });
 
         setFormModerators(uniqueModPubkeys);
-        
+
         // Invalidate relevant queries to update the UI
         queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
         queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
         queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
-        
+
         toast.success("Moderator added successfully!");
       } catch (error) {
         console.error("Error adding moderator:", error);
@@ -350,12 +350,12 @@ export default function GroupDetail() {
         content: "",
       });
       setFormModerators(formModerators.filter(mod => mod !== pubkey));
-      
+
       // Invalidate relevant queries to update the UI
       queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
-      
+
       toast.success("Moderator removed successfully!");
     } catch (error) {
       console.error("Error removing moderator:", error);
@@ -528,13 +528,6 @@ export default function GroupDetail() {
                 />
               )}
             </div>
-            {/* Ensure consistent height for GroupNutzapTotal - always show for all users */}
-            <div className="h-8 flex items-center">
-              <GroupNutzapTotal 
-                groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                className="w-full"
-              />
-            </div>
           </div>
         </div>
 
@@ -577,6 +570,13 @@ export default function GroupDetail() {
                 </Tooltip>
               </TooltipProvider>
             )}
+          </div>
+          <div className="flex items-center mb-3">
+            <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">Donated to the group</span>
+            <GroupNutzapTotal
+              groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
+              className="w-auto max-w-[180px]"
+            />
           </div>
           <RichText className="text-xs text-muted-foreground">{description}</RichText>
         </div>
@@ -688,7 +688,7 @@ export default function GroupDetail() {
                     <Users className="h-4 w-4" />
                     Members
                     {pendingRequestsCount > 0 && (
-                      <Badge 
+                      <Badge
                         className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-blue-500 hover:bg-blue-600 z-10"
                       >
                         {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
@@ -699,8 +699,8 @@ export default function GroupDetail() {
                     <FileWarning className="h-4 w-4" />
                     Reports
                     {openReportsCount > 0 && (
-                      <Badge 
-                        variant="destructive" 
+                      <Badge
+                        variant="destructive"
                         className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10"
                       >
                         {openReportsCount > 99 ? '99+' : openReportsCount}
