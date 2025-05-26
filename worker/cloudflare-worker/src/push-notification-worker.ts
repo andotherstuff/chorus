@@ -4,6 +4,7 @@
  */
 
 import { nip19 } from 'nostr-tools';
+import { PushQueue } from './push-queue';
 
 // Add KVNamespace type
 type KVNamespace = {
@@ -551,3 +552,5 @@ export default {
     console.log(`Updated relay monitor: ${action} for ${npub} with ${groups.length} groups`);
   }
 };
+
+export { PushQueue };
