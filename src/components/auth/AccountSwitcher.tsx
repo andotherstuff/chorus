@@ -14,6 +14,7 @@ import {
   Wallet,
   Info,
   Download,
+  EyeOff,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -34,6 +35,7 @@ import { useCashuStore } from "@/stores/cashuStore";
 import { useState } from "react";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
 import { usePWA } from "@/hooks/usePWA";
+import { useSiteAdmin } from "@/hooks/useSiteAdmin";
 interface AccountSwitcherProps {
   onAddAccountClick: () => void;
 }
@@ -47,6 +49,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   const cashuStore = useCashuStore();
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const { isInstallable, isRunningAsPwa, promptInstall } = usePWA();
+  const { isSiteAdmin } = useSiteAdmin();
 
   const handleInstallClick = async () => {
     if (isInstallable) {
@@ -161,6 +164,17 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
               <span>Settings</span>
             </a>
           </DropdownMenuItem>
+          {isSiteAdmin && (
+            <DropdownMenuItem
+              asChild
+              className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
+            >
+              <a href="/admin/hidden-groups">
+                <EyeOff className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
+                <span>Hidden Groups</span>
+              </a>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator className="my-1" />
 
           <DropdownMenuItem

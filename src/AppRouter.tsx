@@ -22,6 +22,8 @@ const CashuWallet = lazy(() => import("./pages/CashuWallet"));
 const LinkPreviewTest = lazy(() => import("./pages/LinkPreviewTest"));
 const AboutPage = lazy(() => import("@/pages/AboutPage"));
 const FaqPage = lazy(() => import("@/pages/FaqPage"));
+const HiddenGroups = lazy(() => import("@/pages/HiddenGroups"));
+const HiddenGroupsTest = lazy(() => import("@/pages/HiddenGroupsTest"));
 
 // Loading component
 function PageLoader() {
@@ -97,6 +99,16 @@ export function AppRouter() {
         <Route path="/faq" element={
           <Suspense fallback={<PageLoader />}>
             <FaqPage />
+          </Suspense>
+        } />
+        <Route path="/admin/hidden-groups" element={
+          <Suspense fallback={<PageLoader />}>
+            <HiddenGroups />
+          </Suspense>
+        } />
+        <Route path="/admin/hidden-groups-test" element={
+          <Suspense fallback={<PageLoader />}>
+            <HiddenGroupsTest />
           </Suspense>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

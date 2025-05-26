@@ -28,12 +28,15 @@ Site Admins are defined as owners or moderators of this specific group:
    - Other
 4. **Additional Details**: Site Admins can provide additional context in a text area
 5. **Submit**: The system creates a 1984 (report) event that tags the group ID
+6. **View Hidden Groups**: Site Admins have a "Hidden Groups" link in their profile dropdown menu
+7. **Manage Hidden Groups**: In the Hidden Groups page, Site Admins can view all hidden groups and unhide them if needed
 
 ### For All Users
 
 1. **Hidden Groups**: Groups with 1984 events from Site Admins are automatically filtered out of all public listings
 2. **Real-time Updates**: The hidden groups list is cached and refreshed periodically
 3. **No Notification**: Regular users don't see any indication that groups have been hidden
+4. **No Access**: Regular users cannot access the Hidden Groups page (redirected to home)
 
 ## Technical Implementation
 
@@ -46,6 +49,7 @@ Site Admins are defined as owners or moderators of this specific group:
 ### New Components
 
 - `HideGroupDialog`: Dialog for Site Admins to hide groups with reason selection
+- `HiddenGroups`: Page for Site Admins to view and manage hidden groups
 
 ### Updated Components
 
@@ -53,21 +57,29 @@ Site Admins are defined as owners or moderators of this specific group:
 - `Groups`: Filters out hidden groups
 - `CommonGroupsList`: Filters out hidden groups
 - `CommonGroupsListImproved`: Filters out hidden groups
+- `AccountSwitcher`: Added "Hidden Groups" link for Site Admins
 
 ### Event Structure
 
-When a Site Admin hides a group, a 1984 event is created with:
+**Hiding a Group**: When a Site Admin hides a group, a 1984 event is created with:
 - `kind`: 1984 (REPORT)
 - `tags`: `[["a", communityId, reason]]`
 - `content`: Additional details provided by the Site Admin
 
+**Unhiding a Group**: When a Site Admin unhides a group, a kind 5 event is created with:
+- `kind`: 5 (DELETION)
+- `tags`: `[["a", communityId, "unhidden by admin"]]`
+- `content`: Explanation of the unhiding action
+
 ### Filtering Logic
 
 The system:
-1. Queries for all 1984 events from Site Admin pubkeys
+1. Queries for all 1984 events (hide) and kind 5 events (unhide) from Site Admin pubkeys
 2. Extracts group IDs from "a" tags that start with "34550:"
-3. Filters these groups from all public listings
-4. Caches the results for performance
+3. Builds a set of hidden groups from 1984 events
+4. Removes groups from the hidden set if they have corresponding kind 5 events (unhidden)
+5. Filters the resulting hidden groups from all public listings
+6. Caches the results for performance
 
 ## Files Modified
 
@@ -76,21 +88,37 @@ The system:
 - `src/hooks/useHiddenGroups.ts`
 - `src/hooks/useHideGroup.ts`
 - `src/components/groups/HideGroupDialog.tsx`
+- `src/pages/HiddenGroups.tsx`
 
 ### Modified Files
 - `src/components/groups/GroupCard.tsx`
 - `src/pages/Groups.tsx`
 - `src/components/profile/CommonGroupsList.tsx`
 - `src/components/profile/CommonGroupsListImproved.tsx`
+- `src/components/auth/AccountSwitcher.tsx`
+- `src/AppRouter.tsx`
 
 ## Usage
 
 ### For Site Admins
+
+**To Hide a Group:**
 1. Navigate to any group listing
 2. Click the three dots menu on a group card
 3. Select "Hide group"
 4. Choose a reason and provide details
 5. Click "Hide Group"
+
+**To View Hidden Groups:**
+1. Click on your profile avatar in the top navigation
+2. Select "Hidden Groups" from the dropdown menu
+3. View all currently hidden groups
+
+**To Unhide a Group:**
+1. Navigate to the Hidden Groups page
+2. Find the group you want to unhide
+3. Click the "Unhide" button on the group card
+4. The group will be restored to public listings
 
 ### For Developers
 ```typescript

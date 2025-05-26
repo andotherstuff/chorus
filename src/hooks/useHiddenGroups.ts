@@ -50,15 +50,25 @@ export function useHiddenGroups() {
           return new Set<string>();
         }
 
-        // Now get all 1984 events from Site Admins
-        const reportEvents = await nostr.query(
-          [{ 
-            kinds: [KINDS.REPORT],
-            authors: Array.from(siteAdminPubkeys),
-            limit: 1000
-          }],
-          { signal }
-        );
+        // Get all 1984 events (hide) and kind 5 events (unhide) from Site Admins
+        const [reportEvents, deletionEvents] = await Promise.all([
+          nostr.query(
+            [{ 
+              kinds: [KINDS.REPORT],
+              authors: Array.from(siteAdminPubkeys),
+              limit: 1000
+            }],
+            { signal }
+          ),
+          nostr.query(
+            [{ 
+              kinds: [KINDS.DELETION],
+              authors: Array.from(siteAdminPubkeys),
+              limit: 1000
+            }],
+            { signal }
+          )
+        ]);
 
         // Extract hidden group IDs from the reports
         const hiddenGroupIds = new Set<string>();
@@ -68,6 +78,15 @@ export function useHiddenGroups() {
           for (const tag of event.tags) {
             if (tag[0] === "a" && tag[1] && tag[1].startsWith("34550:")) {
               hiddenGroupIds.add(tag[1]);
+            }
+          }
+        }
+
+        // Remove groups that have been unhidden (deletion events)
+        for (const event of deletionEvents) {
+          for (const tag of event.tags) {
+            if (tag[0] === "a" && tag[1] && tag[1].startsWith("34550:")) {
+              hiddenGroupIds.delete(tag[1]);
             }
           }
         }
