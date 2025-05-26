@@ -54,7 +54,7 @@ export function HideGroupDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <EyeOff className="h-5 w-5 text-red-500" />
@@ -80,6 +80,7 @@ export function HideGroupDialog({
               value={reason}
               onValueChange={(value) => setReason(value as HideGroupReason)}
               className="grid grid-cols-2 gap-2"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="spam" id="spam" />
@@ -111,17 +112,22 @@ export function HideGroupDialog({
               placeholder="Please provide more information about why you're hiding this group..."
               value={details}
               onChange={(e) => setDetails(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               rows={4}
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
+          <Button 
+            variant="outline" 
+            onClick={(e) => { e.stopPropagation(); onClose(); }} 
+            disabled={isPending}
+          >
             Cancel
           </Button>
           <Button 
-            onClick={handleSubmit} 
+            onClick={(e) => { e.stopPropagation(); handleSubmit(); }} 
             disabled={isPending || !user}
             variant="destructive"
           >

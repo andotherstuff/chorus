@@ -285,14 +285,15 @@ export function GroupCard({
           </DropdownMenu>
         )}
 
-        {/* Hide Group Dialog */}
-        <HideGroupDialog
-          isOpen={showHideDialog}
-          onClose={() => setShowHideDialog(false)}
-          communityId={communityId}
-          groupName={name}
-        />
       </Card>
+
+      {/* Hide Group Dialog - Outside Link to prevent navigation conflicts */}
+      <HideGroupDialog
+        isOpen={showHideDialog}
+        onClose={() => setShowHideDialog(false)}
+        communityId={communityId}
+        groupName={name}
+      />
     </Link>
   );
 }
