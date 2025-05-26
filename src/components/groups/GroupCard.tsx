@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Clock } from "lucide-react";
+import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Clock, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/groups/RoleBadge";
@@ -12,15 +12,19 @@ import type { UserRole } from "@/hooks/useUserRole";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
 import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
+import { useSiteAdmin } from "@/hooks/useSiteAdmin";
 import { toast } from "sonner";
 import type { NostrEvent } from "@nostrify/nostrify";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { JoinRequestMenuItem } from "@/components/groups/JoinRequestMenuItem";
+import { HideGroupDialog } from "@/components/groups/HideGroupDialog";
+import { useState } from "react";
 
 interface GroupCardProps {
   community: NostrEvent;
@@ -51,6 +55,8 @@ export function GroupCard({
   isLoadingStats,
 }: GroupCardProps) {
   const { user } = useCurrentUser();
+  const { isSiteAdmin } = useSiteAdmin();
+  const [showHideDialog, setShowHideDialog] = useState(false);
 
   // Extract community data from tags
   const nameTag = community.tags.find((tag) => tag[0] === "name");
@@ -88,6 +94,12 @@ export function GroupCard({
     } else {
       pinGroup(communityId);
     }
+  };
+
+  const handleHideGroup = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowHideDialog(true);
   };
 
   // Get the first letter of the group name for avatar fallback
@@ -260,9 +272,26 @@ export function GroupCard({
                 </DropdownMenuItem>
               )}
               {!isUserMember && <JoinRequestMenuItem communityId={communityId} hasPendingRequest={hasPendingRequest} />}
+              {isSiteAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleHideGroup} className="text-red-600 focus:text-red-600">
+                    <EyeOff className="h-4 w-4 mr-2" />
+                    Hide group
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        {/* Hide Group Dialog */}
+        <HideGroupDialog
+          isOpen={showHideDialog}
+          onClose={() => setShowHideDialog(false)}
+          communityId={communityId}
+          groupName={name}
+        />
       </Card>
     </Link>
   );

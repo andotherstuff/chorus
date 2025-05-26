@@ -12,6 +12,7 @@ import { useGroupStats } from "@/hooks/useGroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { useUserPendingJoinRequests } from "@/hooks/useUserPendingJoinRequests";
+import { useHiddenGroups } from "@/hooks/useHiddenGroups";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
@@ -93,6 +94,9 @@ export default function Groups() {
     isLoading: isPendingRequestsLoading,
   } = useUserPendingJoinRequests();
 
+  // Get hidden groups
+  const { data: hiddenGroups = new Set(), isLoading: isHiddenGroupsLoading } = useHiddenGroups();
+
   // Query for community stats
   const { data: communityStats, isLoading: isLoadingStats } =
     useGroupStats(allGroups);
@@ -155,10 +159,19 @@ export default function Groups() {
       );
     };
 
+    // Function to check if a group is hidden
+    const isGroupHidden = (community: NostrEvent) => {
+      const communityId = getCommunityId(community);
+      return hiddenGroups.has(communityId);
+    };
+
     // Create a stable copy of the array to avoid mutation issues
     const stableGroups = [...allGroups];
 
-    return stableGroups.filter(matchesSearch).sort((a, b) => {
+    return stableGroups
+      .filter(matchesSearch)
+      .filter(community => !isGroupHidden(community)) // Filter out hidden groups
+      .sort((a, b) => {
       // Ensure both a and b are valid objects
       if (!a || !b) return 0;
 
@@ -218,6 +231,7 @@ export default function Groups() {
     isGroupPinned,
     userMembershipMap,
     pendingJoinRequestsSet,
+    hiddenGroups,
   ]);
 
   // Loading state skeleton with stable keys
@@ -285,7 +299,8 @@ export default function Groups() {
         <div className="space-y-4 mb-6">
           {isGroupsLoading ||
           isUserGroupsLoading ||
-          isPendingRequestsLoading ? (
+          isPendingRequestsLoading ||
+          isHiddenGroupsLoading ? (
             renderSkeletons()
           ) : allGroups &&
             sortedAndFilteredGroups &&

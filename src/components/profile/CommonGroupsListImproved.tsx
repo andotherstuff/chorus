@@ -1,5 +1,6 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useHiddenGroups } from "@/hooks/useHiddenGroups";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -144,6 +145,7 @@ function UserWithRole({
 export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsListProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { data: hiddenGroups = new Set() } = useHiddenGroups();
   const profileAuthor = useAuthor(profileUserPubkey);
   const profileMetadata = profileAuthor.data?.metadata;
   const profileDisplayName = profileMetadata?.name || profileUserPubkey.slice(0, 8);
@@ -239,8 +241,10 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
       for (const event of communityEvents) {
         const communityId = getCommunityId(event);
         
-        // Only include if both users are actually members
-        if (currentUserCommunityIds.has(communityId) && profileUserCommunityIds.has(communityId)) {
+        // Only include if both users are actually members and group is not hidden
+        if (currentUserCommunityIds.has(communityId) && 
+            profileUserCommunityIds.has(communityId) && 
+            !hiddenGroups.has(communityId)) {
           const nameTag = event.tags.find(tag => tag[0] === "name");
           const descriptionTag = event.tags.find(tag => tag[0] === "description");
           const imageTag = event.tags.find(tag => tag[0] === "image");
