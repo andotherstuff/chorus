@@ -66,10 +66,6 @@ script_name = "chorus-notifications-staging"
 tag = "v1"
 new_sqlite_classes = ["PushQueue"]
 
-# Resource limits
-[limits]
-cpu_ms = 50 # 50ms CPU time per request
-
 # Secrets must be set via wrangler CLI or GitHub Actions:
 # - VAPID_PUBLIC_KEY
 # - VAPID_PRIVATE_KEY
