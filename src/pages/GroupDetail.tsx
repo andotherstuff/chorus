@@ -439,9 +439,9 @@ export default function GroupDetail() {
             <div className="flex-1">
               <Skeleton className="h-40 w-full rounded-lg mb-2" />
             </div>
-            <div className="min-w-[140px] flex flex-col space-y-4">
-              <Skeleton className="h-10 w-full rounded-md" />
-              <Skeleton className="h-10 w-full rounded-md" />
+            <div className="min-w-[140px] flex flex-col justify-start">
+              <Skeleton className="h-8 w-full rounded-md mb-2" />
+              <Skeleton className="h-8 w-full rounded-md mb-2" />
             </div>
           </div>
 
@@ -513,21 +513,17 @@ export default function GroupDetail() {
             </div>
           </div>
 
-          <div className="flex flex-col min-w-[140px] h-40 space-y-2">
-            <div className="h-8">
-              <JoinRequestButton communityId={groupId || ''} isModerator={isModerator || false} />
-            </div>
-            {/* Ensure consistent height for GroupNutzapButton */}
-            <div className="h-8">
-              {user && community && (
-                <GroupNutzapButton
-                  groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                  ownerPubkey={community.pubkey}
-                  variant="outline"
-                  className="w-full h-full"
-                />
-              )}
-            </div>
+          <div className="flex flex-col min-w-[140px] h-40 justify-start">
+            <JoinRequestButton communityId={groupId || ''} isModerator={isModerator || false} className="mb-2 h-8" />
+
+            {user && community && (
+              <GroupNutzapButton
+                groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                ownerPubkey={community.pubkey}
+                variant="outline"
+                className="w-full mb-2 h-8"
+              />
+            )}
           </div>
         </div>
 
@@ -572,7 +568,7 @@ export default function GroupDetail() {
             )}
           </div>
           <div className="flex items-center mb-3">
-            <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">Donated to the group</span>
+            <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">Sent to the group</span>
             <GroupNutzapTotal
               groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
               className="w-auto max-w-[180px]"

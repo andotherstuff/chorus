@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, CheckCircle, Clock, XCircle } from "lucide-react";
+import { UserPlus, CheckCircle, Clock, XCircle, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KINDS } from "@/lib/nostr-kinds";
 
@@ -117,9 +117,14 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
     }
   };
 
-  // If the user is a moderator, don't show the join button at all
-  if (isModerator) {
-    return null;
+  // If the user is a moderator, show a moderator badge instead of returning null
+  if (isModerator && user) {
+    return (
+      <Button variant="outline" disabled className={cn("text-purple-600 border-purple-600 dark:text-purple-400 dark:border-purple-400 w-full h-full justify-start pl-3 text-xs", className)}>
+        <Shield className="h-4 w-4 mr-1" />
+        Moderator
+      </Button>
+    );
   }
 
   if (!user) {
@@ -143,7 +148,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
   // If user is in both approved and declined lists, treat them as approved
   if (isUserApprovedMember) {
     return (
-      <Button variant="outline" disabled className={cn("text-green-600 border-green-600 w-full h-full justify-start pl-3 text-xs", className)}>
+      <Button variant="outline" disabled className={cn("text-green-600 border-green-600 dark:text-green-400 dark:border-green-400 w-full h-full justify-start pl-3 text-xs", className)}>
         <CheckCircle className="h-4 w-4 mr-1" />
         Member
       </Button>
@@ -161,7 +166,7 @@ export function JoinRequestButton({ communityId, isModerator = false, initialOpe
   
   if (isDeclinedUser) {
     return (
-      <Button variant="outline" disabled className={cn("text-red-600 border-red-600 w-full h-full justify-start pl-3 text-xs", className)}>
+      <Button variant="outline" disabled className={cn("text-red-600 border-red-600 dark:text-red-400 dark:border-red-400 w-full h-full justify-start pl-3 text-xs", className)}>
         <XCircle className="h-4 w-4 mr-1" />
         Request declined
       </Button>
