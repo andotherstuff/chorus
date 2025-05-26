@@ -5,11 +5,37 @@
 
 import { NostrEvent, verifyEvent, Filter, nip19 } from 'nostr-tools';
 
+// Add missing type definitions
+
+type KVNamespace = {
+  get: <T>(key: string, type?: 'text' | 'json') => Promise<T | null>;
+  put: (key: string, value: string, options?: { expirationTtl?: number }) => Promise<void>;
+  delete: (key: string) => Promise<void>;
+  list: (options?: { prefix?: string }) => Promise<{ keys: { name: string }[] }>;
+};
+
+type ScheduledEvent = {
+  cron: string;
+  scheduledTime: number;
+};
+
+type ExecutionContext = {
+  waitUntil: (promise: Promise<unknown>) => void;
+};
+
 export interface Env {
   KV: KVNamespace;
   RELAY_URLS: string;
   NOTIFICATION_WORKER_URL: string;
   WORKER_AUTH_TOKEN: string;
+}
+
+// Add notification type definition
+interface RelayNotification {
+  npub: string;
+  type: string;
+  priority: string;
+  groupId?: string;
 }
 
 export default {
@@ -29,7 +55,7 @@ export default {
     const url = new URL(request.url);
     
     switch (url.pathname) {
-      case '/health':
+      case '/health': {
         return new Response(JSON.stringify({
           status: 'ok',
           service: 'relay-monitor',
@@ -37,8 +63,8 @@ export default {
         }), {
           headers: { 'Content-Type': 'application/json' }
         });
-        
-      case '/trigger':
+      }
+      case '/trigger': {
         // Manual trigger for testing
         const auth = request.headers.get('Authorization');
         if (auth !== `Bearer ${env.WORKER_AUTH_TOKEN}`) {
@@ -46,9 +72,10 @@ export default {
         }
         await this.monitorRelays(env);
         return new Response('Triggered', { status: 200 });
-        
-      default:
+      }
+      default: {
         return new Response('Not Found', { status: 404 });
+      }
     }
   },
 
@@ -61,7 +88,7 @@ export default {
     
     try {
       // Get last check timestamp
-      const lastCheck = await env.KV.get('last_check_time');
+      const lastCheck = await env.KV.get<string>('last_check_time', 'text');
       const since = lastCheck ? parseInt(lastCheck) : Math.floor(Date.now() / 1000) - 3600;
       
       // Get active groups to monitor
@@ -91,7 +118,7 @@ export default {
       let processedCount = 0;
       for (const event of uniqueEvents) {
         // Check if already processed
-        const processed = await env.KV.get(`processed:${event.id}`);
+        const processed = await env.KV.get<string>(`processed:${event.id}`, 'text');
         if (processed) continue;
         
         // Analyze event and determine notifications
@@ -127,7 +154,7 @@ export default {
     for (const key of list.keys) {
       const groupId = key.name.replace('group:', '');
       // Check if group has any subscribers
-      const subscribers = await env.KV.get(key.name, 'json') as string[];
+      const subscribers = await env.KV.get<string[]>(`group:${groupId}`, 'json') || [];
       if (subscribers && subscribers.length > 0) {
         groups.push(groupId);
       }
@@ -223,19 +250,18 @@ export default {
   /**
    * Analyze event and determine who should be notified
    */
-  async analyzeEvent(event: NostrEvent, env: Env): Promise<any[]> {
-    const notifications = [];
+  async analyzeEvent(event: NostrEvent, env: Env): Promise<RelayNotification[]> {
+    const notifications: RelayNotification[] = [];
     
     switch (event.kind) {
-      case 11: { // Group post
+      case 11: {
         const aTag = event.tags.find(tag => tag[0] === 'a');
         if (!aTag) break;
         
         const groupId = aTag[1];
-        const subscribersJson = await env.KV.get(`group:${groupId}`);
-        if (!subscribersJson) break;
+        const subscribers = await env.KV.get<string[]>(`group:${groupId}`, 'json') || [];
+        if (subscribers.length === 0) break;
         
-        const subscribers = JSON.parse(subscribersJson) as string[];
         const mentions = this.extractMentions(event);
         const authorNpub = nip19.npubEncode(event.pubkey);
         
@@ -265,7 +291,7 @@ export default {
         break;
       }
       
-      case 7: { // Reaction
+      case 7: {
         const pTag = event.tags.find(tag => tag[0] === 'p');
         if (pTag) {
           const targetNpub = nip19.npubEncode(pTag[1]);
@@ -339,7 +365,7 @@ export default {
   /**
    * Send notifications to the notification worker
    */
-  async sendToNotificationWorker(env: Env, event: NostrEvent, notifications: any[]): Promise<void> {
+  async sendToNotificationWorker(env: Env, event: NostrEvent, notifications: RelayNotification[]): Promise<void> {
     const payload = {
       event: {
         id: event.id,

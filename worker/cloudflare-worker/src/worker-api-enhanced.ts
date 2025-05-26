@@ -5,6 +5,20 @@
 
 import { Env } from './worker-enhanced';
 
+// Add DurableObjectNamespace type definition
+type DurableObjectNamespace = {
+  idFromName: (name: string) => DurableObjectId;
+  get: (id: DurableObjectId) => DurableObjectStub;
+};
+
+type DurableObjectId = {
+  toString: () => string;
+};
+
+type DurableObjectStub = {
+  fetch: (request: Request) => Promise<Response>;
+};
+
 export interface WorkerEnv extends Env {
   PUSH_QUEUE: DurableObjectNamespace;
 }
@@ -30,6 +44,38 @@ interface UserSubscription {
   };
   createdAt: number;
   lastNotified: number;
+}
+
+// Add types for request bodies
+interface SubscribeRequestBody {
+  npub: string;
+  subscription: PushSubscription;
+  preferences?: {
+    settings?: Partial<UserSubscription['preferences']>;
+    subscriptions?: { groups?: string[] };
+  };
+}
+
+interface UnsubscribeRequestBody {
+  npub: string;
+}
+
+interface PreferencesRequestBody {
+  npub: string;
+  preferences?: {
+    settings?: Partial<UserSubscription['preferences']>;
+    subscriptions?: { groups?: string[] };
+  };
+}
+
+interface CheckSubscriptionRequestBody {
+  npub: string;
+  endpoint: string;
+}
+
+interface NotificationType {
+  type: string;
+  [key: string]: unknown;
 }
 
 export class WorkerAPI {
@@ -97,7 +143,7 @@ export class WorkerAPI {
   }
 
   private async handleSubscribe(request: Request): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as SubscribeRequestBody;
 
     const userSub: UserSubscription = {
       npub: body.npub,
@@ -127,7 +173,7 @@ export class WorkerAPI {
   }
 
   private async handleUnsubscribe(request: Request): Promise<Response> {
-    const body = await request.json() as { npub: string };
+    const body = await request.json() as UnsubscribeRequestBody;
     
     const existing = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     if (existing) {
@@ -165,7 +211,7 @@ export class WorkerAPI {
   }
 
   private async handleUpdatePreferences(request: Request): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as PreferencesRequestBody;
 
     const existing = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     if (!existing) {
@@ -210,7 +256,7 @@ export class WorkerAPI {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const body = await request.json() as any;
+    const body = await request.json() as { npub: string; notification: NotificationType };
     const sub = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     
     if (!sub) {
@@ -223,7 +269,7 @@ export class WorkerAPI {
 
     const payload = {
       title: this.getNotificationTitle(body.notification),
-      body: body.notification.content,
+      body: body.notification.content as string,
       icon: '/icon-192x192.png',
       badge: '/icon-96x96.png',
       data: {
@@ -245,7 +291,7 @@ export class WorkerAPI {
   }
 
   private async handleTestNotification(request: Request): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as { npub: string; message?: string };
     const sub = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     
     if (!sub) {
@@ -269,7 +315,7 @@ export class WorkerAPI {
   }
 
   private async handleCheckSubscription(request: Request): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as CheckSubscriptionRequestBody;
     const sub = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     
     if (!sub || sub.subscription.endpoint !== body.endpoint) {
@@ -301,7 +347,7 @@ export class WorkerAPI {
     }
   }
 
-  private shouldSendNotification(sub: UserSubscription, notification: any): boolean {
+  private shouldSendNotification(sub: UserSubscription, notification: NotificationType): boolean {
     switch (notification.type) {
       case 'mention':
         return sub.preferences.mentions;
@@ -318,7 +364,7 @@ export class WorkerAPI {
     }
   }
 
-  private getNotificationTitle(notification: any): string {
+  private getNotificationTitle(notification: NotificationType): string {
     switch (notification.type) {
       case 'mention':
         return '💬 You were mentioned';
@@ -335,7 +381,7 @@ export class WorkerAPI {
     }
   }
 
-  private getNotificationUrl(notification: any): string {
+  private getNotificationUrl(notification: NotificationType): string {
     if (notification.groupId && notification.eventId) {
       return `/group/${notification.groupId}?post=${notification.eventId}`;
     } else if (notification.groupId) {
@@ -348,7 +394,7 @@ export class WorkerAPI {
    * Queue push notification for reliable delivery
    * For now, we'll store it and process async
    */
-  private async queuePushNotification(subscription: PushSubscription, payload: any): Promise<void> {
+  private async queuePushNotification(subscription: PushSubscription, payload: { title: string; body: string; icon: string; badge: string; data: object; timestamp: number }): Promise<void> {
     // Store notification in queue
     const queueId = crypto.randomUUID();
     await this.env.KV.put(

@@ -2,7 +2,7 @@
 name = "chorus-notifications"
 main = "src/worker-all-in-one.ts"
 compatibility_date = "2023-05-18"
-node_compat = true # Required for WebSocket
+compatibility_flags = ["nodejs_compat"]
 
 # KV Namespace binding
 [[kv_namespaces]]
@@ -31,16 +31,12 @@ crons = ["*/5 * * * *"] # Every 5 minutes
 # Production environment
 [env.production]
 name = "chorus-notifications-prod"
-vars = { 
-  RELAY_URLS = "wss://relay.chorus.community/,wss://relay.primal.net" 
-}
+vars = { RELAY_URLS = "wss://relay.chorus.community/,wss://relay.primal.net" }
 
 # Staging environment (optional)
 [env.staging]
 name = "chorus-notifications-staging"
-vars = { 
-  RELAY_URLS = "wss://relay.primal.net" 
-}
+vars = { RELAY_URLS = "wss://relay.primal.net" }
 
 # Resource limits
 [limits]

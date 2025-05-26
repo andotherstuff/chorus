@@ -7,13 +7,102 @@
 import { NostrEvent, SimplePool, nip19, verifyEvent, Filter } from 'nostr-tools';
 import { WorkerAPI } from './worker-api-enhanced';
 
-export interface Env {
+// Add missing type definitions
+type KVNamespace = {
+  get: <T>(key: string, type: 'text' | 'json') => Promise<T | null>;
+  put: (key: string, value: string, options?: { expirationTtl?: number }) => Promise<void>;
+  delete: (key: string) => Promise<void>;
+  list: (options?: { prefix?: string }) => Promise<{ keys: { name: string }[] }>;
+};
+
+type DurableObjectNamespace = {
+  idFromName: (name: string) => DurableObjectId;
+  get: (id: DurableObjectId) => DurableObjectStub;
+};
+
+type DurableObjectId = {
+  toString: () => string;
+};
+
+type DurableObjectStub = {
+  fetch: (request: Request) => Promise<Response>;
+};
+
+type ScheduledEvent = {
+  cron: string;
+  scheduledTime: number;
+};
+
+type ExecutionContext = {
+  waitUntil: (promise: Promise<unknown>) => void;
+};
+
+interface WorkerEnv {
   KV: KVNamespace;
-  RELAY_URLS: string; // Comma-separated relay URLs
+  PUSH_QUEUE: DurableObjectNamespace;
+  RELAY_URL: string;
+  PUSH_DISPATCH_API: string;
   BOT_TOKEN: string;
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY: string;
+}
+
+export interface Env {
+  KV: KVNamespace;
   PUSH_QUEUE: DurableObjectNamespace;
+  RELAY_URL: string;
+  RELAY_URLS: string; // Comma-separated relay URLs
+  PUSH_DISPATCH_API: string;
+  BOT_TOKEN: string;
+  VAPID_PUBLIC_KEY: string;
+  VAPID_PRIVATE_KEY: string;
+  WORKER_URL?: string;
+}
+
+interface NotificationPayload {
+  event: {
+    id: string;
+    [key: string]: unknown;
+  };
+  notifications: Array<{
+    npub: string;
+    type: string;
+    content: string;
+  }>;
+}
+
+// Add notification type definitions
+interface Notification {
+  type: string;
+  groupId?: string;
+  eventId?: string;
+  author?: string;
+  content?: string;
+  timestamp: number;
+  reactor?: string;
+  reaction?: string;
+}
+
+interface NotificationEntry {
+  npub: string;
+  notification: Notification;
+}
+
+// Add user type definition
+interface UserPreferences {
+  enabled: boolean;
+  mentions: boolean;
+  groupActivity: boolean;
+  reactions: boolean;
+  moderation: boolean;
+  frequency: 'immediate' | 'hourly' | 'daily';
+  subscribedGroups: string[];
+}
+
+interface UserSubscription {
+  subscription: PushSubscription;
+  preferences: UserPreferences;
+  lastNotified?: number;
 }
 
 export default {
@@ -50,7 +139,27 @@ export default {
       });
     }
     
-    return new Response('Not Found', { status: 404 });
+    // Fix case declarations by wrapping in blocks
+    switch (url.pathname) {
+      case '/api/notify': {
+        const auth = request.headers.get('Authorization');
+        if (auth !== `Bearer ${env.BOT_TOKEN}`) {
+          return new Response('Unauthorized', { status: 401 });
+        }
+        const response = await handleNotify(request, env);
+        return response;
+      }
+      case '/api/test': {
+        const auth = request.headers.get('Authorization');
+        if (auth !== `Bearer ${env.BOT_TOKEN}`) {
+          return new Response('Unauthorized', { status: 401 });
+        }
+        const response = await handleTestNotification(request, env);
+        return response;
+      }
+      default:
+        return new Response('Not Found', { status: 404 });
+    }
   },
 
   /**
@@ -63,7 +172,7 @@ export default {
     try {
       // Get last check time
       const lastCheckKey = 'last_poll_time';
-      const lastCheck = await env.KV.get(lastCheckKey);
+      const lastCheck = await env.KV.get<string>(lastCheckKey, 'text');
       const since = lastCheck ? parseInt(lastCheck) : Math.floor(Date.now() / 1000) - 3600;
       
       // Load user subscriptions
@@ -85,7 +194,7 @@ export default {
       // Process each event
       for (const event of events) {
         // Check if already processed
-        const processed = await env.KV.get(`processed:${event.id}`);
+        const processed = await env.KV.get<string>(`processed:${event.id}`, 'text');
         if (processed) continue;
         
         // Determine who to notify
@@ -116,12 +225,12 @@ export default {
   /**
    * Load all user subscriptions from KV
    */
-  async loadUserSubscriptions(env: Env): Promise<Map<string, any>> {
-    const users = new Map();
+  async loadUserSubscriptions(env: Env): Promise<Map<string, UserSubscription>> {
+    const users = new Map<string, UserSubscription>();
     const list = await env.KV.list({ prefix: 'sub:' });
     
     for (const key of list.keys) {
-      const data = await env.KV.get(key.name, 'json');
+      const data = await env.KV.get<UserSubscription>(key.name, 'json');
       if (data) {
         const npub = key.name.replace('sub:', '');
         users.set(npub, data);
@@ -256,8 +365,8 @@ export default {
   /**
    * Determine who should be notified for an event
    */
-  async determineNotifications(event: NostrEvent, users: Map<string, any>, groups: Map<string, Set<string>>): Promise<any[]> {
-    const notifications = [];
+  async determineNotifications(event: NostrEvent, users: Map<string, UserSubscription>, groups: Map<string, Set<string>>): Promise<NotificationEntry[]> {
+    const notifications: NotificationEntry[] = [];
     
     // Verify event signature
     if (!verifyEvent(event)) {
@@ -267,7 +376,7 @@ export default {
     
     // Handle different event types
     switch (event.kind) {
-      case 11: // Group post
+      case 11: { // Group post
         const aTag = event.tags.find(tag => tag[0] === 'a');
         if (aTag) {
           const groupId = aTag[1];
@@ -301,8 +410,9 @@ export default {
           }
         }
         break;
+      }
         
-      case 7: // Reaction
+      case 7: { // Reaction
         const pTag = event.tags.find(tag => tag[0] === 'p');
         if (pTag) {
           const targetNpub = nip19.npubEncode(pTag[1]);
@@ -322,8 +432,7 @@ export default {
           }
         }
         break;
-        
-      // Add more event types as needed
+      }
     }
     
     return notifications;
@@ -359,7 +468,7 @@ export default {
   /**
    * Queue a notification for delivery
    */
-  async queueNotification(env: Env, { npub, notification }: any): Promise<void> {
+  async queueNotification(env: Env, { npub, notification }: NotificationEntry): Promise<void> {
     // Call the worker API to send the notification
     const response = await fetch(`https://${env.WORKER_URL || 'localhost'}/api/notify`, {
       method: 'POST',
@@ -375,3 +484,28 @@ export default {
     }
   }
 };
+
+// Add handler function declarations
+async function handleNotify(request: Request, env: Env): Promise<Response> {
+  const body = await request.json();
+  const { npub, notification } = body;
+  
+  if (!npub || !notification) {
+    return new Response('Invalid request', { status: 400 });
+  }
+  
+  // Implementation here
+  return new Response('Not implemented', { status: 501 });
+}
+
+async function handleTestNotification(request: Request, env: Env): Promise<Response> {
+  const body = await request.json();
+  const { npub, message } = body;
+  
+  if (!npub) {
+    return new Response('Invalid request', { status: 400 });
+  }
+  
+  // Implementation here
+  return new Response('Not implemented', { status: 501 });
+}

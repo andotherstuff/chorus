@@ -5,6 +5,14 @@
 
 import { nip19 } from 'nostr-tools';
 
+// Add KVNamespace type
+type KVNamespace = {
+  get: <T>(key: string, type: 'text' | 'json') => Promise<T | null>;
+  put: (key: string, value: string) => Promise<void>;
+  delete: (key: string) => Promise<void>;
+  list: (options?: { prefix?: string }) => Promise<{ keys: { name: string }[] }>;
+};
+
 export interface Env {
   KV: KVNamespace;
   WORKER_AUTH_TOKEN: string;
@@ -13,22 +21,41 @@ export interface Env {
   VAPID_SUBJECT: string;
 }
 
-interface UserSubscription {
-  npub: string;
-  endpoint: string;
-  keys: {
-    p256dh: string;
-    auth: string;
+interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  data?: {
+    url?: string;
+    type?: string;
+    priority?: 'high' | 'normal' | 'low';
+    [key: string]: unknown;
   };
-  groups: string[];
+}
+
+interface PushSubscriptionKeys {
+  p256dh: string;
+  auth: string;
+}
+
+interface PushSubscription {
+  endpoint: string;
+  keys: PushSubscriptionKeys;
+}
+
+interface UserSubscription {
+  subscription: PushSubscription;
+  lastNotified?: number;
   preferences: {
+    enabled: boolean;
     mentions: boolean;
     groupActivity: boolean;
     reactions: boolean;
     moderation: boolean;
     frequency: 'immediate' | 'hourly' | 'daily';
+    subscribedGroups: string[];
   };
-  lastNotified: number;
 }
 
 interface NotificationPayload {
@@ -130,23 +157,29 @@ export default {
    * Handle push subscription
    */
   async handleSubscribe(request: Request, env: Env): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as {
+      npub: string;
+      subscription: PushSubscription;
+      preferences?: {
+        settings?: Partial<UserSubscription['preferences']>;
+        subscriptions?: { groups?: string[] };
+      };
+    };
     
     if (!body.npub || !body.subscription) {
       return new Response('Bad Request', { status: 400 });
     }
     
     const userSub: UserSubscription = {
-      npub: body.npub,
-      endpoint: body.subscription.endpoint,
-      keys: body.subscription.keys,
-      groups: body.preferences?.subscriptions?.groups || [],
+      subscription: body.subscription,
       preferences: {
+        enabled: body.preferences?.settings?.enabled ?? true,
         mentions: body.preferences?.settings?.mentions ?? true,
         groupActivity: body.preferences?.settings?.groupActivity ?? true,
         reactions: body.preferences?.settings?.reactions ?? false,
         moderation: body.preferences?.settings?.moderation ?? true,
         frequency: body.preferences?.settings?.frequency || 'immediate',
+        subscribedGroups: body.preferences?.subscriptions?.groups || [],
       },
       lastNotified: 0
     };
@@ -155,12 +188,12 @@ export default {
     await env.KV.put(`sub:${body.npub}`, JSON.stringify(userSub));
     
     // Update group memberships
-    for (const groupId of userSub.groups) {
+    for (const groupId of userSub.preferences.subscribedGroups) {
       await this.addUserToGroup(env, body.npub, groupId);
     }
     
     // Also send this info to the relay monitor
-    await this.updateRelayMonitor(env, 'subscribe', body.npub, userSub.groups);
+    await this.updateRelayMonitor(env, 'subscribe', body.npub, userSub.preferences.subscribedGroups);
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
@@ -171,12 +204,12 @@ export default {
    * Handle unsubscribe
    */
   async handleUnsubscribe(request: Request, env: Env): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as { npub: string };
     
-    const existing = await env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
+    const existing = await env.KV.get<UserSubscription>(`sub:${body.npub}`, 'json');
     if (existing) {
       // Remove from groups
-      for (const groupId of existing.groups) {
+      for (const groupId of existing.preferences.subscribedGroups) {
         await this.removeUserFromGroup(env, body.npub, groupId);
       }
     }
@@ -206,9 +239,9 @@ export default {
     const users: Record<string, string[]> = {};
     
     for (const key of subscriptions.keys) {
-      const sub = await env.KV.get(key.name, 'json') as UserSubscription;
+      const sub = await env.KV.get<UserSubscription>(key.name, 'json');
       if (sub) {
-        users[sub.npub] = sub.groups;
+        users[key.name] = sub.preferences.subscribedGroups;
       }
     }
     
@@ -221,15 +254,21 @@ export default {
    * Update user preferences
    */
   async handleUpdatePreferences(request: Request, env: Env): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as {
+      npub: string;
+      preferences?: {
+        settings?: Partial<UserSubscription['preferences']>;
+        subscriptions?: { groups?: string[] };
+      };
+    };
     
-    const existing = await env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
+    const existing = await env.KV.get<UserSubscription>(`sub:${body.npub}`, 'json');
     if (!existing) {
       return new Response('Not Found', { status: 404 });
     }
     
     // Update groups if changed
-    const oldGroups = existing.groups;
+    const oldGroups = existing.preferences.subscribedGroups;
     const newGroups = body.preferences?.subscriptions?.groups || [];
     
     // Update group memberships
@@ -246,7 +285,7 @@ export default {
     }
     
     // Update subscription
-    existing.groups = newGroups;
+    existing.preferences.subscribedGroups = newGroups;
     existing.preferences = {
       ...existing.preferences,
       ...body.preferences?.settings
@@ -266,14 +305,14 @@ export default {
    * Send test notification
    */
   async handleTestNotification(request: Request, env: Env): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as { npub: string; message?: string };
     
-    const sub = await env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
+    const sub = await env.KV.get<UserSubscription>(`sub:${body.npub}`, 'json');
     if (!sub) {
       return new Response('Not Found', { status: 404 });
     }
     
-    const payload = {
+    const payload: PushNotificationPayload = {
       title: '🎵 Chorus Test Notification',
       body: body.message || 'Test notification from Chorus!',
       icon: '/icon-192x192.png',
@@ -284,7 +323,7 @@ export default {
       }
     };
     
-    const success = await this.sendPushNotification(env, sub.endpoint, sub.keys, payload);
+    const success = await this.sendPushNotification(env, sub.subscription.endpoint, sub.subscription.keys, payload);
     
     if (success) {
       return new Response(JSON.stringify({ success: true }), {
@@ -302,10 +341,10 @@ export default {
    * Check if subscription is valid
    */
   async handleCheckSubscription(request: Request, env: Env): Promise<Response> {
-    const body = await request.json() as any;
+    const body = await request.json() as { npub: string; endpoint: string };
     
-    const sub = await env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
-    if (!sub || sub.endpoint !== body.endpoint) {
+    const sub = await env.KV.get<UserSubscription>(`sub:${body.npub}`, 'json');
+    if (!sub || sub.subscription.endpoint !== body.endpoint) {
       return new Response('Not Found', { status: 404 });
     }
     
@@ -331,7 +370,7 @@ export default {
     let failed = 0;
     
     for (const notification of payload.notifications) {
-      const sub = await env.KV.get(`sub:${notification.npub}`, 'json') as UserSubscription;
+      const sub = await env.KV.get<UserSubscription>(`sub:${notification.npub}`, 'json');
       if (!sub) continue;
       
       // Check preferences
@@ -350,7 +389,7 @@ export default {
       const pushPayload = await this.buildPushPayload(payload.event, notification, sub);
       
       // Send push notification
-      const success = await this.sendPushNotification(env, sub.endpoint, sub.keys, pushPayload);
+      const success = await this.sendPushNotification(env, sub.subscription.endpoint, sub.subscription.keys, pushPayload);
       
       if (success) {
         sent++;
@@ -389,7 +428,11 @@ export default {
   /**
    * Build push notification payload
    */
-  async buildPushPayload(event: any, notification: any, sub: UserSubscription): Promise<any> {
+  async buildPushPayload(
+    event: NotificationPayload['event'],
+    notification: NotificationPayload['notifications'][number],
+    sub: UserSubscription
+  ): Promise<PushNotificationPayload> {
     const authorNpub = nip19.npubEncode(event.pubkey);
     let title = '';
     let body = event.content.substring(0, 100);
@@ -430,8 +473,6 @@ export default {
       body,
       icon: '/icon-192x192.png',
       badge: '/icon-96x96.png',
-      tag: event.id,
-      requireInteraction: notification.priority === 'high',
       data: {
         url,
         eventId: event.id,
@@ -444,11 +485,8 @@ export default {
   /**
    * Send push notification using Web Push protocol
    */
-  async sendPushNotification(env: Env, endpoint: string, keys: any, payload: any): Promise<boolean> {
+  async sendPushNotification(env: Env, endpoint: string, keys: PushSubscriptionKeys, payload: PushNotificationPayload): Promise<boolean> {
     try {
-      // For now, use a simple approach that works with FCM
-      // In production, you'd want to use proper web-push encryption
-      
       const message = JSON.stringify(payload);
       
       const response = await fetch(endpoint, {
@@ -485,7 +523,7 @@ export default {
    * Add user to group
    */
   async addUserToGroup(env: Env, npub: string, groupId: string): Promise<void> {
-    const members = await env.KV.get(`group:${groupId}`, 'json') as string[] || [];
+    const members = await env.KV.get<string[]>(`group:${groupId}`, 'json') || [];
     if (!members.includes(npub)) {
       members.push(npub);
       await env.KV.put(`group:${groupId}`, JSON.stringify(members));
@@ -496,7 +534,7 @@ export default {
    * Remove user from group
    */
   async removeUserFromGroup(env: Env, npub: string, groupId: string): Promise<void> {
-    const members = await env.KV.get(`group:${groupId}`, 'json') as string[] || [];
+    const members = await env.KV.get<string[]>(`group:${groupId}`, 'json') || [];
     const filtered = members.filter(n => n !== npub);
     if (filtered.length > 0) {
       await env.KV.put(`group:${groupId}`, JSON.stringify(filtered));

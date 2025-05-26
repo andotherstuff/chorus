@@ -3,7 +3,7 @@
  * Handles subscription management and notification dispatch
  */
 
-import { Env } from './worker-enhanced';
+import { PushService } from './push-service';
 
 interface PushSubscription {
   endpoint: string;
@@ -28,8 +28,75 @@ interface UserSubscription {
   lastNotified: number;
 }
 
+// Add types for request bodies
+interface SubscribeRequestBody {
+  npub: string;
+  subscription: PushSubscription;
+  preferences?: {
+    settings?: Partial<UserSubscription['preferences']>;
+    subscriptions?: { groups?: string[] };
+  };
+}
+
+interface UnsubscribeRequestBody {
+  npub: string;
+}
+
+interface PreferencesRequestBody {
+  npub: string;
+  preferences?: {
+    settings?: Partial<UserSubscription['preferences']>;
+    subscriptions?: { groups?: string[] };
+  };
+}
+
+interface CheckSubscriptionRequestBody {
+  npub: string;
+  endpoint: string;
+}
+
+interface NotificationType {
+  type: string;
+  [key: string]: unknown;
+}
+
+type KVNamespace = {
+  get: <T>(key: string, type?: 'text' | 'json') => Promise<T | null>;
+  put: (key: string, value: string, options?: { expirationTtl?: number }) => Promise<void>;
+  delete: (key: string) => Promise<void>;
+  list: (options?: { prefix?: string }) => Promise<{ keys: { name: string }[] }>;
+};
+
+type DurableObjectNamespace = {
+  idFromName: (name: string) => DurableObjectId;
+  get: (id: DurableObjectId) => DurableObjectStub;
+};
+
+type DurableObjectId = {
+  toString: () => string;
+};
+
+type DurableObjectStub = {
+  fetch: (request: Request) => Promise<Response>;
+};
+
+interface Env {
+  KV: KVNamespace;
+  RELAY_URL?: string;
+  PUSH_DISPATCH_API?: string;
+  BOT_TOKEN?: string;
+  VAPID_PUBLIC_KEY: string;
+  VAPID_PRIVATE_KEY: string;
+  FCM_SERVER_KEY?: string;
+  PUSH_QUEUE: DurableObjectNamespace;
+}
+
 export class WorkerAPI {
-  constructor(private env: Env) {}
+  private pushService: PushService;
+
+  constructor(private env: Env) {
+    this.pushService = new PushService(env);
+  }
 
   async handleRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -71,6 +138,9 @@ export class WorkerAPI {
         case '/api/subscription/check':
           response = await this.handleCheckSubscription(request);
           break;
+        case '/api/process-queue':
+          response = await this.handleProcessQueue(request);
+          break;
         default:
           response = new Response('Not Found', { status: 404 });
       }
@@ -94,11 +164,7 @@ export class WorkerAPI {
    * Handle push subscription registration
    */
   private async handleSubscribe(request: Request): Promise<Response> {
-    const body = await request.json() as {
-      npub: string;
-      subscription: PushSubscription;
-      preferences?: any;
-    };
+    const body = await request.json() as SubscribeRequestBody;
 
     // Store user subscription
     const userSub: UserSubscription = {
@@ -132,7 +198,7 @@ export class WorkerAPI {
    * Handle push subscription removal
    */
   private async handleUnsubscribe(request: Request): Promise<Response> {
-    const body = await request.json() as { npub: string };
+    const body = await request.json() as UnsubscribeRequestBody;
     
     // Get existing subscription to clean up groups
     const existing = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
@@ -180,10 +246,7 @@ export class WorkerAPI {
    * Update user preferences
    */
   private async handleUpdatePreferences(request: Request): Promise<Response> {
-    const body = await request.json() as {
-      npub: string;
-      preferences: any;
-    };
+    const body = await request.json() as PreferencesRequestBody;
 
     const existing = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     if (!existing) {
@@ -235,10 +298,7 @@ export class WorkerAPI {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const body = await request.json() as {
-      npub: string;
-      notification: any;
-    };
+    const body = await request.json() as { npub: string; notification: NotificationType };
 
     const sub = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     if (!sub) {
@@ -253,7 +313,7 @@ export class WorkerAPI {
     // Format notification
     const payload = {
       title: this.getNotificationTitle(body.notification),
-      body: body.notification.content,
+      body: body.notification.content as string,
       icon: '/icon-192x192.png',
       badge: '/icon-96x96.png',
       data: {
@@ -263,8 +323,8 @@ export class WorkerAPI {
       timestamp: Date.now()
     };
 
-    // Send push notification
-    await this.sendPushNotification(sub.subscription, payload);
+    // Queue the notification
+    await this.pushService.queueNotification(sub.subscription, payload);
 
     // Update last notified time
     sub.lastNotified = Date.now();
@@ -298,7 +358,7 @@ export class WorkerAPI {
       timestamp: Date.now()
     };
 
-    await this.sendPushNotification(sub.subscription, payload);
+    await this.pushService.queueNotification(sub.subscription, payload);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
@@ -309,10 +369,7 @@ export class WorkerAPI {
    * Check if subscription is valid
    */
   private async handleCheckSubscription(request: Request): Promise<Response> {
-    const body = await request.json() as {
-      npub: string;
-      endpoint: string;
-    };
+    const body = await request.json() as CheckSubscriptionRequestBody;
 
     const sub = await this.env.KV.get(`sub:${body.npub}`, 'json') as UserSubscription;
     if (!sub || sub.subscription.endpoint !== body.endpoint) {
@@ -320,6 +377,23 @@ export class WorkerAPI {
     }
 
     return new Response(JSON.stringify({ valid: true }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  /**
+   * Process notification queue
+   */
+  private async handleProcessQueue(request: Request): Promise<Response> {
+    // Verify bot token
+    const auth = request.headers.get('Authorization');
+    if (auth !== `Bearer ${this.env.BOT_TOKEN}`) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    const result = await this.pushService.processQueue();
+
+    return new Response(JSON.stringify(result), {
       headers: { 'Content-Type': 'application/json' }
     });
   }
@@ -353,7 +427,7 @@ export class WorkerAPI {
   /**
    * Check if notification should be sent based on preferences
    */
-  private shouldSendNotification(sub: UserSubscription, notification: any): boolean {
+  private shouldSendNotification(sub: UserSubscription, notification: NotificationType): boolean {
     switch (notification.type) {
       case 'mention':
         return sub.preferences.mentions;
@@ -373,7 +447,7 @@ export class WorkerAPI {
   /**
    * Get notification title
    */
-  private getNotificationTitle(notification: any): string {
+  private getNotificationTitle(notification: NotificationType): string {
     switch (notification.type) {
       case 'mention':
         return '💬 You were mentioned';
@@ -393,49 +467,12 @@ export class WorkerAPI {
   /**
    * Get notification URL
    */
-  private getNotificationUrl(notification: any): string {
+  private getNotificationUrl(notification: NotificationType): string {
     if (notification.groupId && notification.eventId) {
       return `/group/${notification.groupId}?post=${notification.eventId}`;
     } else if (notification.groupId) {
       return `/group/${notification.groupId}`;
     }
     return '/settings/notifications';
-  }
-
-  /**
-   * Send push notification using Web Push protocol
-   */
-  private async sendPushNotification(subscription: PushSubscription, payload: any): Promise<void> {
-    // For Cloudflare Workers, we need to use the web-push protocol manually
-    // or use a service like FCM/APNS
-    
-    // First, let's try a simple approach that works with most browsers
-    const message = {
-      to: subscription.endpoint,
-      notification: payload,
-      data: payload.data
-    };
-    
-    // If endpoint is FCM (Chrome/Edge)
-    if (subscription.endpoint.includes('fcm.googleapis.com')) {
-      const response = await fetch(subscription.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `key=${this.env.FCM_SERVER_KEY}`, // Optional: for better delivery
-          'TTL': '86400'
-        },
-        body: JSON.stringify(message)
-      });
-      
-      if (!response.ok) {
-        console.error(`FCM error: ${response.status} ${await response.text()}`);
-      }
-      return;
-    }
-    
-    // For other endpoints, we'd need proper Web Push encryption
-    // This is simplified - in production, use a proper web-push library
-    console.log(`Push notification queued for ${subscription.endpoint}`);
   }
 }
