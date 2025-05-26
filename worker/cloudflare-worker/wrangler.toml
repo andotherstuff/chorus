@@ -18,7 +18,6 @@ script_name = "chorus-notifications"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["PushQueue"]
 new_sqlite_classes = ["PushQueue"]
 
 # Environment variables (non-sensitive)
@@ -46,7 +45,6 @@ script_name = "chorus-notifications-prod"
 
 [[env.production.migrations]]
 tag = "v1"
-new_classes = ["PushQueue"]
 new_sqlite_classes = ["PushQueue"]
 
 # Staging environment
@@ -66,7 +64,6 @@ script_name = "chorus-notifications-staging"
 
 [[env.staging.migrations]]
 tag = "v1"
-new_classes = ["PushQueue"]
 new_sqlite_classes = ["PushQueue"]
 
 # Resource limits
