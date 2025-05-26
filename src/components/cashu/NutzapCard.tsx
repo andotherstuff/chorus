@@ -21,7 +21,6 @@ import {
   ChevronUp,
   Copy,
   DollarSign,
-  Zap,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCashuStore } from "@/stores/cashuStore";
@@ -39,9 +38,6 @@ import {
 import { nip19 } from "nostr-tools";
 import { Proof } from "@cashu/cashu-ts";
 import { useNutzapInfo } from "@/hooks/useNutzaps";
-import { useNostr } from "@/hooks/useNostr";
-import { CASHU_EVENT_KINDS } from "@/lib/cashu";
-import { getLastEventTimestamp } from "@/lib/nostrTimestamps";
 import { useWalletUiStore } from "@/stores/walletUiStore";
 import { formatBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
@@ -49,7 +45,6 @@ import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
 
 export function NutzapCard() {
   const { user } = useCurrentUser();
-  const { nostr } = useNostr();
   const { wallet } = useCashuWallet();
   const cashuStore = useCashuStore();
   const { sendToken } = useCashuToken();
@@ -94,160 +89,12 @@ export function NutzapCard() {
     return formatBalance(sats);
   }, [showSats, btcPrice]);
 
-  // Set up subscription for real-time nutzaps
+  // Initialize with fetched nutzaps when available
   useEffect(() => {
-    if (!user || !nutzapInfoQuery.data) return;
-
-    // Get trusted mints from nutzap info
-    const trustedMints = nutzapInfoQuery.data.mints.map((mint) => mint.url);
-    if (trustedMints.length === 0) return;
-
-    // Initialize with fetched nutzaps when available
     if (fetchedNutzaps) {
       setReceivedNutzaps(fetchedNutzaps);
     }
-
-    // Create subscription filter
-    const filter = {
-      kinds: [CASHU_EVENT_KINDS.ZAP],
-      "#p": [user.pubkey], // Events that p-tag the user
-      "#u": trustedMints, // Events that u-tag one of the trusted mints
-    };
-
-    // Get the last timestamp of redemption events
-    const lastRedemptionTimestamp = getLastEventTimestamp(
-      user.pubkey,
-      CASHU_EVENT_KINDS.HISTORY
-    );
-    // Add since filter if we have a last redemption timestamp
-    if (lastRedemptionTimestamp) {
-      Object.assign(filter, { since: lastRedemptionTimestamp });
-    }
-
-    // Cache for keeping track of event IDs we've already processed
-    const processedEventIds = new Set<string>(
-      fetchedNutzaps?.map((n) => n.id) || []
-    );
-
-    // Create an abort controller for the subscription
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    // Start a continuous query for new events
-    const fetchRealTimeEvents = async () => {
-      try {
-        // Use regular query with a signal that can be aborted on component unmount
-        const events = await nostr.query([filter], { signal });
-
-        // Process any new events
-        for (const event of events) {
-          // Skip if we've already processed this event
-          if (processedEventIds.has(event.id)) continue;
-          processedEventIds.add(event.id);
-
-          try {
-            // Get the mint URL from tags
-            const mintTag = event.tags.find((tag) => tag[0] === "u");
-            if (!mintTag) continue;
-            const mintUrl = mintTag[1];
-
-            // Verify the mint is in the trusted list
-            if (!trustedMints.includes(mintUrl)) continue;
-
-            // Get proofs from tags
-            const proofTags = event.tags.filter((tag) => tag[0] === "proof");
-            if (proofTags.length === 0) continue;
-
-            const proofs = proofTags
-              .map((tag) => {
-                try {
-                  return JSON.parse(tag[1]);
-                } catch (e) {
-                  console.error("Failed to parse proof:", e);
-                  return null;
-                }
-              })
-              .filter(Boolean);
-
-            if (proofs.length === 0) continue;
-
-            // Get the zapped event if any
-            let zappedEvent: string | undefined;
-            const eventTag = event.tags.find((tag) => tag[0] === "e");
-            if (eventTag) {
-              zappedEvent = eventTag[1];
-            }
-
-            // Create nutzap object
-            const nutzap: ReceivedNutzap = {
-              id: event.id,
-              pubkey: event.pubkey,
-              createdAt: event.created_at,
-              content: event.content,
-              proofs,
-              mintUrl,
-              zappedEvent,
-              redeemed: false, // New nutzaps are not redeemed yet
-            };
-
-            // Add to received nutzaps, putting newest last
-            setReceivedNutzaps((prev) => [...prev, nutzap]);
-
-            // Auto-redeem the new nutzap
-            try {
-              await redeemNutzap(nutzap);
-              // Update the UI state to show this nutzap as redeemed
-              setReceivedNutzaps((prev) =>
-                prev.map((n) =>
-                  n.id === nutzap.id ? { ...n, redeemed: true } : n
-                )
-              );
-
-              // Show success notification for redeemed nutzap
-              setSuccess(
-                `New eCash received and redeemed! ${formatAmount(proofs.reduce(
-                  (sum, p) => sum + p.amount,
-                  0
-                ))}`
-              );
-            } catch (error) {
-              console.error("Failed to auto-redeem nutzap:", error);
-              // Just show the notification without auto-redemption
-              setSuccess(
-                `New eCash received! ${formatAmount(proofs.reduce(
-                  (sum, p) => sum + p.amount,
-                  0
-                ))}`
-              );
-            }
-
-            setTimeout(() => setSuccess(null), 3000);
-          } catch (error) {
-            console.error("Error processing nutzap event:", error);
-          }
-        }
-
-        // Set up a polling interval for continuous real-time updates if component is still mounted
-        if (!signal.aborted) {
-          setTimeout(fetchRealTimeEvents, 5000); // Poll every 5 seconds
-        }
-      } catch (error) {
-        if (!signal.aborted) {
-          console.error("Error fetching real-time events:", error);
-          // Try again after a delay
-          setTimeout(fetchRealTimeEvents, 10000); // Retry after 10 seconds
-        }
-      }
-    };
-
-    // Start the initial fetch
-    fetchRealTimeEvents();
-
-    // Cleanup subscription on unmount
-    return () => {
-      controller.abort();
-    };
-  }, [user, nutzapInfoQuery.data, fetchedNutzaps, nostr, redeemNutzap, formatAmount]);
+  }, [fetchedNutzaps]);
 
   const copyToClipboard = async (text: string) => {
     try {

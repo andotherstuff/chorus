@@ -18,7 +18,7 @@ export async function derivePrivkeyFromNostrSignature(
 ): Promise<string> {
   // Create a minimal event with only the pubkey
   const minimalEvent = {
-    kind: 0,
+    kind: 1337,
     created_at: 1033381312,
     tags: [],
     content: "cashu-wallet-seed",

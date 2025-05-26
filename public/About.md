@@ -31,4 +31,4 @@ Check out our [FAQ](/faq) for answers to common questions.
 
 ## Talk to us
 
-Love +chorus? Have an idea for how to make it better? Come say hello in [our group](https://chorus.community/group/34550%3A932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d%3Aand-other-stuff) or visit our [GitHub](https://github.com/andotherstuff). We welcome your feedback, ideas, contributions, and [bug reports](https://github.com/andotherstuff/chorus/issues/new).
+Love +chorus? Have an idea for how to make it better? Come say hello in [our group](https://chorus.community/group/34550%3A932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d%3Aand-other-stuff-mb3c9stb) or visit our [GitHub](https://github.com/andotherstuff). We welcome your feedback, ideas, contributions, and [bug reports](https://github.com/andotherstuff/chorus/issues/new).

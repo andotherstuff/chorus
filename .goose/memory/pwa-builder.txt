@@ -1,0 +1,3 @@
+# pwa service-worker no-cache pwabuilder
+Working on groups72-pwa (now chorus) to prepare it for PWABuilder.com. Key requirement: DO NOT cache things in the service worker - we want to avoid service worker caching.
+

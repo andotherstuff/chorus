@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx';
 import { useLoginActions } from '@/hooks/useLoginActions';
+import { useProfileSync } from '@/hooks/useProfileSync';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -27,14 +28,19 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
   const [bunkerUri, setBunkerUri] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const login = useLoginActions();
+  const { syncProfile } = useProfileSync();
 
-  const handleExtensionLogin = () => {
+  const handleExtensionLogin = async () => {
     setIsLoading(true);
     try {
       if (!('nostr' in window)) {
         throw new Error('Nostr extension not found. Please install a NIP-07 extension.');
       }
-      login.extension();
+      const loginInfo = await login.extension();
+      
+      // Sync profile after successful login
+      await syncProfile(loginInfo.pubkey);
+      
       onLogin();
       onClose();
     } catch (error) {
@@ -44,12 +50,16 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     }
   };
 
-  const handleKeyLogin = () => {
+  const handleKeyLogin = async () => {
     if (!nsec.trim()) return;
     setIsLoading(true);
 
     try {
-      login.nsec(nsec);
+      const loginInfo = login.nsec(nsec);
+      
+      // Sync profile after successful login
+      await syncProfile(loginInfo.pubkey);
+      
       onLogin();
       onClose();
     } catch (error) {
@@ -59,12 +69,16 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
     }
   };
 
-  const handleBunkerLogin = () => {
+  const handleBunkerLogin = async () => {
     if (!bunkerUri.trim() || !bunkerUri.startsWith('bunker://')) return;
     setIsLoading(true);
 
     try {
-      login.bunker(bunkerUri);
+      const loginInfo = await login.bunker(bunkerUri);
+      
+      // Sync profile after successful login
+      await syncProfile(loginInfo.pubkey);
+      
       onLogin();
       onClose();
     } catch (error) {

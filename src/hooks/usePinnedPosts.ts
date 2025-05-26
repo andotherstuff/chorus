@@ -2,6 +2,8 @@ import { useNostr } from "./useNostr";
 import { useCurrentUser } from "./useCurrentUser";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNostrPublish } from "./useNostrPublish";
+import { KINDS } from "@/lib/nostr-kinds";
+import { useGroup } from "./useGroup";
 
 export interface PinnedPost {
   eventId: string;
@@ -11,6 +13,7 @@ export interface PinnedPost {
 export function usePinnedPosts(communityId: string) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { data: group } = useGroup(communityId);
   const queryClient = useQueryClient();
   const { mutateAsync: publishEvent } = useNostrPublish();
 
@@ -21,12 +24,20 @@ export function usePinnedPosts(communityId: string) {
       if (!nostr || !communityId) return [];
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const moderators = new Set<string>([group!.pubkey]);
+
+      for (const tag of group!.tags) {
+        if (tag[0] === "p" && tag[3] === "moderator") {
+          moderators.add(tag[1]);
+        }
+      }
       
       // Fetch pinned posts events (kind 14554) for this community from all moderators
       const events = await nostr.query([
         { 
-          kinds: [14554], 
-          "#a": [communityId],
+          kinds: [KINDS.GROUP_PINNED_POSTS_LIST], 
+          authors: [...moderators],
+          "#d": [communityId],
           limit: 50 
         }
       ], { signal });
@@ -64,15 +75,15 @@ export function usePinnedPosts(communityId: string) {
       const signal = AbortSignal.timeout(5000);
       const existingEvents = await nostr.query([
         { 
-          kinds: [14554], 
+          kinds: [KINDS.GROUP_PINNED_POSTS_LIST], 
           authors: [user.pubkey],
-          "#a": [communityId],
+          "#d": [communityId],
           limit: 1 
         }
       ], { signal });
 
       // Start with the community tag
-      const tags = [["a", communityId]];
+      const tags = [["d", communityId]];
 
       // If there's an existing event, copy its e tags and add the new one
       if (existingEvents.length > 0) {
@@ -92,7 +103,7 @@ export function usePinnedPosts(communityId: string) {
 
       // Publish the kind 14554 event
       await publishEvent({
-        kind: 14554,
+        kind: KINDS.GROUP_PINNED_POSTS_LIST,
         tags,
         content: ""
       });
@@ -116,9 +127,9 @@ export function usePinnedPosts(communityId: string) {
       const signal = AbortSignal.timeout(5000);
       const existingEvents = await nostr.query([
         { 
-          kinds: [14554], 
+          kinds: [KINDS.GROUP_PINNED_POSTS_LIST], 
           authors: [user.pubkey],
-          "#a": [communityId],
+          "#d": [communityId],
           limit: 1 
         }
       ], { signal });
@@ -134,7 +145,7 @@ export function usePinnedPosts(communityId: string) {
       const remainingETags = existingETags.filter(tag => tag[1] !== eventId);
 
       // Start with the community tag
-      const tags = [["a", communityId]];
+      const tags = [["d", communityId]];
       
       // Add the remaining e tags
       for (const eTag of remainingETags) {
@@ -142,13 +153,13 @@ export function usePinnedPosts(communityId: string) {
       }
 
       // If there are no remaining pinned posts, we could either:
-      // 1. Publish an empty event with just the "a" tag, or
+      // 1. Publish an empty event with just the "d" tag, or
       // 2. Delete the entire event
       // Let's go with option 1 for consistency
       
       // Publish the updated kind 14554 event
       await publishEvent({
-        kind: 14554,
+        kind: KINDS.GROUP_PINNED_POSTS_LIST,
         tags,
         content: ""
       });

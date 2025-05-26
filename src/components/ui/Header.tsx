@@ -23,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
   const showClaimButton = user && pendingToken && !hasClaimedToken;
 
   return (
-    <div className={`flex justify-between items-center ${className || ""}`}>
+    <div className={`flex justify-between items-center safe-area-top ${className || ""}`}>
       <div className="flex items-baseline gap-1.5">
         <Link to="/" className="contents">
           <h1 className="text-2xl font-bold flex flex-row items-center leading-none">

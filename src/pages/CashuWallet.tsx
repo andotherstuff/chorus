@@ -18,6 +18,17 @@ import { Loader2, Bitcoin, DollarSign, ArrowLeftRight } from "lucide-react";
 import { formatBalance, calculateBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info, HelpCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export function CashuWallet() {
   const { user } = useCurrentUser();
@@ -29,6 +40,7 @@ export function CashuWallet() {
   const [isProcessingToken, setIsProcessingToken] = useState(false);
   const { showSats, toggleCurrency } = useCurrencyDisplayStore();
   const { data: btcPrice, isLoading: btcPriceLoading } = useBitcoinPrice();
+
   // Calculate total balance across all mints
   const balances = calculateBalance(cashuStore.proofs);
   const totalBalance = Object.values(balances).reduce(
@@ -37,14 +49,17 @@ export function CashuWallet() {
   );
 
   // Helper function to format amount based on user preference
-  const formatAmount = useCallback((sats: number): string => {
-    if (showSats) {
-      return `${sats.toLocaleString()} sats`;
-    } else {
-      const usd = satsToUSD(sats, btcPrice?.USD || null);
-      return usd !== null ? formatUSD(usd) : `${sats.toLocaleString()} sats`;
-    }
-  }, [showSats, btcPrice]);
+  const formatAmount = useCallback(
+    (sats: number): string => {
+      if (showSats) {
+        return `${sats.toLocaleString()} sats`;
+      } else {
+        const usd = satsToUSD(sats, btcPrice?.USD || null);
+        return usd !== null ? formatUSD(usd) : `${sats.toLocaleString()} sats`;
+      }
+    },
+    [showSats, btcPrice]
+  );
 
   // Handle pending onboarding token
   useEffect(() => {
@@ -173,9 +188,91 @@ export function CashuWallet() {
       <Header />
       <Separator className="my-2" />
 
+      {/* Wallet Info Modal - Upper Left */}
+      <div className="mb-4">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2">
+              <HelpCircle className="h-4 w-4" />
+              What is this?
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="text-xl">💸</span>
+                Understanding Your eCash Wallet
+              </DialogTitle>
+              <DialogDescription className="text-left space-y-3 pt-3">
+                <p>
+                  <strong>Your Cashu Wallet</strong> uses ecash tokens for
+                  private, instant payments. It's like having digital cash in
+                  your pocket!
+                </p>
+                <p>
+                  <strong>Cashu</strong> is a privacy-preserving digital cash
+                  system built on cryptographic proofs. Your transactions are
+                  private by default, and no one can track your spending.
+                </p>
+                <p>
+                  <strong>Lightning Network</strong> enables fast Bitcoin
+                  transactions, and this wallet seamlessly bridges both systems.
+                  You can send and receive Lightning payments while maintaining
+                  privacy through Cashu's blind signatures.
+                </p>
+                <p>
+                  <strong>Use your eCash in the real world!</strong> Through
+                  Lightning, you can:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>
+                    Get a private SIM card at{" "}
+                    <a
+                      href="http://silent.link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Silent.link
+                    </a>
+                  </li>
+                  <li>
+                    Order a private Visa card from{" "}
+                    <a
+                      href="https://paywithmoon.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      PayWithMoon
+                    </a>
+                  </li>
+                  <li>
+                    Buy gift cards at{" "}
+                    <a
+                      href="https://www.bitrefill.com/us/en/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Bitrefill
+                    </a>{" "}
+                    for everyday shopping
+                  </li>
+                </ul>
+                <p className="text-sm font-medium">
+                  Think of it as digital cash that moves at the speed of
+                  Lightning! ⚡
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {/* Total Balance Display */}
       {user && wallet && (
-        <div className="text-center py-6">
+        <div className="text-center py-2">
           <div className="text-5xl font-bold tabular-nums">
             {showSats
               ? formatBalance(totalBalance)
@@ -216,7 +313,7 @@ export function CashuWallet() {
         <CashuWalletLightningCard />
         <CashuWalletCard />
         {/* <NutzapCard /> */}
-        {/* <CashuTokenCard /> */}
+        <CashuTokenCard />
         <CashuHistoryCard />
       </div>
 

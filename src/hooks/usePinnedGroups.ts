@@ -2,6 +2,7 @@ import { useNostr } from "./useNostr";
 import { useCurrentUser } from "./useCurrentUser";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNostrPublish } from "./useNostrPublish";
+import { KINDS } from "@/lib/nostr-kinds";
 
 export interface PinnedGroup {
   communityId: string;
@@ -12,7 +13,7 @@ export function usePinnedGroups() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const queryClient = useQueryClient();
-  const { mutate: publishEvent } = useNostrPublish();
+  const { mutateAsync: publishEvent } = useNostrPublish();
 
   // Fetch pinned groups
   const query = useQuery({
@@ -22,11 +23,12 @@ export function usePinnedGroups() {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
-      // Fetch the user's pinned groups event (kind 14553)
+      // Fetch the user's pinned groups event (kind 34555)
       const events = await nostr.query([
         { 
-          kinds: [14553], 
+          kinds: [KINDS.PINNED_GROUPS_LIST], 
           authors: [user.pubkey],
+          "#d": ["pinned-groups"],
           limit: 1 
         }
       ], { signal });
@@ -41,7 +43,7 @@ export function usePinnedGroups() {
       
       // Extract the pinned groups from the tags
       const pinnedGroups: PinnedGroup[] = pinnedGroupsEvent.tags
-        .filter(tag => tag[0] === "a" && tag[1]?.startsWith("34550:"))
+        .filter(tag => tag[0] === "a" && tag[1]?.startsWith(`${KINDS.GROUP}:`))
         .map(tag => ({
           communityId: tag[1],
           relayUrl: tag[2] || undefined
@@ -58,15 +60,14 @@ export function usePinnedGroups() {
       if (!user) throw new Error("User not logged in");
 
       // Create tags for the event
-      const tags = pinnedGroups.map(group => 
-        group.relayUrl 
-          ? ["a", group.communityId, group.relayUrl] 
-          : ["a", group.communityId]
-      );
+      const tags = [
+        ["d", "pinned-groups"], // The "d" tag identifies this as the user's pinned groups list
+        ...pinnedGroups.map(group => ["a", group.communityId])
+      ];
 
       // Publish the kind 14553 event
       await publishEvent({
-        kind: 14553,
+        kind: KINDS.PINNED_GROUPS_LIST,
         tags,
         content: ""
       });

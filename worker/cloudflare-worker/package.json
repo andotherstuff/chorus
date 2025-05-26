@@ -1,37 +1,29 @@
 {
-  "name": "push-notification-worker",
+  "name": "chorus-notifications",
   "version": "1.0.0",
-  "description": "Cloudflare Worker for push notifications",
-  "main": "src/index.ts",
-  "type": "module",
+  "description": "Push notification worker for Chorus",
+  "main": "src/push-notification-worker.ts",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:integration": "bun run scripts/test-integration.ts",
-    "dev": "tsx watch src/dev-server.ts",
-    "build": "tsc",
-    "start": "tsx src/dev-server.ts",
-    "test:endpoints": "tsx scripts/test-endpoints.ts"
+    "dev": "tsx watch scripts/dev-server.ts",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:prod": "wrangler deploy --env production",
+    "test": "tsx scripts/test-endpoints.ts",
+    "test:staging": "tsx scripts/test-endpoints.ts --env staging",
+    "test:prod": "tsx scripts/test-endpoints.ts --env production"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20240208.0",
+    "@nostrify/nostrify": "npm:@jsr/nostrify__nostrify@^0.46.1",
+    "itty-router": "^4.0.27",
+    "itty-router-extras": "^0.5.1",
+    "nostr-tools": "^2.3.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240208.0",
-    "@jest/globals": "^29.7.0",
-    "@types/jest": "^29.5.12",
-    "@types/node": "^20.11.19",
-    "jest": "^29.7.0",
-    "node-fetch": "^3.3.2",
-    "ts-jest": "^29.1.2",
+    "@types/node": "^22.5.5",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "testMatch": ["**/*.test.ts"],
-    "collectCoverageFrom": [
-      "src/**/*.ts",
-      "!src/**/*.d.ts"
-    ]
+    "typescript": "^5.8.3",
+    "wrangler": "^3.28.2"
   }
 }

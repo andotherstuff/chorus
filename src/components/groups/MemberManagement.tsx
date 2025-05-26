@@ -3,7 +3,7 @@ import { useNostr } from "@/hooks/useNostr";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useBannedUsers } from "@/hooks/useBannedUsers";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { UserPlus, Users, CheckCircle, XCircle, UserX, Ban } from "lucide-react";
 import { NostrEvent } from "@nostrify/nostrify";
 import { Link, useLocation } from "react-router-dom";
+import { KINDS } from "@/lib/nostr-kinds";
+import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 
 interface MemberManagementProps {
   communityId: string;
@@ -26,6 +28,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
   const { user } = useCurrentUser();
   const location = useLocation();
   const { mutateAsync: publishEvent } = useNostrPublish();
+  const queryClient = useQueryClient();
   const { 
     bannedUsers: uniqueBannedUsers, 
     isLoading: isLoadingBanned, 
@@ -51,7 +54,7 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [4552],
+        kinds: [KINDS.GROUP_JOIN_REQUEST],
         "#a": [communityId],
         limit: 50,
       }], { signal });
@@ -61,22 +64,8 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     enabled: !!nostr && !!communityId,
   });
 
-  // Query for approved members
-  const { data: approvedMembersEvents, isLoading: isLoadingMembers, refetch: refetchMembers } = useQuery({
-    queryKey: ["approved-members", communityId],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      
-      const events = await nostr.query([{ 
-        kinds: [14550],
-        "#a": [communityId],
-        limit: 10,
-      }], { signal });
-      
-      return events;
-    },
-    enabled: !!nostr && !!communityId,
-  });
+  // Get approved members using the centralized hook
+  const { approvedMembers, isLoading: isLoadingMembers } = useApprovedMembers(communityId);
 
   // Query for declined users
   const { data: declinedUsersEvents, isLoading: isLoadingDeclined, refetch: refetchDeclined } = useQuery({
@@ -85,8 +74,8 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       const events = await nostr.query([{ 
-        kinds: [14551],
-        "#a": [communityId],
+        kinds: [KINDS.GROUP_DECLINED_MEMBERS_LIST],
+        "#d": [communityId],
         limit: 50,
       }], { signal });
       
@@ -94,11 +83,6 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     },
     enabled: !!nostr && !!communityId,
   });
-
-  // Extract all approved member pubkeys from the events
-  const approvedMembers = approvedMembersEvents?.flatMap(event => 
-    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
-  ) || [];
 
   // Remove duplicates
   const uniqueApprovedMembers = [...new Set(approvedMembers)];
@@ -130,14 +114,14 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       
       // Create a new list or update the existing one for approved members
       const tags = [
-        ["a", communityId],
+        ["d", communityId],
         ...uniqueApprovedMembers.map(pk => ["p", pk]),
         ["p", pubkey] // Add the new member
       ];
 
-      // Create approved members event (kind 14550)
+      // Create approved members event
       await publishEvent({
-        kind: 14550,
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
         tags,
         content: "",
       });
@@ -160,9 +144,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
             // Create a new declined event that doesn't include this pubkey
             // This effectively "removes" the user from the declined list
             await publishEvent({
-              kind: 14551,
+              kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
               tags: [
-                ["a", communityId],
+                ["d", communityId],
                 ["e", eventIdTag[1]],
                 // Deliberately omitting the pubkey tag to remove the user
                 ["k", kindTag[1]]
@@ -177,8 +161,13 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       
       // Refetch data
       refetchRequests();
-      refetchMembers();
       refetchDeclined();
+      
+      // Invalidate pending requests count cache
+      queryClient.invalidateQueries({ queryKey: ["join-requests-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["approved-members-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["declined-users-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["approved-members-list", communityId] });
       
       // Switch to members tab
       setActiveTab("members");
@@ -200,28 +189,28 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       
       // Create a new list with the member removed
       const tags = [
-        ["a", communityId],
+        ["d", communityId],
         ...updatedMembers.map(pk => ["p", pk])
       ];
 
-      // Create updated approved members event (kind 14550)
+      // Create updated approved members event
       await publishEvent({
-        kind: 14550,
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
         tags,
         content: "",
       });
       
-      // Add the removed user to the declined list (kind 14551)
+      // Add the removed user to the declined list 
       // We'll create a generic event ID since we don't have a specific request event
       const removalEventId = `removal:${pubkey}:${Date.now()}`;
       
       await publishEvent({
-        kind: 14551,
+        kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
         tags: [
-          ["a", communityId],
+          ["d", communityId],
           ["e", removalEventId], // Using a generated event ID
           ["p", pubkey], // The pubkey of the removed user
-          ["k", "14550"] // Indicating this was a removal from the approved list
+          ["k", String(KINDS.GROUP_APPROVED_MEMBERS_LIST)] // Indicating this was a removal from the approved list
         ],
         content: JSON.stringify({
           reason: "Removed from group by moderator",
@@ -232,8 +221,12 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       toast.success("Member removed successfully!");
       
       // Refetch data
-      refetchMembers();
       refetchDeclined();
+      
+      // Invalidate pending requests count cache
+      queryClient.invalidateQueries({ queryKey: ["approved-members-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["declined-users-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["approved-members-list", communityId] });
     } catch (error) {
       console.error("Error removing member:", error);
       toast.error("Failed to remove member. Please try again.");
@@ -257,6 +250,11 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       
       toast.success("User banned successfully!");
       
+      // Invalidate pending requests count cache
+      queryClient.invalidateQueries({ queryKey: ["join-requests-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["approved-members-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["banned-users-count", communityId] });
+      
       // Switch to banned tab
       setActiveTab("banned");
     } catch (error) {
@@ -274,12 +272,12 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     try {
       // Create decline event (kind 14551)
       await publishEvent({
-        kind: 14551,
+        kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
         tags: [
-          ["a", communityId],
+          ["d", communityId],
           ["e", request.id],
           ["p", request.pubkey],
-          ["k", "4552"] // The kind of the request event
+          ["k", String(KINDS.GROUP_JOIN_REQUEST)] // The kind of the request event
         ],
         content: JSON.stringify(request), // Store the full request event
       });
@@ -289,6 +287,10 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       // Refetch data
       refetchRequests();
       refetchDeclined();
+      
+      // Invalidate pending requests count cache
+      queryClient.invalidateQueries({ queryKey: ["join-requests-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["declined-users-count", communityId] });
     } catch (error) {
       console.error("Error declining user:", error);
       toast.error("Failed to decline user. Please try again.");
@@ -317,9 +319,9 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
           // Create a new declined event that doesn't include this pubkey
           // This effectively "removes" the user from the declined list
           await publishEvent({
-            kind: 14551,
+            kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
             tags: [
-              ["a", communityId],
+              ["d", communityId],
               ["e", eventIdTag[1]],
               // Deliberately omitting the pubkey tag to remove the user
               ["k", kindTag[1]]
@@ -331,14 +333,14 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
 
       // 3. Add to approved members list
       const tags = [
-        ["a", communityId],
+        ["d", communityId],
         ...uniqueApprovedMembers.map(pk => ["p", pk]),
         ["p", pubkey] // Add the new member
       ];
 
-      // Create approved members event (kind 14550)
+      // Create approved members event
       await publishEvent({
-        kind: 14550,
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
         tags,
         content: "",
       });
@@ -347,7 +349,11 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
       
       // Refetch data
       refetchDeclined();
-      refetchMembers();
+      
+      // Invalidate pending requests count cache
+      queryClient.invalidateQueries({ queryKey: ["approved-members-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["declined-users-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["approved-members-list", communityId] });
       
       // Switch to members tab
       setActiveTab("members");
@@ -357,9 +363,86 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
     }
   };
 
-  if (!isModerator) {
-    return null;
-  }
+  const handleApproveAllRequests = async () => {
+    if (!user || !isModerator) {
+      toast.error("You must be a moderator to approve members");
+      return;
+    }
+
+    if (pendingRequests.length === 0) {
+      toast.info("No pending requests to approve");
+      return;
+    }
+    
+    try {
+      // Get all the pubkeys from pending requests
+      const pendingPubkeys = pendingRequests.map(request => request.pubkey);
+      
+      // Create a new list of all existing approved members plus all pending requests
+      const tags = [
+        ["d", communityId],
+        ...uniqueApprovedMembers.map(pk => ["p", pk]),
+        ...pendingPubkeys.map(pk => ["p", pk]) // Add all pending members
+      ];
+
+      // Create approved members event
+      await publishEvent({
+        kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
+        tags,
+        content: "",
+      });
+      
+      // Handle any declined users in the pending list
+      const declinedPubkeysInPendingList = pendingPubkeys.filter(pk => 
+        uniqueDeclinedUsers.includes(pk)
+      );
+      
+      if (declinedPubkeysInPendingList.length > 0) {
+        // For each previously declined user, find their events and remove them from declined list
+        for (const pubkey of declinedPubkeysInPendingList) {
+          const declinedEventsForUser = declinedUsersEvents?.filter(event => 
+            event.tags.some(tag => tag[0] === "p" && tag[1] === pubkey)
+          ) || [];
+          
+          for (const declinedEvent of declinedEventsForUser) {
+            // Get the original request event ID and kind from the declined event
+            const eventIdTag = declinedEvent.tags.find(tag => tag[0] === "e");
+            const kindTag = declinedEvent.tags.find(tag => tag[0] === "k");
+            
+            if (eventIdTag && kindTag) {
+              // Create a new declined event that doesn't include this pubkey
+              await publishEvent({
+                kind: KINDS.GROUP_DECLINED_MEMBERS_LIST,
+                tags: [
+                  ["d", communityId],
+                  ["e", eventIdTag[1]],
+                  // Deliberately omitting the pubkey tag to remove the user
+                  ["k", kindTag[1]]
+                ],
+                content: "", // Empty content to indicate removal
+              });
+            }
+          }
+        }
+      }
+      
+      const approvedCount = pendingRequests.length;
+      toast.success(`${approvedCount} ${approvedCount === 1 ? 'user' : 'users'} approved successfully!`);
+      
+      // Refetch data
+      refetchRequests();
+      refetchDeclined();
+      
+      // Invalidate pending requests count cache
+      queryClient.invalidateQueries({ queryKey: ["join-requests-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["approved-members-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["declined-users-count", communityId] });
+      queryClient.invalidateQueries({ queryKey: ["approved-members-list", communityId] });
+    } catch (error) {
+      console.error("Error approving all users:", error);
+      toast.error("Failed to approve all users. Please try again.");
+    }
+  };
 
   return (
     <Card>
@@ -382,8 +465,8 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
                     <UserPlus className="h-4 w-4" />
                     <span>Requests</span>
                     {pendingRequests.length > 0 && (
-                      <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs ml-auto">
-                        {pendingRequests.length > 9 ? '9+' : pendingRequests.length}
+                      <span className="bg-primary text-primary-foreground rounded-full min-w-5 h-5 px-1 flex items-center justify-center text-xs ml-auto">
+                        {pendingRequests.length > 99 ? '99' : pendingRequests.length}
                       </span>
                     )}
                   </div>
@@ -436,6 +519,18 @@ export function MemberManagement({ communityId, isModerator }: MemberManagementP
               </div>
             ) : (
               <div className="space-y-4">
+                {pendingRequests.length > 1 && (
+                  <div className="flex justify-end mb-4">
+                    <Button 
+                      size="sm" 
+                      onClick={handleApproveAllRequests}
+                      className="gap-2"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Approve All ({pendingRequests.length})
+                    </Button>
+                  </div>
+                )}
                 {pendingRequests.map((request) => (
                   <JoinRequestItem 
                     key={request.id} 
@@ -572,7 +667,7 @@ function JoinRequestItem({ request, onApprove, onDecline }: JoinRequestItemProps
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-md gap-3">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <Link to={`/profile/${request.pubkey}`} className="flex-shrink-0">
-          <Avatar>
+          <Avatar className="rounded-md">
             <AvatarImage src={profileImage} />
             <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
@@ -634,7 +729,7 @@ function MemberItem({ pubkey, onRemove, onBan, isBanned = false }: MemberItemPro
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-md gap-3">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <Link to={`/profile/${pubkey}`} className="flex-shrink-0">
-          <Avatar>
+          <Avatar className="rounded-md">
             <AvatarImage src={profileImage} />
             <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
@@ -701,7 +796,7 @@ function DeclinedUserItem({ pubkey, onApprove }: DeclinedUserItemProps) {
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-md gap-3">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <Link to={`/profile/${pubkey}`} className="flex-shrink-0">
-          <Avatar>
+          <Avatar className="rounded-md">
             <AvatarImage src={profileImage} />
             <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>

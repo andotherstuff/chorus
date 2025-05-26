@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, DollarSign, Bitcoin } from "lucide-react";
+import { Zap, DollarSign, Bitcoin, AlertCircle, Wallet, Loader2 } from "lucide-react";
 import {
   useSendNutzap,
   useFetchNutzapInfo,
@@ -26,6 +26,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
 import { formatBalance } from "@/lib/cashu";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface GroupNutzapButtonProps {
   groupId: string;
@@ -56,6 +57,52 @@ export function GroupNutzapButton({
   const [amount, setAmount] = useState("");
   const [comment, setComment] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [recipientWalletStatus, setRecipientWalletStatus] = useState<'loading' | 'no-wallet' | 'no-compatible-mint' | 'ready'>('loading');
+
+  // Check recipient wallet status when dialog opens
+  useEffect(() => {
+    // Skip if dialog is not open or we don't have required dependencies
+    if (!isDialogOpen || !user || !wallet || !cashuStore.activeMintUrl) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkRecipientWallet = async () => {
+      try {
+        setRecipientWalletStatus('loading');
+        const recipientInfo = await fetchNutzapInfo(ownerPubkey);
+        
+        // Check if the effect was cancelled before updating state
+        if (cancelled) return;
+        
+        // Try to verify mint compatibility
+        try {
+          verifyMintCompatibility(recipientInfo);
+          if (!cancelled) {
+            setRecipientWalletStatus('ready');
+          }
+        } catch {
+          if (!cancelled) {
+            setRecipientWalletStatus('no-compatible-mint');
+          }
+        }
+      } catch (error) {
+        // If we can't fetch nutzap info, recipient doesn't have a wallet
+        if (!cancelled) {
+          setRecipientWalletStatus('no-wallet');
+        }
+      }
+    };
+
+    checkRecipientWallet();
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDialogOpen, ownerPubkey, user?.pubkey, wallet, cashuStore.activeMintUrl]); // Only depend on stable values
 
   // Format amount based on user preference
   const formatAmount = (sats: number) => {
@@ -85,6 +132,8 @@ export function GroupNutzapButton({
       return;
     }
 
+    // Reset the status when opening the dialog
+    setRecipientWalletStatus('loading');
     setIsDialogOpen(true);
   };
 
@@ -148,6 +197,7 @@ export function GroupNutzapButton({
       toast.success(
         `Successfully sent ${formatAmount(amountValue)} to group owner`
       );
+      // Clear form on success
       setAmount("");
       setComment("");
       setIsDialogOpen(false);
@@ -183,42 +233,88 @@ export function GroupNutzapButton({
               Send eCash to the group owner to show your support.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                Amount {showSats ? "(sats)" : "(USD)"}
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder={showSats ? "100" : "0.10"}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="col-span-3"
-              />
+
+          {/* Check wallet status first */}
+          {!user ? (
+            <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-amber-900 dark:text-amber-100">
+                You must be logged in to send eCash.
+              </AlertDescription>
+            </Alert>
+          ) : !wallet ? (
+            <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+              <Wallet className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-amber-900 dark:text-amber-100">
+                You need to set up a Cashu wallet first to send eCash.
+              </AlertDescription>
+            </Alert>
+          ) : !cashuStore.activeMintUrl ? (
+            <Alert className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-amber-900 dark:text-amber-100">
+                No active mint selected. Please select a mint in your wallet settings.
+              </AlertDescription>
+            </Alert>
+          ) : recipientWalletStatus === 'loading' ? (
+            <div className="py-8 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              <span className="text-sm text-muted-foreground">Checking group owner's wallet...</span>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="comment" className="text-right">
-                Comment
-              </Label>
-              <Input
-                id="comment"
-                placeholder="Thanks for creating this group!"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={handleSendNutzap}
-              disabled={isProcessing || isSending || isFetching || !amount}
-            >
-              {isProcessing ? "Sending..." : "Send eCash"}
-            </Button>
-          </DialogFooter>
+          ) : recipientWalletStatus === 'no-wallet' ? (
+            <Alert className="bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800">
+              <Wallet className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <AlertDescription className="text-red-900 dark:text-red-100">
+                The group owner hasn't set up a Cashu wallet yet. They need to create a wallet before they can receive eCash.
+              </AlertDescription>
+            </Alert>
+          ) : recipientWalletStatus === 'no-compatible-mint' ? (
+            <Alert className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+              <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              <AlertDescription className="text-orange-900 dark:text-orange-100">
+                You don't share any mints with the group owner. To send them eCash, you need to add one of their mints to your wallet, or they need to add one of yours.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="amount" className="text-right">
+                    Amount {showSats ? "(sats)" : "(USD)"}
+                  </Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder={showSats ? "100" : "0.10"}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="comment" className="text-right">
+                    Comment
+                  </Label>
+                  <Input
+                    id="comment"
+                    placeholder="Thanks for creating this group!"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="submit"
+                  onClick={handleSendNutzap}
+                  disabled={isProcessing || isSending || isFetching || !amount}
+                >
+                  {isProcessing || isSending ? "Sending..." : "Send eCash"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>

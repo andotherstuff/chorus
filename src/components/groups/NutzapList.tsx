@@ -177,7 +177,7 @@ function NutzapItem({ nutzap, formatAmount }: NutzapItemProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <Avatar className="h-5 w-5">
+      <Avatar className="h-5 w-5 rounded-md">
         <AvatarImage src={profileImage} alt={displayName} />
         <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
       </Avatar>

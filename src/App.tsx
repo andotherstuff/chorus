@@ -11,6 +11,7 @@ import AppRouter from './AppRouter';
 import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
 import { useSystemTheme } from '@/hooks/useSystemTheme';
 import { JoinDialogProvider } from '@/components/groups/JoinDialogProvider';
+import { WalletLoader } from '@/components/WalletLoader';
 
 // DO NOT MODIFY THIS LIST UNLESS YOU ARE ABSOLUTELY CERTAIN EACH RELAY URL YOU ARE ADDING IS VALID AND THE RELAY IS CURRENTLY ONLINE AND CONFIRMED TO BE FULLY FUNCTIONAL AND WORKING.
 const defaultRelays = [
@@ -37,6 +38,7 @@ export function App() {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <JoinDialogProvider>
+              <WalletLoader />
               <Toaster />
               <Sonner />
               <NotificationPermissionPrompt />

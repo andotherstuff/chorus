@@ -10,6 +10,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { generateSecretKey, nip19 } from "nostr-tools";
 import { toast } from "@/hooks/useToast";
 import { useCreateCashuWallet } from "@/hooks/useCreateCashuWallet";
+import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { Smartphone } from "lucide-react";
 import { useCashuStore } from "@/stores/cashuStore";
@@ -29,6 +30,8 @@ const Index = () => {
   const { mutateAsync: publishEvent } = useNostrPublish();
   const [newUser, setNewUser] = useState(false);
   const { mutateAsync: createCashuWallet } = useCreateCashuWallet();
+  const { wallet, isLoading } = useCashuWallet();
+
   const [generatedName, setGeneratedName] = useState<string | null>(null);
   const cashuStore = useCashuStore();
   const onboardingStore = useOnboardingStore();
@@ -107,9 +110,28 @@ const Index = () => {
   // Redirect to /groups after user is logged in
   useEffect(() => {
     if (currentUser && !newUser) {
-      navigate("/groups", { replace: true });
+      // Query the wallet when user logs in
+      if (wallet) {
+        console.log("User wallet found:", wallet);
+        // Wallet exists, redirect to groups
+        navigate("/groups", { replace: true });
+      } else if (isLoading) {
+        // Wait for wallet query to complete
+        console.log("Fetching wallet data...");
+      } else {
+        // Wallet query completed but no wallet found
+        console.log("No wallet found for user");
+        createCashuWallet()
+          .then(() => {
+            navigate("/groups", { replace: true });
+          })
+          .catch((error) => {
+            console.error("Failed to create wallet:", error);
+            navigate("/groups", { replace: true });
+          });
+      }
     }
-  }, [newUser, currentUser, navigate]);
+  }, [newUser, currentUser, navigate, wallet, isLoading, createCashuWallet]);
 
   // Handle account creation inline
   const handleCreateAccount = async () => {
@@ -265,7 +287,7 @@ const Index = () => {
   // Fallback (should redirect to /groups in most cases)
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
-      <div>Redirecting to groups...</div>
+      <div>Loading groups...</div>
     </div>
   );
 };

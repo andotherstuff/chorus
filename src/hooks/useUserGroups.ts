@@ -3,11 +3,12 @@ import { useCurrentUser } from "./useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
 import type { NostrEvent, NostrFilter } from "@nostrify/nostrify";
 import { usePinnedGroups } from "./usePinnedGroups";
+import { KINDS } from "@/lib/nostr-kinds";
 
 // Helper function to get a unique community ID
 function getCommunityId(community: NostrEvent): string {
   const dTag = community.tags.find(tag => tag[0] === "d");
-  return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+  return `${KINDS.GROUP}:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 }
 
 export function useUserGroups() {
@@ -31,14 +32,14 @@ export function useUserGroups() {
       // Step 1: Directly fetch communities where the user is listed as a member
       // This query fetches approved members lists where the user is explicitly listed
       const membershipLists = await nostr.query(
-        [{ kinds: [14550], "#p": [user.pubkey], limit: 100 }],
+        [{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [user.pubkey], limit: 100 }],
         { signal }
       );
 
       // Extract community IDs from the membership lists
       const communityIds = new Set<string>();
       for (const list of membershipLists) {
-        const communityRef = list.tags.find(tag => tag[0] === "a");
+        const communityRef = list.tags.find(tag => tag[0] === "d");
         if (communityRef) {
           communityIds.add(communityRef[1]);
         }
@@ -47,8 +48,8 @@ export function useUserGroups() {
       // Step 2: Fetch all communities the user owns or is moderating
       const ownedModeratedCommunities = await nostr.query(
         [
-          { kinds: [34550], authors: [user.pubkey] }, // Owned
-          { kinds: [34550], "#p": [user.pubkey] },    // Possibly moderated
+          { kinds: [KINDS.GROUP], authors: [user.pubkey] }, // Owned
+          { kinds: [KINDS.GROUP], "#p": [user.pubkey] },    // Possibly moderated
         ],
         { signal },
       );
@@ -100,27 +101,23 @@ export function useUserGroups() {
         allCommunities = communityBatchResults.flat();
       }
 
-      // Also fetch communities the user has pinned
+      // Also fetch communities the user has pinned (for display purposes)
+      // Note: These will be fetched but not automatically added to allCommunities
+      // They need to be checked for actual membership
+      let pinnedCommunityEvents: NostrEvent[] = [];
       if (pinnedGroups.length > 0) {
         const pinnedFilters = pinnedGroups.map(pinned => {
           const [kindStr, pubkey, identifier] = pinned.communityId.split(":");
           const kind = parseInt(kindStr, 10);
           return {
-            kinds: [isNaN(kind) ? 34550 : kind],
+            kinds: [isNaN(kind) ? KINDS.GROUP : kind],
             authors: [pubkey],
             "#d": [identifier],
             limit: 1
           };
         });
 
-        const pinnedCommunityEvents = await nostr.query(pinnedFilters, { signal });
-        
-        // Add to our all communities collection
-        for (const event of pinnedCommunityEvents) {
-          if (!allCommunities.some(c => c.id === event.id)) {
-            allCommunities.push(event);
-          }
-        }
+        pinnedCommunityEvents = await nostr.query(pinnedFilters, { signal });
       }
 
       // Create a map of community IDs to community events for faster lookups
@@ -148,8 +145,8 @@ export function useUserGroups() {
       // Step 4: Fetch all approved members lists for the communities we've found
       const approvedMembersLists = await nostr.query([
         {
-          kinds: [14550],
-          '#a': [...communityMap.keys()], // Use the community IDs
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+          '#d': [...communityMap.keys()], // Use the community IDs
           '#p': [user.pubkey], // Only get lists that include the user
           limit: 200
         }
@@ -159,7 +156,7 @@ export function useUserGroups() {
       const memberCommunityIds = new Set<string>();
       
       for (const list of approvedMembersLists) {
-        const communityRef = list.tags.find(tag => tag[0] === "a");
+        const communityRef = list.tags.find(tag => tag[0] === "d");
         if (communityRef) {
           const communityId = communityRef[1];
           const isUserIncluded = list.tags.some(tag => 
@@ -180,20 +177,28 @@ export function useUserGroups() {
           !moderatedCommunities.includes(community);
       });
 
-      // Process pinned groups
+      // Process pinned groups - only include those where user is actually a member/owner/moderator
       const pinnedCommunities: NostrEvent[] = [];
       const processedInPinned = new Set<string>();
 
       for (const pinnedGroup of pinnedGroups) {
         const communityId = pinnedGroup.communityId;
         
-        // Find the community in our fetched communities using the map
-        for (const [id, community] of communityMap.entries()) {
-          if (id === communityId) {
-            pinnedCommunities.push(community);
-            processedInPinned.add(id);
-            break;
-          }
+        // First check if the community is in our map (user is a member)
+        const community = communityMap.get(communityId);
+        if (community) {
+          pinnedCommunities.push(community);
+          processedInPinned.add(communityId);
+        } else {
+          // If not in the map, check if it's in the pinnedCommunityEvents
+          // This would be a pinned group where user is NOT a member
+          const pinnedCommunity = pinnedCommunityEvents.find(event => {
+            const eventCommunityId = getCommunityId(event);
+            return eventCommunityId === communityId;
+          });
+          
+          // We don't add non-member pinned communities to pinnedCommunities
+          // They will be displayed on the Groups page but not counted as user's groups
         }
       }
 

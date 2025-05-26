@@ -262,7 +262,7 @@ export function ReportsList({ communityId }: ReportsListProps) {
                 <UserAvatar pubkey={selectedReport.reportedPubkey} />
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                <p>This will update the Kind 14550 approved members list to remove this user.</p>
+                <p>This will update the approved members list to remove this user.</p>
                 {isLoadingApprovedMembers ? (
                   <p className="mt-1 italic">Checking membership status...</p>
                 ) : approvedMembers?.includes(selectedReport.reportedPubkey) ? (

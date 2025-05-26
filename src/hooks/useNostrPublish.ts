@@ -1,8 +1,10 @@
+import { NKinds } from "@nostrify/nostrify";
 import { useNostr } from "@nostrify/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "./useCurrentUser";
 import { getPostExpirationTimestamp } from "../lib/utils";
 import { CASHU_EVENT_KINDS } from "@/lib/cashu";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface EventTemplate {
   kind: number;
@@ -16,45 +18,11 @@ interface UseNostrPublishOptions {
   onSuccessCallback?: () => void;
 }
 
-// Group Meta
-// - 34550: Group meta
-
-// Post Creation
-// - 11: Create Post
-// - 1111: Reply to post
-// - 7: React to post
-
-// Post Moderation
-// - 4550: Approve post
-// - 4551: Remove post
-
-// Joining Groups
-// - 14550: Mod Approved members list
-// - 14551: Mod Declined members list
-// - 14552: Mod Banned users lists
-// - 4552: Request to join group
-// - 4553: Request to leave group
-
-// Cashu
-// - 17375: Replaceable event for wallet info
-// - 7375: Token events for unspent proofs
-// - 7376: Spending history events
-// - 7374: Quote events (optional)
-// - 10019: ZAP info events
-// - 9321: ZAP events
-
-const protectedEventKinds = [
-  7, // Reactions
-  11, // Posts
-  1111, // Comments (replies)
-  34550, // Group meta
-];
-
-const expirationEventKinds = [
-  7, // Reactions
-  11, // Posts
-  1111, // Comments (replies)
-];
+const expirationEventKinds: number[] = [
+  KINDS.REACTION, // Reactions
+  KINDS.GROUP_POST, // Posts
+  KINDS.GROUP_POST_REPLY, // Comments (replies)
+] as const;
 
 export function useNostrPublish(options?: UseNostrPublishOptions) {
   const { nostr } = useNostr();
@@ -77,7 +45,7 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
         // }
 
         const expiration = getPostExpirationTimestamp();
-        if (expirationEventKinds.includes(t.kind) && !tags.some((tag) => tag[0] === "expiration") && expiration) {
+        if ((expirationEventKinds as readonly number[]).includes(t.kind) && !tags.some((tag) => tag[0] === "expiration") && expiration) {
           tags.push(["expiration", expiration.toString()]);
         }
 
@@ -115,7 +83,7 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
       // Auto-invalidate queries based on event kind
       if (event) {
         // Get community ID from tags if present
-        const communityTag = event.tags?.find(tag => tag[0] === "a");
+        const communityTag = event.tags?.find(tag => tag[0] === (NKinds.addressable(event.kind) ? "d" : "a"));
         const communityId = communityTag ? communityTag[1] : undefined;
         
         // Invalidate relevant queries based on event kind
@@ -133,7 +101,12 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             queryClient.invalidateQueries({ queryKey: ['following-count'] });
             break;
             
-          case 4550: // Approve post
+          case KINDS.GROUP: // Community definition (group creation/update)
+            queryClient.invalidateQueries({ queryKey: ['communities'] });
+            queryClient.invalidateQueries({ queryKey: ['user-groups', event.pubkey] });
+            break;
+            
+          case KINDS.GROUP_POST_APPROVAL: // Approve post
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["approved-posts", communityId] });
               queryClient.invalidateQueries({ queryKey: ["pending-posts", communityId] });
@@ -141,7 +114,7 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             }
             break;
             
-          case 4551: // Remove post
+          case KINDS.GROUP_POST_REMOVAL: // Remove post
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["removed-posts", communityId] });
               queryClient.invalidateQueries({ queryKey: ["approved-posts", communityId] });
@@ -150,8 +123,8 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             }
             break;
             
-          case 14550: // Approved members list
-          case 14551: // Declined members list
+          case KINDS.GROUP_APPROVED_MEMBERS_LIST: // Approved members list
+          case KINDS.GROUP_DECLINED_MEMBERS_LIST: // Declined members list
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["approved-members-list", communityId] });
               queryClient.invalidateQueries({ queryKey: ["approved-members-count", communityId] });
@@ -165,7 +138,7 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             }
             break;
             
-          case 14552: // Ban user
+          case KINDS.GROUP_BANNED_MEMBERS_LIST: // Ban user
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["banned-users", communityId] });
               queryClient.invalidateQueries({ queryKey: ["banned-users-count", communityId] });
@@ -177,12 +150,12 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             }
             break;
             
-          case 14553: // Pinned groups
+          case KINDS.PINNED_GROUPS_LIST: // Pinned groups
             queryClient.invalidateQueries({ queryKey: ["pinned-groups", event.pubkey] });
             queryClient.invalidateQueries({ queryKey: ["user-groups", event.pubkey] });
             break;
             
-          case 7: {
+          case KINDS.REACTION: {
             // Find the event being reacted to
             const reactedEventId = event.tags.find(tag => tag[0] === "e")?.[1];
             if (reactedEventId) {
@@ -192,7 +165,7 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             break;
           }
             
-          case 11: // Post
+          case KINDS.GROUP_POST: // Post
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["pending-posts", communityId] });
               queryClient.invalidateQueries({ queryKey: ["pending-posts-count", communityId] });
@@ -201,7 +174,7 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             queryClient.invalidateQueries({ queryKey: ["user-posts", event.pubkey] });
             break;
             
-          case 1111: {
+          case KINDS.GROUP_POST_REPLY: {
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["pending-posts", communityId] });
               queryClient.invalidateQueries({ queryKey: ["pending-posts-count", communityId] });
@@ -217,8 +190,8 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             break;
           }
             
-          case 4552: // Request to join group
-          case 4553: {
+          case KINDS.GROUP_JOIN_REQUEST: // Request to join group
+          case KINDS.GROUP_LEAVE_REQUEST: {
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["join-requests", communityId] });
               queryClient.invalidateQueries({ queryKey: ["join-requests-count", communityId] });

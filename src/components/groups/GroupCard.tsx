@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle } from "lucide-react";
+import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/groups/RoleBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RichText } from "@/components/ui/RichText";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/hooks/useUserRole";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -29,6 +30,7 @@ interface GroupCardProps {
   isUpdating: boolean;
   isMember?: boolean;
   userRole?: UserRole;
+  hasPendingRequest?: boolean;
   stats?: {
     posts: number;
     participants: Set<string>;
@@ -44,6 +46,7 @@ export function GroupCard({
   isUpdating,
   isMember,
   userRole,
+  hasPendingRequest,
   stats,
   isLoadingStats,
 }: GroupCardProps) {
@@ -99,7 +102,8 @@ export function GroupCard({
   const cardStyle = cn(
     "overflow-hidden flex flex-col relative group h-full transition-colors hover:bg-accent/5 cursor-pointer",
     isPinned && "ring-1 ring-primary/20",
-    isUserMember && "bg-primary/5" // Subtle highlight for groups the user is a member of
+    isUserMember && "bg-primary/5", // Subtle highlight for groups the user is a member of
+    hasPendingRequest && !isUserMember && "bg-gray-50/50" // Different background for pending requests
   );
 
   return (
@@ -108,6 +112,15 @@ export function GroupCard({
         {userRole && (
           <div className="absolute top-2 right-10 z-10">
             <RoleBadge role={userRole} />
+          </div>
+        )}
+
+        {hasPendingRequest && !userRole && (
+          <div className="absolute top-2 right-10 z-10">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+              <Clock className="h-3 w-3" />
+              <span>Pending</span>
+            </div>
           </div>
         )}
 
@@ -208,7 +221,7 @@ export function GroupCard({
         </CardHeader>
 
         <CardContent className="px-3 pb-3 pt-0">
-          <div className="line-clamp-2 text-xs">{description}</div>
+          <RichText className="line-clamp-2 text-xs">{description}</RichText>
         </CardContent>
 
         {user && (
@@ -246,7 +259,7 @@ export function GroupCard({
                   Pin group
                 </DropdownMenuItem>
               )}
-              {!isUserMember && <JoinRequestMenuItem communityId={communityId} />}
+              {!isUserMember && <JoinRequestMenuItem communityId={communityId} hasPendingRequest={hasPendingRequest} />}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

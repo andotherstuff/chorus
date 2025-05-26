@@ -9,6 +9,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface EmojiReactionButtonProps {
   postId: string;
@@ -40,7 +41,7 @@ export function EmojiReactionButton({ postId, showText = true }: EmojiReactionBu
       
       // Get all kind 7 reactions that reference this event
       const events = await nostr.query([{ 
-        kinds: [7],
+        kinds: [KINDS.REACTION],
         "#e": [postId],
         limit: 100,
       }], { signal });
@@ -91,10 +92,10 @@ export function EmojiReactionButton({ postId, showText = true }: EmojiReactionBu
     try {
       // Create a reaction event (kind 7)
       await publishEvent({
-        kind: 7,
+        kind: KINDS.REACTION,
         tags: [
           ["e", postId],
-          ["k", "11"], // Assuming we're reacting to a kind 11 post
+          ["k", String(KINDS.GROUP_POST)], // Assuming we're reacting to a kind 11 post
         ],
         content: emojiData.emoji, // The emoji character
       });

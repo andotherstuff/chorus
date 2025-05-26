@@ -5,12 +5,14 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { RichText } from "@/components/ui/RichText";
 import { Users, Crown, Shield, User, ArrowRight } from "lucide-react";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { useAuthor } from "@/hooks/useAuthor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface CommonGroup {
   id: string;
@@ -29,7 +31,7 @@ interface CommonGroupsListProps {
 // Helper function to get community ID
 const getCommunityId = (community: NostrEvent) => {
   const dTag = community.tags.find(tag => tag[0] === "d");
-  return `34550:${community.pubkey}:${dTag ? dTag[1] : ""}`;
+  return `${KINDS.GROUP}:${community.pubkey}:${dTag ? dTag[1] : ""}`;
 };
 
 // Helper function to determine user's role in a group
@@ -157,19 +159,19 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
 
       // Get membership events for both users
       const [currentUserMemberships, profileUserMemberships] = await Promise.all([
-        nostr.query([{ kinds: [14550], "#p": [user.pubkey], limit: 100 }], { signal }),
-        nostr.query([{ kinds: [14550], "#p": [profileUserPubkey], limit: 100 }], { signal })
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [user.pubkey], limit: 100 }], { signal }),
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [profileUserPubkey], limit: 100 }], { signal })
       ]);
 
       // Get communities owned/moderated by both users
       const [currentUserCommunities, profileUserCommunities] = await Promise.all([
         nostr.query([
-          { kinds: [34550], authors: [user.pubkey] },
-          { kinds: [34550], "#p": [user.pubkey] }
+          { kinds: [KINDS.GROUP], authors: [user.pubkey] },
+          { kinds: [KINDS.GROUP], "#p": [user.pubkey] }
         ], { signal }),
         nostr.query([
-          { kinds: [34550], authors: [profileUserPubkey] },
-          { kinds: [34550], "#p": [profileUserPubkey] }
+          { kinds: [KINDS.GROUP], authors: [profileUserPubkey] },
+          { kinds: [KINDS.GROUP], "#p": [profileUserPubkey] }
         ], { signal })
       ]);
 
@@ -343,9 +345,9 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
                       <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     {group.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                      <RichText className="text-sm text-muted-foreground line-clamp-2 mt-1">
                         {group.description}
-                      </p>
+                      </RichText>
                     )}
                   </div>
                 </div>

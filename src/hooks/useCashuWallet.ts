@@ -85,6 +85,11 @@ export function useCashuWallet() {
 
         cashuStore.setPrivkey(walletData.privkey);
 
+        // if no active mint is set, set the first mint as active
+        if (!cashuStore.getActiveMintUrl()) {
+          cashuStore.setActiveMintUrl(walletData.mints[0]);
+        }
+
         // log wallet data
         console.log('walletData', walletData);
 
@@ -261,8 +266,16 @@ export function useCashuWallet() {
           tags: [],
           created_at: Math.floor(Date.now() / 1000)
         });
+
+        // add proofs to store
+        cashuStore.addProofs(newProofs, newTokenEvent?.id || '');
+
         // publish token event
-        await nostr.event(newTokenEvent);
+        try {
+          await nostr.event(newTokenEvent);
+        } catch (error) {
+          console.error('Failed to publish token event:', error);
+        }
 
         // update local event IDs on all newProofs
         newProofs.forEach(proof => {
@@ -282,6 +295,10 @@ export function useCashuWallet() {
           created_at: Math.floor(Date.now() / 1000)
         });
 
+        // remove proofs from store
+        const proofsToRemoveFiltered = proofsToRemove.filter(proof => !newProofs.map(p => p.secret).includes(proof.secret));
+        cashuStore.removeProofs(proofsToRemoveFiltered);
+
         // publish deletion event
         try {
           await nostr.event(deletionEvent);
@@ -289,13 +306,6 @@ export function useCashuWallet() {
           console.error('Failed to publish deletion event:', error);
         }
       }
-
-      // remove proofs from store
-      const proofsToRemoveFiltered = proofsToRemove.filter(proof => !newProofs.includes(proof));
-      cashuStore.removeProofs(proofsToRemoveFiltered);
-
-      // add proofs to store
-      cashuStore.addProofs(newProofs, eventToReturn?.id || '');
 
       return eventToReturn;
     },

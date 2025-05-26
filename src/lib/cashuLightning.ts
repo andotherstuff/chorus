@@ -137,7 +137,14 @@ export async function createMeltQuote(mintUrl: string, paymentRequest: string): 
 export async function payMeltQuote(mintUrl: string, quoteId: string, proofs: Proof[]) {
   try {
     const mint = new CashuMint(mintUrl);
-    const wallet = new CashuWallet(mint);
+    // const mintInStore = useCashuStore.getState().getMint(mintUrl);
+    // const keysArray = mintInStore.keys?.flatMap(obj => Object.values(obj)) || [];
+    // const wallet = new CashuWallet(mint, {
+    //   keys: keysArray,
+    //   keysets: mintInStore.keysets,
+    //   mintInfo: mintInStore.mintInfo
+    // });
+    const wallet = new CashuWallet(mint)
 
     // Load mint keysets
     await wallet.loadMint();
@@ -159,7 +166,20 @@ export async function payMeltQuote(mintUrl: string, quoteId: string, proofs: Pro
     });
 
     // Melt the selected proofs to pay the Lightning invoice
-    const meltResponse = await wallet.meltProofs(meltQuote, send);
+    let meltResponse;
+    try {
+      meltResponse = await wallet.meltProofs(meltQuote, send);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      // Check if error is "Token already spent"
+      if (message.includes("Token already spent")) {
+        console.log("Detected spent tokens, cleaning up and retrying...");
+        error.message = "Token already spent. Please go to your wallet and press Cleanup Wallet for this mint.";
+        throw error;
+      }
+      throw error;
+    }
 
     const meltQuoteUpdated = await wallet.checkMeltQuote(meltQuote.quote);
     useCashuStore.getState().updateMeltQuote(mintUrl, meltQuote.quote, meltQuoteUpdated as MeltQuoteResponse);

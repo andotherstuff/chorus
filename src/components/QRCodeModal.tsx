@@ -15,12 +15,24 @@ interface QRCodeModalProps {
   onClose: () => void;
   profileUrl: string;
   displayName: string;
+  title?: string;
+  description?: string;
+  downloadPrefix?: string;
 }
 
-export function QRCodeModal({ isOpen, onClose, profileUrl, displayName }: QRCodeModalProps) {
+export function QRCodeModal({ 
+  isOpen, 
+  onClose, 
+  profileUrl, 
+  displayName,
+  title = "Share Profile",
+  description = `Scan this QR code to view ${displayName}'s profile`,
+  downloadPrefix = "profile"
+}: QRCodeModalProps) {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(profileUrl);
-    toast.success('Profile link copied to clipboard');
+    const linkType = title.includes('Group') ? 'Group' : 'Profile';
+    toast.success(`${linkType} link copied to clipboard`);
   };
 
   const handleDownloadQR = () => {
@@ -42,7 +54,7 @@ export function QRCodeModal({ isOpen, onClose, profileUrl, displayName }: QRCode
       // Convert canvas to download link
       const pngUrl = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
-      downloadLink.download = `${displayName}-profile-qr.png`;
+      downloadLink.download = `${displayName}-${downloadPrefix}-qr.png`;
       downloadLink.href = pngUrl;
       downloadLink.click();
     };
@@ -54,9 +66,9 @@ export function QRCodeModal({ isOpen, onClose, profileUrl, displayName }: QRCode
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Share Profile</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Scan this QR code to view {displayName}'s profile
+            {description}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center space-y-4 py-4">

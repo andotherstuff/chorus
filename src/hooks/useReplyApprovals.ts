@@ -1,6 +1,7 @@
 import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 import { NostrEvent } from "@nostrify/nostrify";
+import { KINDS } from "@/lib/nostr-kinds";
 
 /**
  * Hook to fetch and manage reply approvals
@@ -17,9 +18,9 @@ export function useReplyApprovals(communityId: string) {
       
       // Get approval events for replies (kind 4550 with k=1111)
       const approvals = await nostr.query([{ 
-        kinds: [4550],
+        kinds: [KINDS.GROUP_POST_APPROVAL],
         "#a": [communityId],
-        "#k": ["1111"],
+        "#k": [String(KINDS.GROUP_POST_REPLY)],
         limit: 100,
       }], { signal });
       

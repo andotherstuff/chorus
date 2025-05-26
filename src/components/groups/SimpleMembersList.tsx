@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthor } from "@/hooks/useAuthor";
+import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { DollarSign, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { UserNutzapDialog } from "./UserNutzapDialog";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface SimpleMembersListProps {
   communityId: string;
@@ -29,7 +31,7 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedId.pubkey],
         "#d": [parsedId.identifier]
       }], { signal });
@@ -40,27 +42,8 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
     enabled: !!nostr && !!parsedId,
   });
   
-  // Query for approved members
-  const { data: approvedMembersEvents, isLoading } = useQuery({
-    queryKey: ["approved-members-simple", communityId],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      
-      const events = await nostr.query([{ 
-        kinds: [14550],
-        "#a": [communityId],
-        limit: 50,
-      }], { signal });
-      
-      return events;
-    },
-    enabled: !!nostr && !!communityId,
-  });
-
-  // Extract all approved member pubkeys from the events
-  const approvedMembers = approvedMembersEvents?.flatMap(event => 
-    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
-  ) || [];
+  // Get approved members using the centralized hook
+  const { approvedMembers, isLoading } = useApprovedMembers(communityId);
 
   // Get moderators from community
   const moderatorTags = community?.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator") || [];
@@ -200,7 +183,7 @@ function MemberItem({ pubkey }: MemberItemProps) {
   return (
     <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors">
       <Link to={`/profile/${pubkey}`} className="flex items-center gap-3">
-        <Avatar>
+        <Avatar className="rounded-md h-9 w-9">
           <AvatarImage src={profileImage} />
           <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>

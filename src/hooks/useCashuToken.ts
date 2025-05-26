@@ -35,41 +35,89 @@ export function useCashuToken() {
       await wallet.loadMint();
 
       // Get all proofs from store
-      const proofs = await cashuStore.getMintProofs(mintUrl);
+      let proofs = await cashuStore.getMintProofs(mintUrl);
 
       const proofsAmount = proofs.reduce((sum, p) => sum + p.amount, 0);
       if (proofsAmount < amount) {
         throw new Error(`Not enough funds on mint ${mintUrl}`);
       }
 
-      // For regular token, create a token string
-      // Perform coin selection
-      const { keep: proofsToKeep, send: proofsToSend } = await wallet.send(amount, proofs, { pubkey: p2pkPubkey, privkey: cashuStore.privkey });
+      try {
+        // For regular token, create a token string
+        // Perform coin selection
+        const { keep: proofsToKeep, send: proofsToSend } = await wallet.send(amount, proofs, { pubkey: p2pkPubkey, privkey: cashuStore.privkey });
 
+        // Create new token for the proofs we're keeping
+        if (proofsToKeep.length > 0) {
+          const keepTokenData: CashuToken = {
+            mint: mintUrl,
+            proofs: proofsToKeep.map(p => ({
+              id: p.id || '',
+              amount: p.amount,
+              secret: p.secret || '',
+              C: p.C || ''
+            }))
+          };
 
-      // Create new token for the proofs we're keeping
-      if (proofsToKeep.length > 0) {
-        const keepTokenData: CashuToken = {
-          mint: mintUrl,
-          proofs: proofsToKeep.map(p => ({
-            id: p.id || '',
-            amount: p.amount,
-            secret: p.secret || '',
-            C: p.C || ''
-          }))
-        };
+          // update proofs
+          await updateProofs({ mintUrl, proofsToAdd: keepTokenData.proofs, proofsToRemove: [...proofsToSend, ...proofs] });
 
-        // update proofs
-        await updateProofs({ mintUrl, proofsToAdd: keepTokenData.proofs, proofsToRemove: [...proofsToSend, ...proofs] });
+          // Create history event
+          await createHistory({
+            direction: 'out',
+            amount: amount.toString(),
+          });
+        }
+        return proofsToSend;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        
+        // Check if error is "Token already spent"
+        if (message.includes("Token already spent")) {
+          console.log("Detected spent tokens, cleaning up and retrying...");
+          
+          // Clean spent proofs
+          await cleanSpentProofs(mintUrl);
+          
+          // Get fresh proofs after cleanup
+          proofs = await cashuStore.getMintProofs(mintUrl);
+          
+          // Check if we still have enough funds after cleanup
+          const newProofsAmount = proofs.reduce((sum, p) => sum + p.amount, 0);
+          if (newProofsAmount < amount) {
+            throw new Error(`Not enough funds on mint ${mintUrl} after cleaning spent proofs`);
+          }
+          
+          // Retry the send operation with fresh proofs
+          const { keep: proofsToKeep, send: proofsToSend } = await wallet.send(amount, proofs, { pubkey: p2pkPubkey, privkey: cashuStore.privkey });
 
-        // Create history event
-        await createHistory({
-          direction: 'out',
-          amount: amount.toString(),
-        });
+          // Create new token for the proofs we're keeping
+          if (proofsToKeep.length > 0) {
+            const keepTokenData: CashuToken = {
+              mint: mintUrl,
+              proofs: proofsToKeep.map(p => ({
+                id: p.id || '',
+                amount: p.amount,
+                secret: p.secret || '',
+                C: p.C || ''
+              }))
+            };
+
+            // update proofs
+            await updateProofs({ mintUrl, proofsToAdd: keepTokenData.proofs, proofsToRemove: [...proofsToSend, ...proofs] });
+
+            // Create history event
+            await createHistory({
+              direction: 'out',
+              amount: amount.toString(),
+            });
+          }
+          return proofsToSend;
+        }
+        
+        // Re-throw the error if it's not a "Token already spent" error
+        throw error;
       }
-      return proofsToSend;
-
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setError(`Failed to generate token: ${message}`);

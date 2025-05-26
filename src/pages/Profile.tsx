@@ -53,6 +53,7 @@ import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { NutzapInterface } from "@/components/groups/NutzapInterface";
 import { ReplyList } from "@/components/groups/ReplyList";
+import { KINDS } from "@/lib/nostr-kinds";
 import { nip19 } from 'nostr-tools';
 import {
   DropdownMenu,
@@ -85,19 +86,19 @@ function useSharedGroupIds(profileUserPubkey: string): string[] {
 
       // Get membership events for both users
       const [currentUserMemberships, profileUserMemberships] = await Promise.all([
-        nostr.query([{ kinds: [14550], "#p": [user.pubkey], limit: 100 }], { signal }),
-        nostr.query([{ kinds: [14550], "#p": [profileUserPubkey], limit: 100 }], { signal })
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [user.pubkey], limit: 100 }], { signal }),
+        nostr.query([{ kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST], "#p": [profileUserPubkey], limit: 100 }], { signal })
       ]);
 
       // Get communities owned/moderated by both users
       const [currentUserCommunities, profileUserCommunities] = await Promise.all([
         nostr.query([
-          { kinds: [34550], authors: [user.pubkey] },
-          { kinds: [34550], "#p": [user.pubkey] }
+          { kinds: [KINDS.GROUP], authors: [user.pubkey] },
+          { kinds: [KINDS.GROUP], "#p": [user.pubkey] }
         ], { signal }),
         nostr.query([
-          { kinds: [34550], authors: [profileUserPubkey] },
-          { kinds: [34550], "#p": [profileUserPubkey] }
+          { kinds: [KINDS.GROUP], authors: [profileUserPubkey] },
+          { kinds: [KINDS.GROUP], "#p": [profileUserPubkey] }
         ], { signal })
       ]);
 
@@ -197,7 +198,7 @@ function GroupNameDisplay({ groupId }: { groupId: string }) {
 
       // Query for the group event
       const events = await nostr.query([{
-        kinds: [34550],
+        kinds: [KINDS.GROUP],
         authors: [parsedAddress.pubkey],
         "#d": [parsedAddress.identifier],
         limit: 1,
@@ -584,23 +585,43 @@ function PostCard({ post, profileImage, displayName, displayNameFull, isLastItem
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
   const handleSharePost = async () => {
-    // Extract group info to create proper share URL
-    const groupInfo = extractGroupInfo(post);
-    let shareUrl: string;
-    
-    if (groupInfo) {
-      // If post is in a group, link to the group with post hash
-      shareUrl = `${window.location.origin}/group/${encodeURIComponent(groupInfo.groupId)}#${post.id}`;
-    } else {
-      // Otherwise, link to the user's profile
-      shareUrl = `${window.location.origin}/profile/${post.pubkey}#${post.id}`;
+    try {
+      // Create nevent identifier for the post with relay hint
+      const nevent = nip19.neventEncode({
+        id: post.id,
+        author: post.pubkey,
+        kind: post.kind,
+        relays: ["wss://relay.chorus.community"],
+      });
+      
+      // Create njump.me URL
+      const shareUrl = `https://njump.me/${nevent}`;
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
+    } catch (error) {
+      console.error("Error creating share URL:", error);
+      // Fallback to the original URL format
+      const groupInfo = extractGroupInfo(post);
+      let shareUrl: string;
+      
+      if (groupInfo) {
+        // If post is in a group, link to the group with post hash
+        shareUrl = `${window.location.origin}/group/${encodeURIComponent(groupInfo.groupId)}#${post.id}`;
+      } else {
+        // Otherwise, link to the user's profile
+        shareUrl = `${window.location.origin}/profile/${post.pubkey}#${post.id}`;
+      }
+      
+      await shareContent({
+        title: "Check out this post",
+        text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
+        url: shareUrl
+      });
     }
-    
-    await shareContent({
-      title: "Check out this post",
-      text: post.content.slice(0, 100) + (post.content.length > 100 ? "..." : ""),
-      url: shareUrl
-    });
   };
 
   // Handle toggle between replies and zaps
@@ -847,7 +868,7 @@ export default function Profile() {
 
       // Get posts by this user
       const userPosts = await nostr.query([{
-        kinds: [11],
+        kinds: [KINDS.GROUP_POST],
         authors: [pubkey],
         limit: 20,
       }], { signal });
@@ -875,7 +896,7 @@ export default function Profile() {
 
         // Get communities where user is owner or moderator
         const ownedOrModeratedEvents = await nostr.query([{
-          kinds: [34550],
+          kinds: [KINDS.GROUP],
           authors: [pubkey], // Communities they created
           limit: 50,
         }], { signal });
@@ -884,7 +905,7 @@ export default function Profile() {
 
         // Get communities where user is a moderator but not owner
         const moderatedEvents = await nostr.query([{
-          kinds: [34550],
+          kinds: [KINDS.GROUP],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
@@ -903,7 +924,7 @@ export default function Profile() {
 
         // Get communities where user is a member
         const membershipEvents = await nostr.query([{
-          kinds: [14550],
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
@@ -926,7 +947,7 @@ export default function Profile() {
 
           if (!existingGroup) {
             const [groupEvent] = await nostr.query([{
-              kinds: [34550],
+              kinds: [KINDS.GROUP],
               authors: [parsedGroup.pubkey],
               "#d": [parsedGroup.identifier],
               limit: 1,
@@ -940,7 +961,7 @@ export default function Profile() {
       } else {
         // For other users, get membership events
         const membershipEvents = await nostr.query([{
-          kinds: [14550],
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
           "#p": [pubkey],
           limit: 50,
         }], { signal });
@@ -957,7 +978,7 @@ export default function Profile() {
 
           // Fetch the group details
           const [groupEvent] = await nostr.query([{
-            kinds: [34550],
+            kinds: [KINDS.GROUP],
             authors: [parsedGroup.pubkey],
             "#d": [parsedGroup.identifier],
             limit: 1,
@@ -970,7 +991,7 @@ export default function Profile() {
 
         // Also get communities they created
         const ownedEvents = await nostr.query([{
-          kinds: [34550],
+          kinds: [KINDS.GROUP],
           authors: [pubkey],
           limit: 50,
         }], { signal });
@@ -1043,13 +1064,14 @@ export default function Profile() {
         <Header />
         <div className="space-y-6 my-6">
           {/* Profile info skeleton - matches new layout */}
-          <div className="relative mb-6 mt-4">
+          <div className="max-w-3xl mx-auto relative mb-6 mt-4">
             {/* Top row: Avatar and name/username side by side */}
             <div className="flex items-center gap-4 mb-4">
               <Skeleton className="h-20 w-20 rounded-full border-4 border-background shadow-md" />
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
                   <Skeleton className="h-5 w-16 rounded-full" />
                 </div>
                 <Skeleton className="h-4 w-32" />
@@ -1059,15 +1081,14 @@ export default function Profile() {
             {/* Middle row: Bio */}
             <div className="w-full mb-4">
               <div className="space-y-2">
-                <Skeleton className="h-4 w-full max-w-2xl" />
-                <Skeleton className="h-4 w-5/6 max-w-2xl" />
-                <Skeleton className="h-4 w-4/6 max-w-xl" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
               </div>
             </div>
 
             {/* Bottom row: Action buttons */}
             <div className="flex flex-wrap gap-2">
-              <Skeleton className="h-8 w-20 rounded-md" />
               <Skeleton className="h-8 w-20 rounded-md" />
               <Skeleton className="h-8 w-24 rounded-md" />
             </div>
@@ -1122,7 +1143,7 @@ export default function Profile() {
     <div className="container mx-auto py-1 px-3 sm:px-4">
       <Header />
 
-      <div className="relative mb-6 mt-4">
+      <div className="max-w-3xl mx-auto relative mb-6 mt-4">
         {/* Top row: Avatar and name/username side by side */}
         <div className="flex items-center gap-4 mb-4">
           <Avatar className="h-20 w-20 rounded-full border-4 border-background shadow-md">
@@ -1131,9 +1152,19 @@ export default function Profile() {
               {displayName.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold">{displayNameFull}</h1>
+              {/* QR Code button - icon only, right next to name */}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setShowQRCode(true)}
+              >
+                <QrCode className="h-4 w-4" />
+                <span className="sr-only">Show QR Code</span>
+              </Button>
               {nip05 && nip05Verification?.isVerified && (
                 <VerifiedNip05 nip05={nip05} pubkey={pubkey || ""} />
               )}
@@ -1173,17 +1204,6 @@ export default function Profile() {
             </Button>
           )}
 
-          {/* QR Code button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setShowQRCode(true)}
-          >
-            <QrCode className="h-4 w-4" />
-            QR Code
-          </Button>
-
           {/* Edit Profile button - only for current user */}
           {isCurrentUser && (
             <Button
@@ -1209,87 +1229,89 @@ export default function Profile() {
         displayName={displayNameFull}
       />
 
-      <Tabs value={activeTab} defaultValue="posts" onValueChange={(value) => {
-        setActiveTab(value);
-        // Update URL hash without full page reload
-        window.history.pushState(null, '', `#${value}`);
-      }} className="w-full">
-        <div className="md:flex md:justify-start">
-          <TabsList className="mb-4 w-full md:w-auto flex">
-            <TabsTrigger value="posts" className="flex-1 md:flex-none">
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Posts
-            </TabsTrigger>
+      <div className="max-w-3xl mx-auto">
+        <Tabs value={activeTab} defaultValue="posts" onValueChange={(value) => {
+          setActiveTab(value);
+          // Update URL hash without full page reload
+          window.history.pushState(null, '', `#${value}`);
+        }} className="w-full">
+          <div className="md:flex md:justify-start">
+            <TabsList className="mb-4 w-full md:w-auto flex">
+              <TabsTrigger value="posts" className="flex-1 md:flex-none">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Posts
+              </TabsTrigger>
 
-            <TabsTrigger value="groups" className="flex-1 md:flex-none">
-              <Users className="h-4 w-4 mr-2" />
-              Groups
-            </TabsTrigger>
-          </TabsList>
-        </div>
+              <TabsTrigger value="groups" className="flex-1 md:flex-none">
+                <Users className="h-4 w-4 mr-2" />
+                Groups
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="posts" className="space-y-4">
-          <div className="max-w-3xl mx-auto">
-            {isLoadingPosts ? (
-              <div className="space-y-0">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className={`py-4 ${i < 3 ? 'border-b-2 border-border/70' : ''}`}>
-                    <div className="px-3">
-                      <div className="flex flex-row items-center pb-2">
-                        <Skeleton className="h-9 w-9 rounded-md mr-2.5" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-24" />
+          <TabsContent value="posts" className="space-y-4">
+            <div className="w-full">
+              {isLoadingPosts ? (
+                <div className="space-y-0">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className={`py-4 ${i < 3 ? 'border-b-2 border-border/70' : ''}`}>
+                      <div className="px-3">
+                        <div className="flex flex-row items-center pb-2">
+                          <Skeleton className="h-9 w-9 rounded-md mr-2.5" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="pt-1 pb-2 pl-[2.875rem]">
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-2/3" />
-                      </div>
-                      <div className="pt-1.5 pl-[2.875rem]">
-                        <div className="flex gap-4">
-                          <Skeleton className="h-7 w-7" />
-                          <Skeleton className="h-7 w-7" />
-                          <Skeleton className="h-7 w-7" />
+                        <div className="pt-1 pb-2 pl-[2.875rem]">
+                          <Skeleton className="h-4 w-full mb-2" />
+                          <Skeleton className="h-4 w-full mb-2" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="pt-1.5 pl-[2.875rem]">
+                          <div className="flex gap-4">
+                            <Skeleton className="h-7 w-7" />
+                            <Skeleton className="h-7 w-7" />
+                            <Skeleton className="h-7 w-7" />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : posts && posts.length > 0 ? (
-              <div className="space-y-0">
-                {posts.map((post, index) => (
-                  <PostCard 
-                    key={post.id} 
-                    post={post} 
-                    profileImage={profileImage}
-                    displayName={displayName}
-                    displayNameFull={displayNameFull}
-                    isLastItem={index === posts.length - 1}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center border border-border/30 rounded-md bg-card">
-                <p className="text-muted-foreground">No posts from this user yet</p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
+                  ))}
+                </div>
+              ) : posts && posts.length > 0 ? (
+                <div className="space-y-0">
+                  {posts.map((post, index) => (
+                    <PostCard 
+                      key={post.id} 
+                      post={post} 
+                      profileImage={profileImage}
+                      displayName={displayName}
+                      displayNameFull={displayNameFull}
+                      isLastItem={index === posts.length - 1}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center border border-border/30 rounded-md bg-card">
+                  <p className="text-muted-foreground">No posts from this user yet</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
 
-        <TabsContent value="groups" className="space-y-4">
-          <div className="max-w-3xl mx-auto pb-6">
-            <UserGroupsList 
-              groups={userGroups} 
-              isLoading={isLoadingGroups} 
-              profileUserPubkey={pubkey || ""} 
-              sharedGroupIds={sharedGroupIds}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="groups" className="space-y-4">
+            <div className="w-full pb-6">
+              <UserGroupsList 
+                groups={userGroups} 
+                isLoading={isLoadingGroups} 
+                profileUserPubkey={pubkey || ""} 
+                sharedGroupIds={sharedGroupIds}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

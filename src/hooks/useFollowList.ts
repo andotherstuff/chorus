@@ -4,6 +4,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { NostrEvent } from '@nostrify/nostrify';
+import { KINDS } from "@/lib/nostr-kinds";
 
 export function useFollowList(pubkey?: string) {
   const { nostr } = useNostr();
@@ -26,7 +27,7 @@ export function useFollowList(pubkey?: string) {
       
       // Get the most recent kind 3 event for the user
       const [event] = await nostr.query(
-        [{ kinds: [3], authors: [targetPubkey], limit: 1 }],
+        [{ kinds: [KINDS.FOLLOW_LIST], authors: [targetPubkey], limit: 1 }],
         { signal: abortSignal }
       );
 
@@ -85,7 +86,7 @@ export function useFollowList(pubkey?: string) {
 
       // Publish the new follow list event
       await publishEvent({
-        kind: 3,
+        kind: KINDS.FOLLOW_LIST,
         tags,
         content: '',
       });

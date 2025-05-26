@@ -40,8 +40,8 @@ export const CASHU_EVENT_KINDS = {
 };
 
 export const defaultMints = [
-  // "https://mint.chorus.community",
-  "https://testnut.cashu.space",
+  "https://mint.chorus.community",
+  // "https://testnut.cashu.space",
 ];
 
 // Helper function to calculate total balance from tokens

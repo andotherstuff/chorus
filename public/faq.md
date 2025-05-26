@@ -112,4 +112,4 @@ You can explore our code, design decisions, and documentation on [GitHub](https:
 
 ## Something isn't working — how can I get help?
 
-Feel free to ask in our [+chorus group](https://chorus.community/group/34550%3A932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d%3Aand-other-stuff), visit our [GitHub](https://github.com/andotherstuff), or check out our [website](https://andotherstuff.org). We welcome your questions, feedback, ideas, contributions, and [bug reports](https://github.com/andotherstuff/chorus/issues/new).
+Feel free to ask in our [+chorus group](https://chorus.community/group/34550%3A932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d%3Aand-other-stuff-mb3c9stb), visit our [GitHub](https://github.com/andotherstuff), or check out our [website](https://andotherstuff.org). We welcome your questions, feedback, ideas, contributions, and [bug reports](https://github.com/andotherstuff/chorus/issues/new).
