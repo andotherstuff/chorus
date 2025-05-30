@@ -1,4 +1,5 @@
 import { useNostr } from "@/hooks/useNostr";
+import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { nip19 } from 'nostr-tools';
 import { NoteContent } from "../NoteContent";
 import { Link } from "react-router-dom";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { parseGroupRouteId } from "@/lib/group-utils";
 import { formatRelativeTime } from "@/lib/utils";
 import { ReplyList } from "./ReplyList";
 import { ReportDialog } from "./ReportDialog";
@@ -87,9 +89,14 @@ interface PostListProps {
 
 export function PostList({ communityId, showOnlyApproved = false, pendingOnly = false, onPostCountChange }: PostListProps) {
   const { nostr } = useNostr();
+  const { nostr: enhancedNostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
   const { bannedUsers } = useBannedUsers(communityId);
   const { pinnedPostIds, isLoading: isLoadingPinnedPostIds } = usePinnedPosts(communityId);
+  
+  // Parse the group ID to determine if it's NIP-72 or NIP-29
+  const parsedGroup = useMemo(() => parseGroupRouteId(communityId), [communityId]);
+  const isNip29 = parsedGroup?.type === "nip29";
 
   // Query for approved posts
   const { data: approvedPosts, isLoading: isLoadingApproved } = useQuery({
@@ -168,6 +175,45 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       }).filter((id): id is string => id !== null);
     },
     enabled: !!nostr && !!communityId,
+  });
+
+  // Query for NIP-29 posts if this is a NIP-29 group
+  const { data: nip29Posts, isLoading: isLoadingNip29 } = useQuery({
+    queryKey: ["nip29-posts", communityId, parsedGroup],
+    queryFn: async (c) => {
+      if (!parsedGroup || parsedGroup.type !== "nip29") return [];
+      
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const relay = parsedGroup.relay!;
+      const groupId = parsedGroup.groupId!;
+      
+      console.log(`[PostList] Fetching NIP-29 posts for group ${groupId} from ${relay}`);
+      
+      // Fetch posts from the NIP-29 relay
+      const posts = enhancedNostr ? await enhancedNostr.query([{
+        kinds: [9], // NIP-29 text note
+        "#h": [groupId],
+        limit: 50
+      }], { 
+        signal,
+        relays: [relay]
+      }) : [];
+      
+      console.log(`[PostList] Found ${posts.length} NIP-29 posts`);
+      
+      // Add approval info to all NIP-29 posts (they're all "approved" by default)
+      return posts.map(post => ({
+        ...post,
+        approval: {
+          id: `nip29-${post.id}`,
+          pubkey: post.pubkey,
+          created_at: post.created_at,
+          kind: post.kind,
+          autoApproved: true
+        }
+      }));
+    },
+    enabled: !!enhancedNostr && !!parsedGroup && parsedGroup.type === "nip29",
   });
 
   // Query for pending posts
@@ -277,7 +323,9 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
 
   const isUserModerator = Boolean(user && moderators.includes(user.pubkey));
 
-  const allPosts = [...(approvedPosts || []), ...(pendingPosts || [])];
+  const allPosts = isNip29 
+    ? [...(nip29Posts || [])]
+    : [...(approvedPosts || []), ...(pendingPosts || [])];
 
   const uniquePosts = allPosts.filter((post, index, self) =>
     index === self.findIndex(p => p.id === post.id)
@@ -413,7 +461,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     }
   }, [sortedPosts, onPostCountChange]);
 
-  if (isLoadingApproved || isLoadingPending || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
+  if (isLoadingApproved || isLoadingPending || isLoadingNip29 || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
     return (
       <div className="space-y-0">
         {[1, 2, 3].map((i) => (

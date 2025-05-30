@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -23,6 +23,29 @@ const LinkPreviewTest = lazy(() => import("./pages/LinkPreviewTest"));
 const AboutPage = lazy(() => import("@/pages/AboutPage"));
 const FaqPage = lazy(() => import("@/pages/FaqPage"));
 
+// Legacy NIP-29 redirect component
+function LegacyNip29Redirect() {
+  const location = useLocation();
+  
+  // Extract the old format: /group/nip29:relay:groupId
+  const path = location.pathname;
+  const match = path.match(/^\/group\/nip29:(.+):([^:]+)$/);
+  
+  if (match) {
+    const [, encodedRelay, groupId] = match;
+    const relay = decodeURIComponent(encodedRelay);
+    const newPath = `/group/nip29/${encodeURIComponent(relay)}/${encodeURIComponent(groupId)}${location.search}${location.hash}`;
+    
+    // Redirect to the new format
+    window.location.replace(newPath);
+    return <div>Redirecting...</div>;
+  }
+  
+  // If we can't parse the old format, redirect to groups page
+  window.location.replace('/groups');
+  return <div>Redirecting...</div>;
+}
+
 // Loading component
 function PageLoader() {
   return (
@@ -44,6 +67,15 @@ export function AppRouter() {
         <Route path="/" element={<Index />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/group/:groupId" element={<GroupDetail />} />
+        {/* Backward compatibility route for old NIP-29 URL format */}
+        <Route path="/group/nip29:*" element={<LegacyNip29Redirect />} />
+        {/* NIP-29 specific routes */}
+        <Route path="/group/nip29/:relay/:groupId" element={<GroupDetail />} />
+        <Route path="/group/nip29/:relay/:groupId/settings" element={
+          <Suspense fallback={<PageLoader />}>
+            <GroupSettings />
+          </Suspense>
+        } />
         <Route path="/profile/:pubkey" element={<Profile />} />
         <Route path="/t/:hashtag" element={<Hashtag />} />
         <Route path="/trending" element={<Trending />} />

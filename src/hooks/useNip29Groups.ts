@@ -30,30 +30,70 @@ export function useNip29Groups(groupRelays: string[] = []) {
           // Use a shorter timeout for each relay to fail faster
           const signal = AbortSignal.any([
             c.signal, 
-            AbortSignal.timeout(5000) // 5 seconds per relay
+            AbortSignal.timeout(8000) // 8 seconds per relay to allow for member queries
           ]);
           
-          // Query for relay-generated group metadata events (kind 39000)
-          // These are created by the relay after a successful group creation
-          // We don't filter by author since we might not know the relay's pubkey
-          const events = await nostr.query([{
-            kinds: [39000], // NIP-29 relay-generated group metadata
-            limit: 100
-          }], { 
-            signal,
-            relays: [relayUrl] // Specify the relay explicitly
-          });
+          // Query for both group metadata and member lists
+          const [groupEvents, memberEvents] = await Promise.all([
+            // Group metadata events
+            nostr.query([{
+              kinds: [39000], // NIP-29 relay-generated group metadata
+              limit: 100
+            }], { 
+              signal,
+              relays: [relayUrl] // Specify the relay explicitly
+            }),
+            // Member list events
+            nostr.query([{
+              kinds: [39002], // NIP-29 relay-generated member lists
+              limit: 100
+            }], { 
+              signal,
+              relays: [relayUrl] // Specify the relay explicitly
+            })
+          ]);
 
-          console.log(`[NIP-29] Found ${events.length} group metadata events from ${relayUrl}`);
-          if (events.length > 0) {
-            console.log('[NIP-29] Sample event:', events[0]);
+          console.log(`[NIP-29] Found ${groupEvents.length} group metadata events and ${memberEvents.length} member events from ${relayUrl}`);
+          if (groupEvents.length > 0) {
+            console.log('[NIP-29] Sample group event:', groupEvents[0]);
+          }
+
+          // Create a map of group ID to member lists
+          const memberMap = new Map<string, { members: string[], admins: string[] }>();
+          for (const memberEvent of memberEvents) {
+            const dTag = memberEvent.tags.find(tag => tag[0] === 'd');
+            if (dTag && dTag[1]) {
+              const groupId = dTag[1];
+              const members: string[] = [];
+              const admins: string[] = [];
+              
+              for (const tag of memberEvent.tags) {
+                if (tag[0] === 'p' && tag[1]) {
+                  members.push(tag[1]);
+                  // Check if admin (tag[2] might contain role)
+                  if (tag[2] === 'admin' || tag[3] === 'admin') {
+                    admins.push(tag[1]);
+                  }
+                }
+              }
+              
+              memberMap.set(groupId, { members, admins });
+            }
           }
 
           // Parse each event into a Nip29Group
           const groups: Nip29Group[] = [];
-          for (const event of events) {
+          for (const event of groupEvents) {
             const group = parseNip29Group(event, relayUrl);
             if (group) {
+              // Populate member lists if available
+              const memberInfo = memberMap.get(group.groupId);
+              if (memberInfo) {
+                group.members = memberInfo.members;
+                group.admins = memberInfo.admins;
+                console.log(`[NIP-29] Group ${group.name} has ${memberInfo.members.length} members and ${memberInfo.admins.length} admins`);
+              }
+              
               groups.push(group);
               
               // Register this group's relay for future operations
@@ -161,7 +201,7 @@ export function useNip29GroupMembers(groupId: string | undefined, relay: string 
       // Query for relay-generated member list events (kind 39002)
       const events = await nostr.query([{
         kinds: [39002], // NIP-29 relay-generated member list
-        "#h": [groupId], // Group identifier
+        "#d": [groupId], // Group identifier (using d tag for addressable events)
         limit: 1
       }], { 
         signal,

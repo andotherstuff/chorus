@@ -86,9 +86,28 @@ export function useUnifiedGroups() {
         return false;
       });
 
-      // For member groups, we need to check membership lists
-      // TODO: Implement membership checking for both NIP-72 and NIP-29
-      const memberGroups: Group[] = [];
+      // For member groups, check membership lists
+      const memberGroups = allGroups.filter(group => {
+        if (group.type === "nip29") {
+          // For NIP-29, check if user is in the members list but not an owner/admin
+          return group.pubkey !== user.pubkey && 
+                 !group.admins.includes(user.pubkey) && 
+                 group.members?.includes(user.pubkey);
+        } else if (group.type === "nip72") {
+          // TODO: Implement NIP-72 membership checking
+          return false;
+        }
+        return false;
+      });
+
+      console.log(`[Groups] User ${user.pubkey.slice(0, 8)} membership categorization:`);
+      console.log(`  Owned: ${ownedGroups.length}`);
+      console.log(`  Moderated: ${moderatedGroups.length}`);
+      console.log(`  Member: ${memberGroups.length}`);
+      
+      if (memberGroups.length > 0) {
+        console.log(`  Member groups: ${memberGroups.map(g => g.name).join(', ')}`);
+      }
 
       // Handle pinned groups
       const pinnedGroupsList: Group[] = [];

@@ -3,6 +3,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useUploadFile } from "@/hooks/useUploadFile";
 import { useAuthor } from "@/hooks/useAuthor";
+import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,8 +11,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Image, Loader2, Send, XCircle, Mic, Square } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
+import { parseGroupRouteId } from "@/lib/group-utils";
 import { Link } from "react-router-dom";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useMemo } from "react";
 
 interface CreatePostFormProps {
   communityId: string;
@@ -22,6 +25,11 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending: isPublishing } = useNostrPublish();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const { nostr: enhancedNostr } = useEnhancedNostr();
+  
+  // Parse the group ID to determine if it's NIP-72 or NIP-29
+  const parsedGroup = useMemo(() => parseGroupRouteId(communityId), [communityId]);
+  const isNip29 = parsedGroup?.type === "nip29";
   
   // Move useAuthor hook before any conditional returns
   const author = useAuthor(user?.pubkey || '');
@@ -186,12 +194,6 @@ export function CreatePostForm({ communityId, onPostSuccess }: CreatePostFormPro
     }
 
     try {
-      const parsedId = parseNostrAddress(communityId);
-      if (!parsedId) {
-        toast.error("Invalid group ID");
-        return;
-      }
-
       // Add mic emoji to content if this is a voice recording
       let baseContent = content;
       if (mediaFile && mediaFile.name.includes('voice_memo')) {
@@ -216,18 +218,49 @@ ${mediaUrl}`;
         ? hashtagMatches.map(hashtag => ["t", hashtag.slice(1).toLowerCase()])
         : [];
 
-      const tags = [
-        ["a", communityId],
-        ["subject", `Post in ${parsedId?.identifier || 'group'}`],
-        ...imageTags,
-        ...hashtagTags,
-      ];
+      if (isNip29 && parsedGroup && user) {
+        // For NIP-29, create a kind 9 event with h tag for the group
+        const tags = [
+          ["h", parsedGroup.groupId!],
+          ...imageTags,
+          ...hashtagTags,
+        ];
 
-      await publishEvent({
-        kind: KINDS.GROUP_POST,
-        tags,
-        content: finalContent,
-      });
+        // Sign and publish the event directly to the NIP-29 relay
+        const event = await user.signer.signEvent({
+          kind: 9, // NIP-29 text note
+          content: finalContent,
+          tags,
+          created_at: Math.floor(Date.now() / 1000),
+        });
+
+        if (enhancedNostr) {
+          await enhancedNostr.event(event, {
+            relays: [parsedGroup.relay!],
+            signal: AbortSignal.timeout(5000)
+          });
+        }
+      } else {
+        // For NIP-72, use the existing logic
+        const parsedId = parseNostrAddress(communityId);
+        if (!parsedId) {
+          toast.error("Invalid group ID");
+          return;
+        }
+
+        const tags = [
+          ["a", communityId],
+          ["subject", `Post in ${parsedId?.identifier || 'group'}`],
+          ...imageTags,
+          ...hashtagTags,
+        ];
+
+        await publishEvent({
+          kind: KINDS.GROUP_POST,
+          tags,
+          content: finalContent,
+        });
+      }
 
       setContent("");
       setMediaFile(null);

@@ -58,7 +58,19 @@ export function GroupCard({
   const description = community.description || "No description available";
   const image = community.image;
   const communityId = getCommunityId(community);
-  const routeId = createGroupRouteId(community);
+  // Generate the correct URL based on group type  
+  const getGroupUrl = (community: Group): string => {
+    if (community.type === "nip29") {
+      // For NIP-29 groups, use the new route format
+      return `/group/nip29/${encodeURIComponent(community.relay)}/${encodeURIComponent(community.groupId)}`;
+    } else {
+      // For NIP-72 groups, use the traditional route format  
+      const routeId = createGroupRouteId(community);
+      return `/group/${routeId}`;
+    }
+  };
+
+  const groupUrl = getGroupUrl(community);
 
   // Use the reliable membership hook to determine the user's role if not passed directly
   const { data: membership } = useReliableGroupMembership(
@@ -120,7 +132,7 @@ export function GroupCard({
   const displayPosts = stats?.posts || 0;
 
   return (
-    <Link to={`/group/${routeId}`}>
+    <Link to={groupUrl}>
       <Card className={cardStyle}>
         {displayRole && (
           <div className="absolute top-2 right-10 z-10">

@@ -95,56 +95,27 @@ export function CreateGroupForm({ onCancel }: CreateGroupFormProps) {
     console.log(`[NIP-29] Creating group ${groupId} on relay ${groupData.relay}`);
 
     try {
-      // Step 1: Create group creation request (kind 9000)
+      // Create NIP-29 group creation event (kind 9007)
       const createTags = [
-        ["h", groupId], // Group ID
+        ["name", groupData.name],
       ];
       
-      // Add group metadata as name=value tags
-      if (groupData.name) createTags.push(["name", groupData.name]);
+      // Add group metadata
       if (groupData.description) createTags.push(["about", groupData.description]);
       if (imageUrl) createTags.push(["picture", imageUrl]);
       
       // Add privacy settings
-      if (!groupData.isOpen) createTags.push(["closed", "true"]);
-      if (!groupData.isPublic) createTags.push(["private", "true"]);
+      if (!groupData.isPublic) createTags.push(["private"]);
+      if (!groupData.isOpen) createTags.push(["closed"]);
 
-      const createEvent = await user.signer.signEvent({
-        kind: 9000, // NIP-29 group creation request
+      await publishEvent({
+        kind: 9007, // GROUP_CREATE
         tags: createTags,
-        content: `Creating private group: ${groupData.name}`,
-        created_at: Math.floor(Date.now() / 1000)
-      });
-
-      // Publish the creation event to the specified relay
-      await enhancedNostr.event(createEvent, {
-        relays: [groupData.relay!],
-        groupType: "nip29",
-        groupId
-      });
-
-      console.log(`[NIP-29] Group creation request published for ${groupId}`);
-
-      // Step 2: Add ourselves as admin (kind 9001)
-      const adminTags = [
-        ["h", groupId],
-        ["p", user.pubkey, "", "admin"] // Add ourselves as admin
-      ];
-
-      const adminEvent = await user.signer.signEvent({
-        kind: 9001, // NIP-29 group admin action
-        tags: adminTags,
         content: "",
-        created_at: Math.floor(Date.now() / 1000)
+        created_at: Math.floor(Date.now() / 1000),
       });
 
-      await enhancedNostr.event(adminEvent, {
-        relays: [groupData.relay!],
-        groupType: "nip29",
-        groupId
-      });
-
-      console.log(`[NIP-29] Admin permissions set for group ${groupId}`);
+      console.log(`[NIP-29] Group creation event published for ${groupId}`);
 
       // Register the group-relay mapping for future use
       enhancedNostr.addGroupRelay(groupId, groupData.relay!);
@@ -212,9 +183,8 @@ export function CreateGroupForm({ onCancel }: CreateGroupFormProps) {
         // Create NIP-29 group
         const groupId = await createNip29Group(formData, imageUrl);
         
-        // Navigate to the new group
-        const routeId = `nip29:${encodeURIComponent(formData.relay!)}:${groupId}`;
-        navigate(`/group/${encodeURIComponent(routeId)}`);
+        // Navigate to the new group using proper NIP-29 route
+        navigate(`/group/nip29/${encodeURIComponent(formData.relay!)}/${encodeURIComponent(groupId)}`);
       }
 
       toast.success("Group created successfully!");

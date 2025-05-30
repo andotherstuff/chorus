@@ -24,11 +24,12 @@ import type { NostrEvent } from "@nostrify/nostrify";
 import Header from "@/components/ui/Header";
 import { ReportsList } from "@/components/groups/ReportsList";
 import { MemberManagement } from "@/components/groups/MemberManagement";
+import { Nip29GroupSettings } from "@/components/groups/Nip29GroupSettings";
 import { KINDS } from "@/lib/nostr-kinds";
 
 
 export default function GroupSettings() {
-  const { groupId } = useParams<{ groupId: string }>();
+  const { groupId, relay } = useParams<{ groupId: string; relay?: string }>();
   const location = useLocation();
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -66,6 +67,7 @@ export default function GroupSettings() {
   const [communityGuidelines, setCommunityGuidelines] = useState("");
   const [moderators, setModerators] = useState<string[]>([]);
 
+  // Always call useEffect and parseNostrAddress, even for NIP-29 groups
   useEffect(() => {
     if (groupId) {
       const parsed = parseNostrAddress(decodeURIComponent(groupId));
@@ -75,7 +77,7 @@ export default function GroupSettings() {
     }
   }, [groupId]);
 
-  // Query for community details
+  // Query for community details (will be disabled for NIP-29 groups)
   const { data: community, isLoading: isLoadingCommunity } = useQuery<NostrEvent>({
     queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier],
     queryFn: async (c) => {
@@ -91,10 +93,10 @@ export default function GroupSettings() {
       if (events.length === 0) throw new Error("Community not found"); // Internal error message
       return events[0];
     },
-    enabled: !!nostr && !!parsedId
+    enabled: !!nostr && !!parsedId && !relay // Disable for NIP-29 groups
   });
 
-  // Query for approved members
+  // Query for approved members (will be disabled for NIP-29 groups)
   const { data: approvedMembersEvents, isLoading: isLoadingMembers } = useQuery({
     queryKey: ["approved-members-settings", groupId],
     queryFn: async (c) => {
@@ -108,7 +110,7 @@ export default function GroupSettings() {
 
       return events;
     },
-    enabled: !!nostr && !!groupId,
+    enabled: !!nostr && !!groupId && !relay, // Disable for NIP-29 groups
   });
 
   // Handle community data changes
@@ -154,9 +156,15 @@ export default function GroupSettings() {
   const isModerator = user && moderators.includes(user.pubkey);
   const isOwner = Boolean(user && community && user.pubkey === (community as NostrEvent).pubkey);
 
-  // Get notification counts for tabs
-  const { data: openReportsCount = 0 } = useOpenReportsCount(groupId || '');
-  const { pendingRequestsCount = 0 } = usePendingJoinRequests(groupId || '');
+  // Get notification counts for tabs (disable for NIP-29 groups)
+  const { data: openReportsCount = 0 } = useOpenReportsCount(relay ? '' : groupId || '');
+  const { pendingRequestsCount = 0 } = usePendingJoinRequests(relay ? '' : groupId || '');
+
+  // Check if this is a NIP-29 group (new route format) - return early AFTER all hooks
+  if (relay && groupId) {
+    console.log(`[GroupSettings] NIP-29 group detected: ${groupId} @ ${relay}`);
+    return <Nip29GroupSettings groupId={decodeURIComponent(groupId)} relay={decodeURIComponent(relay)} />;
+  }
 
   console.log("Current user pubkey:", user?.pubkey);
   console.log("Community creator pubkey:", community?.pubkey);

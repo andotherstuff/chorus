@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { useNostr } from "@/hooks/useNostr";
+import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { usePendingPostsCount } from "@/hooks/usePendingPostsCount";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
@@ -29,7 +30,7 @@ import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileTe
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import type { Group } from "@/types/groups";
-import { parseGroupRouteId, parseGroup } from "@/lib/group-utils";
+import { parseGroupRouteId, parseGroup, parseNip29Group } from "@/lib/group-utils";
 import { MemberManagement } from "@/components/groups/MemberManagement";
 import { ReportsList } from "@/components/groups/ReportsList";
 import { useAuthor } from "@/hooks/useAuthor";
@@ -44,13 +45,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function GroupDetail() {
-  const { groupId } = useParams<{ groupId: string }>();
+  const { groupId, relay } = useParams<{ groupId: string; relay?: string }>();
   const location = useLocation();
   const { nostr } = useNostr();
+  const { nostr: enhancedNostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
-  const [parsedId, setParsedId] = useState<{ kind: number; pubkey: string; identifier: string } | null>(null);
+  const [parsedRouteId, setParsedRouteId] = useState<ReturnType<typeof parseGroupRouteId>>(null);
   const [showOnlyApproved, setShowOnlyApproved] = useState(true);
   const [currentPostCount, setCurrentPostCount] = useState(0);
   const [activeTab, setActiveTab] = useState("posts");
@@ -72,29 +74,100 @@ export default function GroupDetail() {
 
   useEffect(() => {
     if (groupId) {
-      const parsed = parseNostrAddress(decodeURIComponent(groupId));
-      if (parsed) {
-        setParsedId(parsed);
+      // Handle NIP-29 routes directly
+      if (relay) {
+        // This is a NIP-29 route: /group/nip29/:relay/:groupId
+        const decodedRelay = decodeURIComponent(relay);
+        const decodedGroupId = decodeURIComponent(groupId);
+        console.log(`[GroupDetail] NIP-29 route detected: ${decodedGroupId} @ ${decodedRelay}`);
+        setParsedRouteId({
+          type: "nip29",
+          groupId: decodedGroupId,
+          relay: decodedRelay
+        });
+      } else {
+        // This is a legacy route: /group/:groupId (could be NIP-72 or encoded NIP-29)
+        const parsed = parseGroupRouteId(decodeURIComponent(groupId));
+        console.log(`[GroupDetail] Legacy route parsed: ${JSON.stringify(parsed)}`);
+        setParsedRouteId(parsed);
       }
     }
-  }, [groupId]);
+  }, [groupId, relay]);
 
-  const { data: community, isLoading: isLoadingCommunity } = useQuery({
-    queryKey: ["community", parsedId?.pubkey, parsedId?.identifier],
+  const { data: groupData, isLoading: isLoadingCommunity } = useQuery({
+    queryKey: ["group", parsedRouteId],
     queryFn: async (c) => {
-      if (!parsedId) throw new Error("Invalid community ID");
+      if (!parsedRouteId) throw new Error("Invalid group ID");
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      const events = await nostr.query([{
-        kinds: [KINDS.GROUP],
-        authors: [parsedId.pubkey],
-        "#d": [parsedId.identifier]
-      }], { signal });
+      
+      if (parsedRouteId.type === "nip72") {
+        // Fetch NIP-72 community
+        const events = await nostr.query([{
+          kinds: [KINDS.GROUP],
+          authors: [parsedRouteId.pubkey!],
+          "#d": [parsedRouteId.identifier!]
+        }], { signal });
 
-      if (events.length === 0) throw new Error("Community not found");
-      return events[0];
+        if (events.length === 0) throw new Error("Community not found");
+        return parseGroup(events[0]);
+      } else if (parsedRouteId.type === "nip29") {
+        // Fetch NIP-29 group metadata from the specific relay
+        const relayUrl = parsedRouteId.relay!;
+        const groupId = parsedRouteId.groupId!;
+        
+        console.log(`[GroupDetail] Fetching NIP-29 group ${groupId} from ${relayUrl}`);
+        
+        // Fetch both group metadata and member list
+        if (!enhancedNostr) throw new Error("Enhanced Nostr provider not available");
+        
+        const [groupEvents, memberEvents] = await Promise.all([
+          enhancedNostr.query([{
+            kinds: [39000], // NIP-29 relay-generated group metadata
+            "#d": [groupId]
+          }], { 
+            signal,
+            relays: [relayUrl]
+          }),
+          enhancedNostr.query([{
+            kinds: [39002], // NIP-29 relay-generated member lists
+            "#d": [groupId]
+          }], { 
+            signal,
+            relays: [relayUrl]
+          })
+        ]);
+
+        if (groupEvents.length === 0) throw new Error("Group not found");
+        
+        const group = parseNip29Group(groupEvents[0], relayUrl);
+        if (!group) throw new Error("Failed to parse group");
+        
+        // Parse member list if available
+        if (memberEvents.length > 0) {
+          const memberEvent = memberEvents[0];
+          const memberPubkeys = memberEvent.tags
+            .filter(tag => tag[0] === "p" && tag[1])
+            .map(tag => tag[1]);
+          
+          // Separate admins from regular members
+          const adminTags = memberEvent.tags.filter(tag => 
+            tag[0] === "p" && tag[3] === "admin"
+          );
+          const adminPubkeys = adminTags.map(tag => tag[1]);
+          
+          group.members = memberPubkeys;
+          group.admins = adminPubkeys;
+          
+          console.log(`[GroupDetail] Group ${group.name} has ${memberPubkeys.length} members and ${adminPubkeys.length} admins`);
+        }
+        
+        return group;
+      }
+      
+      throw new Error("Unknown group type");
     },
-    enabled: !!nostr && !!parsedId,
+    enabled: !!nostr && !!enhancedNostr && !!parsedRouteId,
   });
 
   // Query for approved members list
@@ -117,47 +190,44 @@ export default function GroupDetail() {
     event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
   ) || [];
 
-  const isOwner = user && community && user.pubkey === community.pubkey;
+  const isOwner = user && groupData && user.pubkey === groupData.pubkey;
   
-  // Get moderators from community event
-  const moderators = community?.tags
-    .filter(tag => tag[0] === "p" && tag[3] === "moderator")
-    .map(tag => tag[1]) || [];
+  // Get moderators/admins based on group type
+  const moderators = groupData?.type === "nip72" 
+    ? groupData.moderators 
+    : groupData?.admins || [];
   
   const isModerator = isOwner || (user && moderators.includes(user.pubkey));
 
-  // Initialize form state from community data
+  // Initialize form state from group data
   useEffect(() => {
-    if (community) {
-      const communityEvent = community as NostrEvent;
-      const nameTag = communityEvent.tags.find(tag => tag[0] === "name");
-      const descriptionTag = communityEvent.tags.find(tag => tag[0] === "description");
-      const imageTag = communityEvent.tags.find(tag => tag[0] === "image");
-      const guidelinesTag = communityEvent.tags.find(tag => tag[0] === "guidelines");
+    if (groupData) {
+      setFormName(groupData.name || "");
+      setFormDescription(groupData.description || "");
+      setFormImageUrl(groupData.image || "");
+      
+      // Guidelines are stored in tags for NIP-72
+      if (groupData.type === "nip72" && groupData.tags) {
+        const guidelinesTag = groupData.tags.find(tag => tag[0] === "guidelines");
+        setFormGuidelines(guidelinesTag ? guidelinesTag[1] : "");
+      } else {
+        setFormGuidelines("");
+      }
 
-      const modTags = communityEvent.tags.filter(tag =>
-        tag[0] === "p" && (
-          (tag.length > 3 && tag[3] === "moderator") ||
-          (communityEvent.kind === KINDS.GROUP)
-        )
-      );
+      // Set moderators based on group type
+      const modPubkeys = groupData.type === "nip72" 
+        ? [...groupData.moderators] 
+        : [...groupData.admins];
 
-      setFormName(nameTag ? nameTag[1] : "");
-      setFormDescription(descriptionTag ? descriptionTag[1] : "");
-      setFormImageUrl(imageTag ? imageTag[1] : "");
-      setFormGuidelines(guidelinesTag ? guidelinesTag[1] : "");
-
-      const modPubkeys = modTags.map(tag => tag[1]);
-
-      if (!modPubkeys.includes(communityEvent.pubkey)) {
-        modPubkeys.push(communityEvent.pubkey);
+      if (!modPubkeys.includes(groupData.pubkey)) {
+        modPubkeys.push(groupData.pubkey);
       }
 
       const uniqueModPubkeys = [...new Set(modPubkeys)];
 
       setFormModerators(uniqueModPubkeys);
     }
-  }, [community]);
+  }, [groupData]);
 
   // Handler to ensure unapproved posts are visible when user posts
   const handlePostSuccess = () => {
@@ -182,12 +252,27 @@ export default function GroupDetail() {
       return;
     }
 
-    if (!parsedId) {
-      toast.error("Invalid group ID");
+    // NIP-29 groups cannot be updated through this interface
+    if (parsedRouteId?.type === "nip29") {
+      toast.error("NIP-29 groups cannot be updated through this interface");
       return;
     }
 
-    const communityEvent = community as NostrEvent;
+    if (!parsedRouteId || parsedRouteId.type !== "nip72" || !groupData) {
+      toast.error("Invalid group data");
+      return;
+    }
+
+    const parsedId = { 
+      pubkey: parsedRouteId.pubkey!, 
+      identifier: parsedRouteId.identifier! 
+    };
+    
+    // Create a mock community event from groupData for compatibility
+    const communityEvent = {
+      pubkey: groupData.pubkey,
+      tags: groupData.tags || []
+    } as NostrEvent;
     const originalModPubkeys = communityEvent.tags
       .filter(tag => tag[0] === "p")
       .map(tag => tag[1]);
@@ -278,10 +363,29 @@ export default function GroupDetail() {
       return;
     }
 
+    // NIP-29 groups cannot be updated through this interface
+    if (parsedRouteId?.type === "nip29") {
+      toast.error("NIP-29 groups cannot be updated through this interface");
+      return;
+    }
+
+    if (!parsedRouteId || parsedRouteId.type !== "nip72" || !groupData) {
+      toast.error("Invalid group data");
+      return;
+    }
+
+    const parsedId = { 
+      pubkey: parsedRouteId.pubkey!, 
+      identifier: parsedRouteId.identifier! 
+    };
+
     if (!formModerators.includes(pubkey)) {
       try {
         const updatedModerators = [...formModerators, pubkey];
-        const communityEvent = community as NostrEvent;
+        const communityEvent = {
+          pubkey: groupData.pubkey,
+          tags: groupData.tags || []
+        } as NostrEvent;
 
         // Create a new tags array with only unique tag types
         const tags: string[][] = [];
@@ -343,8 +447,24 @@ export default function GroupDetail() {
       toast.error("Only the group owner can remove moderators");
       return;
     }
-    const communityEvent = community as NostrEvent;
-    if (community && communityEvent.pubkey === pubkey) {
+
+    // NIP-29 groups cannot be updated through this interface
+    if (parsedRouteId?.type === "nip29") {
+      toast.error("NIP-29 groups cannot be updated through this interface");
+      return;
+    }
+
+    if (!parsedRouteId || parsedRouteId.type !== "nip72" || !groupData) {
+      toast.error("Invalid group data");
+      return;
+    }
+
+    const parsedId = { 
+      pubkey: parsedRouteId.pubkey!, 
+      identifier: parsedRouteId.identifier! 
+    };
+
+    if (groupData && groupData.pubkey === pubkey) {
       toast.error("Cannot remove the group owner");
       return;
     }
@@ -361,6 +481,11 @@ export default function GroupDetail() {
       const addedTagTypes = new Set(["d"]);
 
       // Add all tags except the moderator to be removed
+      const communityEvent = {
+        pubkey: groupData.pubkey,
+        tags: groupData.tags || []
+      } as NostrEvent;
+      
       for (const tag of communityEvent.tags) {
         // Skip the moderator we're removing
         if (tag[0] === "p" && tag[1] === pubkey) {
@@ -435,14 +560,15 @@ export default function GroupDetail() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const nameTag = community?.tags.find(tag => tag[0] === "name");
-  const descriptionTag = community?.tags.find(tag => tag[0] === "description");
-  const imageTag = community?.tags.find(tag => tag[0] === "image");
-  const guidelinesTag = community?.tags.find(tag => tag[0] === "guidelines");
-
-  const name = nameTag ? nameTag[1] : (parsedId?.identifier || "Unnamed Group");
-  const description = descriptionTag ? descriptionTag[1] : "No description available";
-  const image = imageTag ? imageTag[1] : undefined;
+  // Extract display values from group data
+  const name = groupData?.name || "Unnamed Group";
+  const description = groupData?.description || "No description available";
+  const image = groupData?.image;
+  
+  // Guidelines are stored in tags for NIP-72
+  const guidelinesTag = groupData?.type === "nip72" && groupData?.tags 
+    ? groupData.tags.find(tag => tag[0] === "guidelines")
+    : null;
   const hasGuidelines = guidelinesTag && guidelinesTag[1].trim().length > 0;
 
   useEffect(() => {
@@ -461,7 +587,7 @@ export default function GroupDetail() {
     setImageLoading(true);
   }, [image]);
 
-  if (isLoadingCommunity || !parsedId) {
+  if (isLoadingCommunity || !parsedRouteId) {
     return (
       <div className="container mx-auto py-1 px-3 sm:px-4">
         <Header />
@@ -489,7 +615,7 @@ export default function GroupDetail() {
     );
   }
 
-  if (!community) {
+  if (!groupData) {
     return (
       <div className="container mx-auto py-1 px-3 sm:px-4">
         <h1 className="text-2xl font-bold mb-4">Group not found</h1>
@@ -552,10 +678,10 @@ export default function GroupDetail() {
             </div>
             {/* Ensure consistent height for GroupNutzapButton */}
             <div className="h-8">
-              {user && community && (
+              {user && groupData && (
                 <GroupNutzapButton
-                  groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                  ownerPubkey={community.pubkey}
+                  groupId={groupData.id}
+                  ownerPubkey={groupData.pubkey}
                   variant="outline"
                   className="w-full h-full"
                 />
@@ -564,7 +690,7 @@ export default function GroupDetail() {
             {/* Ensure consistent height for GroupNutzapTotal - always show for all users */}
             <div className="h-8 flex items-center">
               <GroupNutzapTotal 
-                groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
+                groupId={groupData?.id || groupId || ''}
                 className="w-full"
               />
             </div>
@@ -688,17 +814,17 @@ export default function GroupDetail() {
           <div className="max-w-3xl mx-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Group eCash</h2>
-              {user && community && (
+              {user && groupData && (
                 <div className="flex-shrink-0">
                   <GroupNutzapButton
-                    groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`}
-                    ownerPubkey={community.pubkey}
+                    groupId={groupData.id}
+                    ownerPubkey={groupData.pubkey}
                     className="w-auto"
                   />
                 </div>
               )}
             </div>
-            <GroupNutzapList groupId={`${KINDS.GROUP}:${parsedId?.pubkey}:${parsedId?.identifier}`} />
+            <GroupNutzapList groupId={groupData?.id || groupId || ''} />
           </div>
         </TabsContent>
 
@@ -833,10 +959,10 @@ export default function GroupDetail() {
                           <CardContent>
                             <div className="space-y-4">
                               {/* Always display the owner first */}
-                              {community && (
+                              {groupData && (
                                 <ModeratorItem
-                                  key={(community as NostrEvent).pubkey}
-                                  pubkey={(community as NostrEvent).pubkey}
+                                  key={groupData.pubkey}
+                                  pubkey={groupData.pubkey}
                                   isCreator={true}
                                   onRemove={() => {}} // Owner can't be removed
                                 />
@@ -844,7 +970,7 @@ export default function GroupDetail() {
 
                               {/* Then display all moderators who are not the owner */}
                               {formModerators
-                                .filter(pubkey => pubkey !== (community as NostrEvent)?.pubkey) // Filter out the owner
+                                .filter(pubkey => pubkey !== groupData?.pubkey) // Filter out the owner
                                 .map((pubkey) => (
                                   <ModeratorItem
                                     key={pubkey}
@@ -855,7 +981,7 @@ export default function GroupDetail() {
                                 ))
                               }
 
-                              {formModerators.length === 0 && !community && (
+                              {formModerators.length === 0 && !groupData && (
                                 <p className="text-muted-foreground">No moderators yet</p>
                               )}
                             </div>
