@@ -1,9 +1,11 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useGroup } from "./useGroup";
 
 export function usePendingJoinRequests(communityId: string) {
   const { nostr } = useNostr();
+  const { data: group } = useGroup(communityId);
 
   const { data: joinRequests } = useQuery({
     queryKey: ["join-requests-count", communityId],

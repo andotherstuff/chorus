@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/groups/RoleBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RichText } from "@/components/ui/RichText";
 import { cn } from "@/lib/utils";
 import type { Group } from "@/types/groups";
 import type { UserRole } from "@/hooks/useUserRole";
@@ -241,7 +242,7 @@ export function GroupCard({
         </CardHeader>
 
         <CardContent className="px-3 pb-3 pt-0">
-          <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>
+          <RichText className="line-clamp-2 text-xs">{description}</RichText>
         </CardContent>
 
         {/* Pin/More menu buttons - positioned absolute */}

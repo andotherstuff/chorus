@@ -23,11 +23,12 @@ export function usePinnedGroups() {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
-      // Fetch the user's pinned groups event (kind 14553)
+      // Fetch the user's pinned groups event (kind 34555)
       const events = await nostr.query([
         { 
           kinds: [KINDS.PINNED_GROUPS_LIST], 
           authors: [user.pubkey],
+          "#d": ["pinned-groups"],
           limit: 1 
         }
       ], { signal });
@@ -59,7 +60,10 @@ export function usePinnedGroups() {
       if (!user) throw new Error("User not logged in");
 
       // Create tags for the event
-      const tags = pinnedGroups.map(group => ["d", group.communityId]);
+      const tags = [
+        ["d", "pinned-groups"], // The "d" tag identifies this as the user's pinned groups list
+        ...pinnedGroups.map(group => ["a", group.communityId])
+      ];
 
       // Publish the kind 14553 event
       await publishEvent({

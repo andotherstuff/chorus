@@ -9,19 +9,22 @@ export function useLoginActions() {
 
   return {
     // Login with a Nostr secret key
-    nsec(nsec: string): void {
+    nsec(nsec: string) {
       const login = NLogin.fromNsec(nsec);
       addLogin(login);
+      return login;
     },
     // Login with a NIP-46 "bunker://" URI
-    async bunker(uri: string): Promise<void> {
+    async bunker(uri: string) {
       const login = await NLogin.fromBunker(uri, nostr);
       addLogin(login);
+      return login;
     },
     // Login with a NIP-07 browser extension
-    async extension(): Promise<void> {
+    async extension() {
       const login = await NLogin.fromExtension();
       addLogin(login);
+      return login;
     },
     // Log out the current user
     async logout(): Promise<void> {

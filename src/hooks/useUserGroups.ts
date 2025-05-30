@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { NostrEvent, NostrFilter } from "@nostrify/nostrify";
 import { usePinnedGroups } from "./usePinnedGroups";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useGroupDeletionRequests } from "./useGroupDeletionRequests";
 
 // Helper function to get a unique community ID
 function getCommunityId(community: NostrEvent): string {
@@ -39,7 +40,7 @@ export function useUserGroups() {
       // Extract community IDs from the membership lists
       const communityIds = new Set<string>();
       for (const list of membershipLists) {
-        const communityRef = list.tags.find(tag => tag[0] === "a");
+        const communityRef = list.tags.find(tag => tag[0] === "d");
         if (communityRef) {
           communityIds.add(communityRef[1]);
         }
@@ -156,7 +157,7 @@ export function useUserGroups() {
       const memberCommunityIds = new Set<string>();
       
       for (const list of approvedMembersLists) {
-        const communityRef = list.tags.find(tag => tag[0] === "a");
+        const communityRef = list.tags.find(tag => tag[0] === "d");
         if (communityRef) {
           const communityId = communityRef[1];
           const isUserIncluded = list.tags.some(tag => 

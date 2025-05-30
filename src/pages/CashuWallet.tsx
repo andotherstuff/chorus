@@ -40,6 +40,7 @@ export function CashuWallet() {
   const [isProcessingToken, setIsProcessingToken] = useState(false);
   const { showSats, toggleCurrency } = useCurrencyDisplayStore();
   const { data: btcPrice, isLoading: btcPriceLoading } = useBitcoinPrice();
+
   // Calculate total balance across all mints
   const balances = calculateBalance(cashuStore.proofs);
   const totalBalance = Object.values(balances).reduce(
@@ -191,7 +192,7 @@ export function CashuWallet() {
       <div className="mb-4">
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="gap-2">
               <HelpCircle className="h-4 w-4" />
               What is this?
             </Button>
@@ -204,29 +205,64 @@ export function CashuWallet() {
               </DialogTitle>
               <DialogDescription className="text-left space-y-3 pt-3">
                 <p>
-                  <strong>Your Cashu Wallet</strong> uses ecash tokens for private, 
-                  instant payments. It's like having digital cash in your pocket!
+                  <strong>Your Cashu Wallet</strong> uses ecash tokens for
+                  private, instant payments. It's like having digital cash in
+                  your pocket!
                 </p>
                 <p>
-                  <strong>Cashu</strong> is a privacy-preserving digital cash system 
-                  built on cryptographic proofs. Your transactions are private by default, 
-                  and no one can track your spending.
+                  <strong>Cashu</strong> is a privacy-preserving digital cash
+                  system built on cryptographic proofs. Your transactions are
+                  private by default, and no one can track your spending.
                 </p>
                 <p>
-                  <strong>Lightning Network</strong> enables fast Bitcoin transactions, 
-                  and this wallet seamlessly bridges both systems. You can send and receive 
-                  Lightning payments while maintaining privacy through Cashu's blind signatures.
+                  <strong>Lightning Network</strong> enables fast Bitcoin
+                  transactions, and this wallet seamlessly bridges both systems.
+                  You can send and receive Lightning payments while maintaining
+                  privacy through Cashu's blind signatures.
                 </p>
                 <p>
-                  <strong>Use your eCash in the real world!</strong> Through Lightning, you can:
+                  <strong>Use your eCash in the real world!</strong> Through
+                  Lightning, you can:
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Get a private SIM card at <a href="http://silent.link" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Silent.link</a></li>
-                  <li>Order a private Visa card from <a href="https://paywithmoon.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PayWithMoon</a></li>
-                  <li>Buy gift cards at <a href="https://www.bitrefill.com/us/en/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Bitrefill</a> for everyday shopping</li>
+                  <li>
+                    Get a private SIM card at{" "}
+                    <a
+                      href="http://silent.link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Silent.link
+                    </a>
+                  </li>
+                  <li>
+                    Order a private Visa card from{" "}
+                    <a
+                      href="https://paywithmoon.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      PayWithMoon
+                    </a>
+                  </li>
+                  <li>
+                    Buy gift cards at{" "}
+                    <a
+                      href="https://www.bitrefill.com/us/en/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Bitrefill
+                    </a>{" "}
+                    for everyday shopping
+                  </li>
                 </ul>
                 <p className="text-sm font-medium">
-                  Think of it as digital cash that moves at the speed of Lightning! ⚡
+                  Think of it as digital cash that moves at the speed of
+                  Lightning! ⚡
                 </p>
               </DialogDescription>
             </DialogHeader>
@@ -277,7 +313,7 @@ export function CashuWallet() {
         <CashuWalletLightningCard />
         <CashuWalletCard />
         {/* <NutzapCard /> */}
-        {/* <CashuTokenCard /> */}
+        <CashuTokenCard />
         <CashuHistoryCard />
       </div>
 

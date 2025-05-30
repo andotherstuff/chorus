@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthor } from "@/hooks/useAuthor";
+import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { DollarSign, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { parseNostrAddress } from "@/lib/nostr-utils";
@@ -18,6 +19,7 @@ interface SimpleMembersListProps {
 
 export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
   const { nostr } = useNostr();
+  const [showAllMembers, setShowAllMembers] = useState(false);
   
   // Parse the community ID to get the community details
   const parsedId = parseNostrAddress(decodeURIComponent(communityId));
@@ -41,27 +43,8 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
     enabled: !!nostr && !!parsedId,
   });
   
-  // Query for approved members
-  const { data: approvedMembersEvents, isLoading } = useQuery({
-    queryKey: ["approved-members-simple", communityId],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      
-      const events = await nostr.query([{ 
-        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
-        "#a": [communityId],
-        limit: 50,
-      }], { signal });
-      
-      return events;
-    },
-    enabled: !!nostr && !!communityId,
-  });
-
-  // Extract all approved member pubkeys from the events
-  const approvedMembers = approvedMembersEvents?.flatMap(event => 
-    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
-  ) || [];
+  // Get approved members using the centralized hook
+  const { approvedMembers, isLoading } = useApprovedMembers(communityId);
 
   // Get moderators from community
   const moderatorTags = community?.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator") || [];
@@ -74,6 +57,10 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
 
   // Remove duplicates from regular members
   const uniqueRegularMembers = [...new Set(regularMembers)];
+  
+  // Determine how many members to show
+  const membersToShow = showAllMembers ? uniqueRegularMembers : uniqueRegularMembers.slice(0, 10);
+  const remainingCount = uniqueRegularMembers.length - 10;
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -119,13 +106,28 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
             </div>
           ) : (
             <div className="space-y-1">
-              {uniqueRegularMembers.slice(0, 10).map((pubkey) => (
+              {membersToShow.map((pubkey) => (
                 <MemberItem key={pubkey} pubkey={pubkey} />
               ))}
-              {uniqueRegularMembers.length > 10 && (
-                <div className="text-center text-sm text-muted-foreground pt-2">
-                  + {uniqueRegularMembers.length - 10} more members
-                </div>
+              {!showAllMembers && remainingCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-sm text-muted-foreground hover:text-foreground mt-2"
+                  onClick={() => setShowAllMembers(true)}
+                >
+                  + {remainingCount} more members
+                </Button>
+              )}
+              {showAllMembers && uniqueRegularMembers.length > 10 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-sm text-muted-foreground hover:text-foreground mt-2"
+                  onClick={() => setShowAllMembers(false)}
+                >
+                  Show less
+                </Button>
               )}
             </div>
           )}
@@ -201,7 +203,7 @@ function MemberItem({ pubkey }: MemberItemProps) {
   return (
     <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors">
       <Link to={`/profile/${pubkey}`} className="flex items-center gap-3">
-        <Avatar>
+        <Avatar className="rounded-md h-9 w-9">
           <AvatarImage src={profileImage} />
           <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>

@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useBannedUsers } from "@/hooks/useBannedUsers";
 import { usePinnedPosts } from "@/hooks/usePinnedPosts";
+import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { toast } from "sonner";
 import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer, Pin } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
@@ -255,20 +256,8 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     enabled: !!nostr && !!communityId,
   });
 
-  // Query for approved members list
-  const { data: approvedMembersEvents } = useQuery({
-    queryKey: ["approved-members-list", communityId],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      const events = await nostr.query([{
-        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
-        "#a": [communityId],
-        limit: 10,
-      }], { signal });
-      return events;
-    },
-    enabled: !!nostr && !!communityId,
-  });
+  // Get approved members using the centralized hook
+  const { approvedMembers, moderators: hookModerators } = useApprovedMembers(communityId);
 
   // Query for community details to get moderators
   const { data: communityEvent } = useQuery({
@@ -311,15 +300,15 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     refetchOnWindowFocus: false,
   });
 
-  const approvedMembers = useMemo(() => 
-    approvedMembersEvents?.flatMap(event =>
-      event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
-    ) || [], [approvedMembersEvents]);
-
-  const moderators = useMemo(() => 
-    communityEvent?.tags
+  // Use moderators from the hook, but fall back to community event if needed
+  const moderators = useMemo(() => {
+    if (hookModerators.length > 0) {
+      return hookModerators;
+    }
+    return communityEvent?.tags
       .filter(tag => tag[0] === "p" && tag[3] === "moderator")
-      .map(tag => tag[1]) || [], [communityEvent]);
+      .map(tag => tag[1]) || [];
+  }, [hookModerators, communityEvent]);
 
   const isUserModerator = Boolean(user && moderators.includes(user.pubkey));
 

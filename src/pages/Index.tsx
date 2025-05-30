@@ -155,7 +155,7 @@ const Index = () => {
           await createCashuWallet();
           await publishEvent({
             kind: 0,
-            content: JSON.stringify({ name: fakeName, display_name: fakeName }),
+            content: JSON.stringify({ name: fakeName }),
           });
         } catch {
           // fallthrough

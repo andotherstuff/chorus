@@ -3,6 +3,7 @@ import { useCurrentUser } from "./useCurrentUser";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNostrPublish } from "./useNostrPublish";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useGroup } from "./useGroup";
 
 export interface PinnedPost {
   eventId: string;
@@ -12,6 +13,7 @@ export interface PinnedPost {
 export function usePinnedPosts(communityId: string) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { data: group } = useGroup(communityId);
   const queryClient = useQueryClient();
   const { mutateAsync: publishEvent } = useNostrPublish();
 
@@ -22,11 +24,19 @@ export function usePinnedPosts(communityId: string) {
       if (!nostr || !communityId) return [];
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const moderators = new Set<string>([group!.pubkey]);
+
+      for (const tag of group!.tags) {
+        if (tag[0] === "p" && tag[3] === "moderator") {
+          moderators.add(tag[1]);
+        }
+      }
       
       // Fetch pinned posts events (kind 14554) for this community from all moderators
       const events = await nostr.query([
         { 
           kinds: [KINDS.GROUP_PINNED_POSTS_LIST], 
+          authors: [...moderators],
           "#d": [communityId],
           limit: 50 
         }

@@ -135,23 +135,23 @@ export function useGroupStats(communities: NostrEvent[] | undefined, enabled = t
         stats[communityId].participants.add(report.pubkey);
       }
 
-      // 6. Get pinned groups (Kind 14553)
+      // 6. Get pinned groups (Kind 34555) - users who have pinned any of these communities
       const pinnedGroups = await nostr.query([{
         kinds: [KINDS.PINNED_GROUPS_LIST],
-        "#d": communityRefs,
+        "#a": communityRefs,
         limit: 500
       }], { signal });
 
       // Process pinned groups to track participants
       for (const pinned of pinnedGroups) {
-        const communityTag = pinned.tags.find(tag => tag[0] === "a");
-        if (!communityTag) continue;
+        const communityTags = pinned.tags.filter(tag => tag[0] === "a");
+        for (const communityTag of communityTags) {
+          const communityId = communityTag[1];
+          if (!stats[communityId]) continue;
 
-        const communityId = communityTag[1];
-        if (!stats[communityId]) continue;
-
-        // Add user who pinned to participants
-        stats[communityId].participants.add(pinned.pubkey);
+          // Add user who pinned to participants
+          stats[communityId].participants.add(pinned.pubkey);
+        }
       }
 
       // 7. Add moderators from community definitions (Kind 34550)

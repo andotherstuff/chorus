@@ -8,6 +8,7 @@ import { TrendingUp } from "lucide-react";
 import { useGroupStats } from "@/hooks/useGroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { useUnifiedGroups } from "@/hooks/useUnifiedGroups";
+import { useGroupDeletionRequests } from "@/hooks/useGroupDeletionRequests";
 import { useUserPendingJoinRequests } from "@/hooks/useUserPendingJoinRequests";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
@@ -90,6 +91,14 @@ export default function Groups() {
     isLoading: isPendingRequestsLoading,
   } = useUserPendingJoinRequests();
 
+  // Get group IDs for deletion request checking
+  const groupIds = useMemo(() => {
+    if (!allGroups) return [];
+    return allGroups.map(getCommunityId);
+  }, [allGroups]);
+
+  // Check for deletion requests
+  const { data: deletionRequests } = useGroupDeletionRequests(groupIds);
   // Create a map to track user's membership in groups
   const userMembershipMap = useMemo(() => {
     if (!userGroups || !user) return new Map<string, UserRole>();
@@ -141,10 +150,20 @@ export default function Groups() {
       );
     };
 
+    // Function to check if a group has been deleted
+    const isGroupDeleted = (group: Group) => {
+      if (!deletionRequests) return false;
+      const groupId = getCommunityId(group);
+      const deletionRequest = deletionRequests.get(groupId);
+      return deletionRequest?.isValid || false;
+    };
+
     // Create a stable copy of the array to avoid mutation issues
     const stableGroups = [...allGroups];
 
-    return stableGroups.filter(matchesSearch).sort((a, b) => {
+    return stableGroups
+      .filter(group => matchesSearch(group) && !isGroupDeleted(group))
+      .sort((a, b) => {
       // Ensure both a and b are valid objects
       if (!a || !b) return 0;
 
@@ -185,7 +204,19 @@ export default function Groups() {
           return aPriority - bPriority;
         }
 
-        // If same priority, sort alphabetically by name
+        // If same priority, sort by member count (descending), then alphabetically by name
+        const aStats = groupStatsResults ? groupStatsResults[aId] : undefined;
+        const bStats = groupStatsResults ? groupStatsResults[bId] : undefined;
+        
+        const aMemberCount = aStats ? aStats.participants.size : 0;
+        const bMemberCount = bStats ? bStats.participants.size : 0;
+        
+        // Sort by member count (descending)
+        if (aMemberCount !== bMemberCount) {
+          return bMemberCount - aMemberCount;
+        }
+        
+        // If same member count, sort alphabetically by name
         const aName = a.name?.toLowerCase() || "";
         const bName = b.name?.toLowerCase() || "";
 
@@ -201,6 +232,8 @@ export default function Groups() {
     isGroupPinned,
     userMembershipMap,
     pendingJoinRequestsSet,
+    groupStatsResults,
+    deletionRequests,
   ]);
 
   // Auto-refresh stats periodically

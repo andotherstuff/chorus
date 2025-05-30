@@ -2,7 +2,7 @@ import { useNostr } from '@/hooks/useNostr';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CASHU_EVENT_KINDS, CashuWalletStruct, CashuToken, activateMint, updateMintKeys, defaultMints } from '@/lib/cashu';
-import { nip44, NostrEvent, getPublicKey } from 'nostr-tools';
+import { NostrEvent, getPublicKey } from 'nostr-tools';
 import { useCashuStore, Nip60TokenEvent } from '@/stores/cashuStore';
 import { Proof } from '@cashu/cashu-ts';
 import { getLastEventTimestamp } from '@/lib/nostrTimestamps';
@@ -304,10 +304,6 @@ export function useCashuWallet() {
           created_at: Math.floor(Date.now() / 1000)
         });
 
-        // remove proofs from store
-        const proofsToRemoveFiltered = proofsToRemove.filter(proof => !newProofs.includes(proof));
-        cashuStore.removeProofs(proofsToRemoveFiltered);
-
         // add proofs to store
         cashuStore.addProofs(newProofs, newTokenEvent?.id || '');
 
@@ -336,6 +332,10 @@ export function useCashuWallet() {
           created_at: Math.floor(Date.now() / 1000)
         });
 
+        // remove proofs from store
+        const proofsToRemoveFiltered = proofsToRemove.filter(proof => !newProofs.map(p => p.secret).includes(proof.secret));
+        cashuStore.removeProofs(proofsToRemoveFiltered);
+
         // publish deletion event
         try {
           await nostr.event(deletionEvent);
@@ -355,7 +355,7 @@ export function useCashuWallet() {
     wallet: walletQuery.data?.wallet,
     walletId: walletQuery.data?.id,
     tokens: getNip60TokensQuery.data || [],
-    isLoading: walletQuery.isLoading || getNip60TokensQuery.isLoading,
+    isLoading: walletQuery.isFetching || getNip60TokensQuery.isFetching,
     createWallet: createWalletMutation.mutate,
     updateProofs: updateProofsMutation.mutateAsync,
   };

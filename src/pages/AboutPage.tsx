@@ -31,7 +31,28 @@ export default function AboutPage() {
       <Header />
       
       <div className="max-w-3xl mx-auto mt-3 space-y-6">
-        {/* PWA Status Card */}
+        {/* About Content */}
+        <Card className="border-none shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-3xl font-bold">About +chorus</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="prose dark:prose-invert max-w-none
+                         prose-headings:font-bold prose-headings:text-foreground
+                         prose-h2:text-2xl prose-h3:text-xl
+                         prose-p:text-base prose-p:leading-relaxed prose-p:text-foreground/90
+                         prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                         prose-strong:text-foreground prose-strong:font-semibold
+                         prose-li:marker:text-primary/70 prose-li:my-1 prose-li:text-foreground/90
+                         prose-img:rounded-md prose-img:shadow-sm
+                         prose-hr:border-border/40"
+              dangerouslySetInnerHTML={{ __html: html }} 
+            />
+          </CardContent>
+        </Card>
+
+        {/* App Status Card */}
         <Card className="border-primary/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -87,27 +108,6 @@ export default function AboutPage() {
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* About Content */}
-        <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-3xl font-bold">About +chorus</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div 
-              className="prose dark:prose-invert max-w-none
-                         prose-headings:font-bold prose-headings:text-foreground
-                         prose-h2:text-2xl prose-h3:text-xl
-                         prose-p:text-base prose-p:leading-relaxed prose-p:text-foreground/90
-                         prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                         prose-strong:text-foreground prose-strong:font-semibold
-                         prose-li:marker:text-primary/70 prose-li:my-1 prose-li:text-foreground/90
-                         prose-img:rounded-md prose-img:shadow-sm
-                         prose-hr:border-border/40"
-              dangerouslySetInnerHTML={{ __html: html }} 
-            />
           </CardContent>
         </Card>
       </div>

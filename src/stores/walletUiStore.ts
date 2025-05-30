@@ -11,6 +11,10 @@ interface WalletUiState {
   };
   toggleCardExpansion: (cardKey: keyof WalletUiState['expandedCards']) => void;
   setCardExpansion: (cardKey: keyof WalletUiState['expandedCards'], isExpanded: boolean) => void;
+  showWallet: boolean;
+  setShowWallet: (show: boolean) => void;
+  balanceAnimation: boolean;
+  setBalanceAnimation: (animate: boolean) => void;
 }
 
 export const useWalletUiStore = create<WalletUiState>()(
@@ -24,6 +28,8 @@ export const useWalletUiStore = create<WalletUiState>()(
         history: true,
         mints: true,
       },
+      showWallet: false,
+      balanceAnimation: false,
       toggleCardExpansion: (cardKey) =>
         set((state) => ({
           expandedCards: {
@@ -38,6 +44,8 @@ export const useWalletUiStore = create<WalletUiState>()(
             [cardKey]: isExpanded,
           },
         })),
+      setShowWallet: (show) => set({ showWallet: show }),
+      setBalanceAnimation: (animate) => set({ balanceAnimation: animate }),
     }),
     {
       name: 'wallet-ui-state',

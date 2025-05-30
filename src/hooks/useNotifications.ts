@@ -1,6 +1,6 @@
 import { useNostr } from '@/hooks/useNostr';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserGroups } from '@/hooks/useUserGroups';
 import { NostrEvent } from '@nostrify/nostrify';
 import { KINDS } from '@/lib/nostr-kinds';
@@ -306,11 +306,14 @@ export function useNotifications() {
       return notifications.sort((a, b) => b.createdAt - a.createdAt);
     },
     enabled: !!user,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 15000, // Consider data stale after 15 seconds
   });
 }
 
 export function useMarkNotificationAsRead() {
   const { user } = useCurrentUser();
+  const queryClient = useQueryClient();
 
   return (notificationId: string) => {
     if (!user) return;
@@ -320,6 +323,32 @@ export function useMarkNotificationAsRead() {
     
     readNotifications[notificationId] = true;
     localStorage.setItem(storageKey, JSON.stringify(readNotifications));
+    
+    // Invalidate the notifications query to trigger a refetch and update the badge
+    queryClient.invalidateQueries({ queryKey: ['notifications', user.pubkey] });
+  };
+}
+
+export function useMarkAllNotificationsAsRead() {
+  const { user } = useCurrentUser();
+  const queryClient = useQueryClient();
+  const { data: notifications = [] } = useNotifications();
+
+  return () => {
+    if (!user) return;
+    
+    const storageKey = `notifications:${user.pubkey}`;
+    const readNotifications = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    
+    // Mark all current notifications as read
+    for (const notification of notifications) {
+      readNotifications[notification.id] = true;
+    }
+    
+    localStorage.setItem(storageKey, JSON.stringify(readNotifications));
+    
+    // Invalidate the notifications query to trigger a refetch and update the badge
+    queryClient.invalidateQueries({ queryKey: ['notifications', user.pubkey] });
   };
 }
 

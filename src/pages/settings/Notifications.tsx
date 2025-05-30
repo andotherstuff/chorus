@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthor } from "@/hooks/useAuthor";
 import { formatDistanceToNow } from "date-fns";
 import { GroupReference } from "@/components/groups/GroupReference";
-import { Badge } from "@/components/ui/badge";
 
 export default function Notifications() {
   const { user } = useCurrentUser();
@@ -76,30 +75,26 @@ export default function Notifications() {
         break;
       case "join_request":
         if (notification.groupId) {
-          // Link to the members tab with requests selected
-          linkTo = `/group/${notification.groupId}#members`;
-          // The MemberManagement component has its own tabs, so we need to set the active tab
-          // We'll add a URL parameter to indicate which tab should be active
-          linkTo += "?membersTab=requests";
-          linkText = "View join requests";
+          // Link to the group settings members tab
+          linkTo = `/group/${notification.groupId}/settings?tab=members`;
+          linkText = "Manage join requests";
         }
         break;
       case "leave_request":
         if (notification.groupId) {
-          // Link to the members tab
-          linkTo = `/group/${notification.groupId}#members`;
+          // Link to the group settings members tab
+          linkTo = `/group/${notification.groupId}/settings?tab=members`;
           linkText = "View members";
         }
         break;
       case "report":
       case "report_action":
         if (notification.groupId) {
-          // Link to the reports tab
-          linkTo = `/group/${notification.groupId}#reports`;
+          // Link to the group settings reports tab
+          linkTo = `/group/${notification.groupId}/settings?tab=reports`;
           if (notification.eventId) {
             // If we have a report ID, add it as a parameter
-            // The ReportsList component can then highlight this specific report
-            linkTo += `?reportId=${notification.eventId}`;
+            linkTo += `&reportId=${notification.eventId}`;
             linkText = "View report";
           } else {
             linkText = "View reports";
@@ -159,21 +154,7 @@ export default function Notifications() {
       return <Navigate to="/" />;
     }
 
-    // Get badge for notification type
-    const getNotificationBadge = () => {
-      switch (notification.type) {
-        case 'report':
-          return <Badge variant="destructive">{notification.reportType || 'Report'}</Badge>;
-        case 'report_action':
-          return <Badge variant="outline">{notification.actionType || 'Action'}</Badge>;
-        case 'join_request':
-          return <Badge variant="secondary">Join Request</Badge>;
-        case 'leave_request':
-          return <Badge variant="default">Leave Request</Badge>;
-        default:
-          return null;
-      }
-    };
+
 
     return (
       <Card className={`mb-4 ${notification.read ? 'opacity-70' : ''}`}>
@@ -186,9 +167,6 @@ export default function Notifications() {
                 {notification.message}
                 {notification.pubkey && (notification.type !== 'reaction' && notification.type !== 'tag_post' && notification.type !== 'tag_reply' && notification.type !== 'post_approved' && notification.type !== 'post_removed' && notification.type !== 'report' && notification.type !== 'report_action') && ` from ${authorName}`}
                 {notification.groupId && <GroupReference groupId={notification.groupId} />}
-                {getNotificationBadge() && (
-                  <span className="ml-2 inline-block">{getNotificationBadge()}</span>
-                )}
               </div>
               <div className="text-sm text-muted-foreground">
                 {formatDistanceToNow(notification.createdAt * 1000, { addSuffix: true })}

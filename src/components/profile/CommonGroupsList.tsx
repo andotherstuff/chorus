@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { RichText } from "@/components/ui/RichText";
 import { Users, Crown, Shield, User } from "lucide-react";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
@@ -337,9 +338,9 @@ export function CommonGroupsList({ profileUserPubkey }: CommonGroupsListProps) {
                   </div>
                   
                   {group.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+                    <RichText className="text-xs text-muted-foreground line-clamp-2 mb-3">
                       {group.description}
-                    </p>
+                    </RichText>
                   )}
                   
                   <div className="flex items-center gap-2 flex-wrap">

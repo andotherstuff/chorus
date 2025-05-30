@@ -2,6 +2,7 @@ import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useGroup } from "./useGroup";
 
 /**
  * Hook to fetch and check approved members for a community
@@ -9,22 +10,38 @@ import { KINDS } from "@/lib/nostr-kinds";
  */
 export function useApprovedMembers(communityId: string) {
   const { nostr } = useNostr();
+  const { data: group } = useGroup(communityId);
+
+  const groupModsKey = group?.tags
+    .filter(tag => tag[0] === "p" && tag[3] === "moderator")
+    .map(([, value]) => value).join(",") || "";
 
   // Query for approved members list
   const { data: approvedMembersEvents, isLoading } = useQuery({
-    queryKey: ["approved-members-list", communityId],
+    queryKey: ["approved-members-list", communityId, groupModsKey],
     queryFn: async (c) => {
+      if (!group) {
+        throw new Error("Group not found");
+      }
+
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const moderators = new Set<string>([group.pubkey]);
+
+      for (const tag of group.tags) {
+        if (tag[0] === "p" && tag[3] === "moderator") {
+          moderators.add(tag[1]);
+        }
+      }
       
       const events = await nostr.query([{ 
         kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+        authors: [...moderators],
         "#d": [communityId],
-        limit: 10,
       }], { signal });
       
       return events;
     },
-    enabled: !!nostr && !!communityId,
+    enabled: !!group && !!communityId,
   });
 
   // Query for community details to get moderators

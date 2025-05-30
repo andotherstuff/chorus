@@ -6,6 +6,7 @@ import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { usePendingPostsCount } from "@/hooks/usePendingPostsCount";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
 import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
+import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { RichText } from "@/components/ui/RichText";
 import { KINDS } from "@/lib/nostr-kinds";
 
 import { CreatePostForm } from "@/components/groups/CreatePostForm";
@@ -43,10 +45,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useGroup } from "@/hooks/useGroup";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useNavigate } from "react-router-dom";
+import { useIsGroupDeleted } from "@/hooks/useGroupDeletionRequests";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 export default function GroupDetail() {
   const { groupId, relay } = useParams<{ groupId: string; relay?: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const { nostr } = useNostr();
   const { nostr: enhancedNostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
@@ -66,7 +75,6 @@ export default function GroupDetail() {
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formGuidelines, setFormGuidelines] = useState("");
   const [formModerators, setFormModerators] = useState<string[]>([]);
-
 
   const searchParams = new URLSearchParams(location.search);
   const reportId = searchParams.get('reportId');
@@ -170,25 +178,13 @@ export default function GroupDetail() {
     enabled: !!nostr && !!enhancedNostr && !!parsedRouteId,
   });
 
-  // Query for approved members list
-  const { data: approvedMembersEvents, refetch: refetchApprovedMembers } = useQuery({
-    queryKey: ["approved-members-list", groupId],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      const events = await nostr.query([{
-        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
-        "#a": [groupId || ''],
-        limit: 10,
-      }], { signal });
-      return events;
-    },
-    enabled: !!nostr && !!groupId,
-  });
+  // Check if group has been deleted
+  const { isDeleted: isGroupDeleted, deletionRequest } = useIsGroupDeleted(
+    parsedRouteId?.type === "nip72" ? groupId : undefined
+  );
 
-  // Get approved members' pubkeys
-  const approvedMembers = approvedMembersEvents?.flatMap(event =>
-    event.tags.filter(tag => tag[0] === "p").map(tag => tag[1])
-  ) || [];
+  // Get approved members using the centralized hook
+  const { approvedMembers } = useApprovedMembers(groupId || '');
 
   const isOwner = user && groupData && user.pubkey === groupData.pubkey;
   
@@ -196,7 +192,6 @@ export default function GroupDetail() {
   const moderators = groupData?.type === "nip72" 
     ? groupData.moderators 
     : groupData?.admins || [];
-  
   const isModerator = isOwner || (user && moderators.includes(user.pubkey));
 
   // Initialize form state from group data
@@ -290,12 +285,19 @@ export default function GroupDetail() {
       return;
     }
 
+    if (!parsedRouteId) {
+      toast.error("Invalid group ID");
+      return;
+    }
+
     try {
       // Create a new tags array with only unique tag types
       const tags: string[][] = [];
 
       // Always include identifier
-      tags.push(["d", parsedId.identifier]);
+      if (parsedRouteId.type === "nip72") {
+        tags.push(["d", parsedRouteId.identifier!]);
+      }
 
       // Add form values
       tags.push(["name", formName]);
@@ -349,7 +351,7 @@ export default function GroupDetail() {
       queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
-      
+
       toast.success("Group settings updated successfully!");
     } catch (error) {
       console.error("Error updating community settings:", error);
@@ -426,12 +428,12 @@ export default function GroupDetail() {
         });
 
         setFormModerators(uniqueModPubkeys);
-        
+
         // Invalidate relevant queries to update the UI
         queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
         queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
         queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
-        
+
         toast.success("Moderator added successfully!");
       } catch (error) {
         console.error("Error adding moderator:", error);
@@ -508,16 +510,50 @@ export default function GroupDetail() {
         content: "",
       });
       setFormModerators(formModerators.filter(mod => mod !== pubkey));
-      
+
       // Invalidate relevant queries to update the UI
       queryClient.invalidateQueries({ queryKey: ["community-settings", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["community", parsedId?.pubkey, parsedId?.identifier] });
       queryClient.invalidateQueries({ queryKey: ["user-groups", user?.pubkey] });
-      
+
       toast.success("Moderator removed successfully!");
     } catch (error) {
       console.error("Error removing moderator:", error);
       toast.error("Failed to remove moderator. Please try again.");
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!isOwner) {
+      toast.error("Only the group owner can delete the group");
+      return;
+    }
+
+    if (!groupData || !parsedRouteId || parsedRouteId.type !== "nip72") {
+      toast.error("Group information not available");
+      return;
+    }
+
+    try {
+      // Create a kind 5 deletion event referencing the group
+      // Include both 'a' tag (addressable event) and 'e' tag (event ID) for maximum relay compatibility
+      await publishEvent({
+        kind: KINDS.DELETION,
+        tags: [
+          ["a", `${KINDS.GROUP}:${groupData.pubkey}:${parsedRouteId.identifier}`],
+          ["e", groupData.id],
+          ["k", KINDS.GROUP.toString()]
+        ],
+        content: "Requesting deletion of this group",
+      });
+
+      toast.success("Group deletion requested successfully!");
+      
+      // Navigate back to groups page after successful deletion request
+      navigate("/groups");
+    } catch (error) {
+      console.error("Error requesting group deletion:", error);
+      toast.error("Failed to request group deletion. Please try again.");
     }
   };
 
@@ -598,9 +634,9 @@ export default function GroupDetail() {
             <div className="flex-1">
               <Skeleton className="h-40 w-full rounded-lg mb-2" />
             </div>
-            <div className="min-w-[140px] flex flex-col space-y-4">
-              <Skeleton className="h-10 w-full rounded-md" />
-              <Skeleton className="h-10 w-full rounded-md" />
+            <div className="min-w-[140px] flex flex-col justify-start">
+              <Skeleton className="h-8 w-full rounded-md mb-2" />
+              <Skeleton className="h-8 w-full rounded-md mb-2" />
             </div>
           </div>
 
@@ -618,11 +654,44 @@ export default function GroupDetail() {
   if (!groupData) {
     return (
       <div className="container mx-auto py-1 px-3 sm:px-4">
+        <Header />
         <h1 className="text-2xl font-bold mb-4">Group not found</h1>
         <p>The group you're looking for doesn't exist or has been deleted.</p>
         <Button asChild className="mt-2">
           <Link to="/groups">Back to Groups</Link>
         </Button>
+      </div>
+    );
+  }
+
+  // Show deletion notice if group has been deleted
+  if (isGroupDeleted && deletionRequest) {
+    return (
+      <div className="container mx-auto py-1 px-3 sm:px-4">
+        <Header />
+        
+        <div className="max-w-3xl mx-auto mt-8">
+          <Alert className="border-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="space-y-2">
+              <div className="font-semibold">This group has been deleted</div>
+              <p>
+                The group owner has requested deletion of this group on{" "}
+                {new Date(deletionRequest.deletionEvent.created_at * 1000).toLocaleDateString()}.
+              </p>
+              {deletionRequest.reason && (
+                <p className="text-sm text-muted-foreground">
+                  <strong>Reason:</strong> {deletionRequest.reason}
+                </p>
+              )}
+              <div className="pt-2">
+                <Button asChild>
+                  <Link to="/groups">Browse Other Groups</Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
@@ -737,7 +806,14 @@ export default function GroupDetail() {
               </TooltipProvider>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <div className="flex items-center mb-3">
+            <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">Sent to the group</span>
+            <GroupNutzapTotal
+              groupId={groupData?.id || groupId || ''}
+              className="w-auto max-w-[180px]"
+            />
+          </div>
+          <RichText className="text-xs text-muted-foreground">{description}</RichText>
         </div>
       </div>
 
@@ -837,17 +913,17 @@ export default function GroupDetail() {
         {isModerator && (
           <TabsContent value="manage" className="space-y-4">
             <div className="max-w-3xl mx-auto">
-              <Tabs defaultValue="general" className="w-full space-y-6">
+              <Tabs defaultValue={isOwner ? "general" : "member-management"} className="w-full space-y-6">
                 <TabsList className="grid grid-cols-3 mb-4">
-                  <TabsTrigger value="general" className="flex items-center gap-2">
+                  <TabsTrigger value="general" className="flex items-center gap-2" disabled={!isOwner}>
                     <Shield className="h-4 w-4" />
-                    General
+                    General {!isOwner && <span className="text-xs">(Owner Only)</span>}
                   </TabsTrigger>
                   <TabsTrigger value="member-management" className="flex items-center gap-2 relative">
                     <Users className="h-4 w-4" />
                     Members
                     {pendingRequestsCount > 0 && (
-                      <Badge 
+                      <Badge
                         className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-blue-500 hover:bg-blue-600 z-10"
                       >
                         {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
@@ -858,8 +934,8 @@ export default function GroupDetail() {
                     <FileWarning className="h-4 w-4" />
                     Reports
                     {openReportsCount > 0 && (
-                      <Badge 
-                        variant="destructive" 
+                      <Badge
+                        variant="destructive"
                         className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs z-10"
                       >
                         {openReportsCount > 99 ? '99+' : openReportsCount}
@@ -869,14 +945,31 @@ export default function GroupDetail() {
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-6 mt-3">
-                  <form onSubmit={handleSubmit} className="w-full space-y-8">
+                  {!isOwner ? (
                     <Card>
                       <CardHeader>
                         <CardTitle>General Settings</CardTitle>
                         <CardDescription>
-                          Update your group's basic information
+                          Only the group owner can modify general settings
                         </CardDescription>
                       </CardHeader>
+                      <CardContent>
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>You don't have permission to modify general settings.</p>
+                          <p className="text-sm mt-2">Only the group owner can update the group's basic information, as these changes require updating the community definition event.</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="w-full space-y-8">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>General Settings</CardTitle>
+                          <CardDescription>
+                            Update your group's basic information
+                          </CardDescription>
+                        </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="name">Group Name</Label>
@@ -934,7 +1027,44 @@ export default function GroupDetail() {
                           />
                         </div>
 
-                        <div className="mt-3 flex justify-end">
+                        <div className="mt-3 flex justify-between">
+                          {isOwner && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" type="button">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Group
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Group</AlertDialogTitle>
+                                  <AlertDialogDescription className="space-y-2">
+                                    <p>
+                                      Are you sure you want to request deletion of this group? This action will:
+                                    </p>
+                                    <ul className="list-disc list-inside space-y-1 text-sm">
+                                      <li>Submit a deletion request to the network</li>
+                                      <li>Signal to relays that this group should be removed</li>
+                                      <li>Make the group inaccessible to new users</li>
+                                    </ul>
+                                    <p className="text-sm font-medium text-destructive">
+                                      Note: This is a request for deletion. Individual relays may choose whether to honor this request. This does not delete individual posts within the group.
+                                    </p>
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={handleDeleteGroup}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete Group
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                           <Button type="submit">
                             <Save className="h-4 w-4 mr-2" />
                             Save Changes
@@ -1023,7 +1153,8 @@ export default function GroupDetail() {
                         </Card>
                       </div>
                     )}
-                  </form>
+                    </form>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="member-management" className="mt-3">
@@ -1074,7 +1205,7 @@ export default function GroupDetail() {
           </DialogHeader>
           <ScrollArea className="mt-4 max-h-[60vh] pr-4">
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <p className="whitespace-pre-wrap">{guidelinesTag?.[1] || "No guidelines available."}</p>
+              <RichText>{guidelinesTag?.[1] || "No guidelines available."}</RichText>
             </div>
           </ScrollArea>
         </DialogContent>
@@ -1103,7 +1234,7 @@ function ModeratorItem({ pubkey, isCreator = false, onRemove }: ModeratorItemPro
     <div className="flex items-center justify-between p-3 border rounded-md">
       <div className="flex items-center gap-3">
         <Link to={`/profile/${pubkey}`}>
-          <Avatar>
+          <Avatar className="rounded-md">
             <AvatarImage src={profileImage} />
             <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
@@ -1167,7 +1298,7 @@ function MemberItem({ pubkey, onPromote, isOwner }: MemberItemProps) {
     <div className="flex items-center justify-between p-3 border rounded-md">
       <div className="flex items-center gap-3">
         <Link to={`/profile/${pubkey}`}>
-          <Avatar>
+          <Avatar className="rounded-md">
             <AvatarImage src={profileImage} />
             <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>

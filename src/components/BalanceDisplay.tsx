@@ -5,12 +5,14 @@ import { useCashuStore } from '@/stores/cashuStore';
 import { useCurrencyDisplayStore } from '@/stores/currencyDisplayStore';
 import { calculateBalance, formatBalance } from '@/lib/cashu';
 import { useBitcoinPrice, satsToUSD, formatUSD } from '@/hooks/useBitcoinPrice';
+import { useWalletUiStore } from '@/stores/walletUiStore';
 import { cn } from '@/lib/utils';
 
 export function BalanceDisplay() {
   const cashuStore = useCashuStore();
   const { showSats, toggleCurrency } = useCurrencyDisplayStore();
   const { data: btcPrice } = useBitcoinPrice();
+  const walletUiStore = useWalletUiStore();
   const [isFlashing, setIsFlashing] = useState(false);
   const prevBalance = useRef<string>('');
 
@@ -34,6 +36,14 @@ export function BalanceDisplay() {
     prevBalance.current = displayBalance;
   }, [displayBalance]);
 
+  // Handle animation from nutzap receipt
+  useEffect(() => {
+    if (walletUiStore.balanceAnimation) {
+      setIsFlashing(true);
+      setTimeout(() => setIsFlashing(false), 300);
+    }
+  }, [walletUiStore.balanceAnimation]);
+
   // Don't show balance if user has no wallet
   if (cashuStore.mints.length === 0) {
     return null;
@@ -46,7 +56,7 @@ export function BalanceDisplay() {
       onClick={toggleCurrency}
       className={cn(
         "flex items-center gap-1.5 px-3 py-1.5 font-medium transition-all",
-        isFlashing && "flash-update"
+        isFlashing && "flash-update animate-pulse scale-110"
       )}
     >
       {showSats ? (

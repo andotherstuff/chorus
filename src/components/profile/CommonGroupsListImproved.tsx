@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { RichText } from "@/components/ui/RichText";
 import { Users, Crown, Shield, User, ArrowRight } from "lucide-react";
 import type { NostrEvent } from "@nostrify/nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
@@ -12,6 +13,7 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useGroupDeletionRequests } from "@/hooks/useGroupDeletionRequests";
 
 interface CommonGroup {
   id: string;
@@ -262,6 +264,17 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
     enabled: !!nostr && !!user && !!profileUserPubkey && user.pubkey !== profileUserPubkey,
   });
 
+  // Get group IDs for deletion checking
+  const groupIds = commonGroups?.map(group => group.id) || [];
+  const { data: deletionRequests } = useGroupDeletionRequests(groupIds);
+
+  // Filter out deleted groups
+  const filteredCommonGroups = commonGroups?.filter(group => {
+    if (!deletionRequests) return true;
+    const deletionRequest = deletionRequests.get(group.id);
+    return !(deletionRequest?.isValid || false);
+  }) || [];
+
   // Don't show anything if viewing own profile
   if (!user || !profileUserPubkey || user.pubkey === profileUserPubkey) {
     return null;
@@ -291,7 +304,7 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
     );
   }
 
-  if (!commonGroups || commonGroups.length === 0) {
+  if (!filteredCommonGroups || filteredCommonGroups.length === 0) {
     return null; // Don't show section if no common groups
   }
 
@@ -303,12 +316,12 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
           <h3 className="text-lg font-semibold">Shared Groups</h3>
         </div>
         <Badge variant="secondary" className="text-xs font-medium">
-          {commonGroups.length} {commonGroups.length === 1 ? 'group' : 'groups'}
+          {filteredCommonGroups.length} {filteredCommonGroups.length === 1 ? 'group' : 'groups'}
         </Badge>
       </div>
       
       <div className="space-y-3">
-        {commonGroups.map((group) => (
+        {filteredCommonGroups.map((group) => (
           <Link
             key={group.id}
             to={`/group/${encodeURIComponent(group.id)}`}
@@ -344,9 +357,9 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
                       <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     {group.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                      <RichText className="text-sm text-muted-foreground line-clamp-2 mt-1">
                         {group.description}
-                      </p>
+                      </RichText>
                     )}
                   </div>
                 </div>

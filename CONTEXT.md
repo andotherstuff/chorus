@@ -389,8 +389,7 @@ NostrGroups implements [NIP-72](https://github.com/nostr-protocol/nips/blob/mast
 
 - **Kind 34550**: Community definition events that include community metadata and moderator lists
 - **Kind 4550**: Post approval events that moderators use to approve posts
-- **Kind 30000**: Custom list events used for approved users lists
-- **Kind 1**: Standard text note events used for posts within communities
+- **Kind 11**: Text note events used for posts within communities
 
 ## Key Features
 
@@ -439,6 +438,108 @@ Posts from approved users are automatically displayed in the community without r
 - **Moderation Tools**: Moderators have access to tools for approving posts and managing approved users
 - **Responsive Design**: Works on both desktop and mobile devices
 
+## Group Event Tagging Patterns
+
+This project follows NIP-72 and NIP-01 specifications for proper event tagging. **It is critical to understand the difference between addressable and regular events when working with group functionality.**
+
+### Addressable Events (3455x kinds) - Use "d" tags for self-identification
+
+These events are replaceable and use "d" tags to identify themselves:
+
+- **Kind 34550** (`GROUP`): Community definition events
+  - Use `["d", "community-identifier"]` to identify the community
+  - Example: `["d", "bitcoin-discussion"]`
+
+- **Kind 34551** (`GROUP_APPROVED_MEMBERS_LIST`): Approved members lists
+  - Use `["d", communityId]` to identify which community this list belongs to
+  - Example: `["d", "34550:pubkey:bitcoin-discussion"]`
+
+- **Kind 34552** (`GROUP_DECLINED_MEMBERS_LIST`): Declined members lists
+  - Use `["d", communityId]` to identify which community this list belongs to
+
+- **Kind 34553** (`GROUP_BANNED_MEMBERS_LIST`): Banned members lists
+  - Use `["d", communityId]` to identify which community this list belongs to
+
+- **Kind 34554** (`GROUP_PINNED_POSTS_LIST`): Pinned posts lists
+  - Use `["d", communityId]` to identify which community this list belongs to
+
+- **Kind 34555** (`PINNED_GROUPS_LIST`): User's pinned groups list
+  - Use `["d", "pinned-groups"]` to identify this as the user's pinned groups list
+  - Use `["a", communityId]` tags to reference each pinned community
+
+### Regular Events (455x kinds) - Use "a" tags to reference communities
+
+These events are not replaceable and use "a" tags to reference the community they target:
+
+- **Kind 4550** (`GROUP_POST_APPROVAL`): Post approval events
+  - Use `["a", communityId]` to reference the target community
+  - Example: `["a", "34550:pubkey:bitcoin-discussion"]`
+
+- **Kind 4551** (`GROUP_POST_REMOVAL`): Post removal events
+  - Use `["a", communityId]` to reference the target community
+
+- **Kind 4552** (`GROUP_JOIN_REQUEST`): Join request events
+  - Use `["a", communityId]` to reference the target community
+
+- **Kind 4553** (`GROUP_LEAVE_REQUEST`): Leave request events
+  - Use `["a", communityId]` to reference the target community
+
+- **Kind 4554** (`GROUP_CLOSE_REPORT`): Close report events
+  - Use `["a", communityId]` to reference the target community
+
+### Querying Events
+
+When querying events, use the appropriate filter:
+
+```typescript
+// ✅ Correct: Query addressable events by "d" tag
+const approvedMembers = await nostr.query([{
+  kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+  "#d": [communityId]
+}], { signal });
+
+// ✅ Correct: Query regular events by "a" tag
+const approvals = await nostr.query([{
+  kinds: [KINDS.GROUP_POST_APPROVAL],
+  "#a": [communityId]
+}], { signal });
+
+// ❌ Wrong: Don't mix up the tag types
+const wrongQuery = await nostr.query([{
+  kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+  "#a": [communityId] // Wrong! Should be "#d"
+}], { signal });
+```
+
+### Creating Events
+
+When creating events, use the appropriate tag structure:
+
+```typescript
+// ✅ Correct: Create addressable event with "d" tag
+await publishEvent({
+  kind: KINDS.GROUP_APPROVED_MEMBERS_LIST,
+  tags: [
+    ["d", communityId], // Identifies which community this list belongs to
+    ["p", userPubkey1],
+    ["p", userPubkey2]
+  ],
+  content: ""
+});
+
+// ✅ Correct: Create regular event with "a" tag
+await publishEvent({
+  kind: KINDS.GROUP_POST_APPROVAL,
+  tags: [
+    ["a", communityId], // References the target community
+    ["e", postId],
+    ["p", authorPubkey],
+    ["k", "1"]
+  ],
+  content: JSON.stringify(originalPost)
+});
+```
+
 ## Development Guidelines
 
 When extending the NostrGroups platform:
@@ -451,3 +552,4 @@ When extending the NostrGroups platform:
 6. Test all changes with `npm run ci` before considering them complete
 7. Always use `for...of` instead of `forEach` in loops
 8. **Always use constants from `@/lib/nostr-kinds` instead of hardcoded event kind literals**
+9. **Follow the correct tagging patterns for addressable vs regular events as documented above**

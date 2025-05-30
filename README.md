@@ -35,31 +35,29 @@
 
 ## Supported Nostr Event Kinds
 
-### Content
-- Kind 11: Post in a group
-- Kind 1111: Reply to posts
-- Kind 7: React to posts
-- Kind 1984: Report content
+### Core Protocol
+- Kind 0: User metadata/profile
+- Kind 1: Text note
+- Kind 3: Follow list
+- Kind 5: Deletion
+- Kind 7: Reaction
+- Kind 9735: Zap
+- Kind 1984: Report
 
 ### Groups
-  - Kind 34550: Community definition
-  - Kind 4550: Post approval
-  - Kind 4551: Post removal
-  - Kind 4552: Join request
-  - Kind 4553: Leave request
-  - Kind 4554: Close report
-  - Kind 14550: Approved members list
-  - Kind 14551: Declined members list
-  - Kind 14552: Banned users list
-  - Kind 14553: Pinned groups
-
-### Payments & Tips
-  - Kind 9321: Nutzaps
-  - Kind 17375: Wallet info (replaceable event for wallet configuration)
-  - Kind 7375: Token events (unspent proofs)
-  - Kind 7376: Spending history (encrypted transaction records)
-  - Kind 7374: Quote events (optional payment references)
-  - Kind 10019: Zap info (payment configuration)
+- Kind 11: Post in a group
+- Kind 1111: Reply to group posts
+- Kind 4550: Post approval
+- Kind 4551: Post removal
+- Kind 4552: Join request
+- Kind 4553: Leave request
+- Kind 4554: Close report
+- Kind 34550: Community definition
+- Kind 34551: Approved members list
+- Kind 34552: Declined members list
+- Kind 34553: Banned members list
+- Kind 34554: Pinned posts list
+- Kind 34555: Pinned groups list
 
 
 ## Getting Started
@@ -94,15 +92,15 @@ npm run build
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions!
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License
 
 ## Links
 
 - [Website](https://chorus.community)
 - [GitHub](https://github.com/andotherstuff/chorus)
-- [+chorus Group](https://chorus.community/group/34550:932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d:and-other-stuff)
+- [+chorus Group](https://chorus.community/group/34550%3A932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d%3Aand-other-stuff-mb3c9stb)
 - [Bug Reports](https://github.com/andotherstuff/chorus/issues/new)

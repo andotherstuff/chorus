@@ -1,0 +1,17 @@
+name = "nostr-nip72-poller"
+main = "worker.js"
+compatibility_date = "2025-05-23"
+compatibility_flags = ["nodejs_compat"]
+# account_id = "your-cloudflare-account-id"  # Set this to your Cloudflare account ID
+
+[vars]
+RELAY_URL = "wss://relay.damus.io"
+# BOT_TOKEN = "your-bot-token"  # Set this as a secret with: wrangler secret put BOT_TOKEN
+
+[[kv_namespaces]]
+binding = "KV"
+# id = "your-kv-namespace-id"        # Set this to your KV namespace ID
+# preview_id = "your-preview-kv-id"  # Set this to your preview KV namespace ID
+
+[triggers]
+crons = ["*/30 * * * *"]

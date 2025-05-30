@@ -2,8 +2,9 @@ import { useMutation } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCashuWallet } from '@/hooks/useCashuWallet';
 import { useCashuStore } from '@/stores/cashuStore';
-import { derivePrivkeyFromNostrSignature } from '@/lib/nip60';
 import { defaultMints } from '@/lib/cashu';
+import { generateSecretKey } from 'nostr-tools';
+import { bytesToHex } from "@noble/hashes/utils";
 
 /**
  * Hook for creating a Cashu wallet using the user's Nostr identity
@@ -22,10 +23,7 @@ export function useCreateCashuWallet() {
       }
 
       try {
-        const privkey = await derivePrivkeyFromNostrSignature(
-          user.signer,
-          user.pubkey
-        );
+        const privkey = bytesToHex(generateSecretKey());
         cashuStore.setPrivkey(privkey);
 
         // Create a new wallet with the default mint

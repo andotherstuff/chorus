@@ -104,7 +104,7 @@ export default function GroupSettings() {
 
       const events = await nostr.query([{
         kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
-        "#a": [groupId || ""],
+        "#d": [groupId || ""],
         limit: 50,
       }], { signal });
 
@@ -155,6 +155,15 @@ export default function GroupSettings() {
 
   const isModerator = user && moderators.includes(user.pubkey);
   const isOwner = Boolean(user && community && user.pubkey === (community as NostrEvent).pubkey);
+
+  // Set default tab based on user permissions
+  useEffect(() => {
+    const tabParam = new URLSearchParams(location.search).get('tab');
+    if (!tabParam && !isOwner && (isModerator || isOwner)) {
+      // If no tab specified and user is not owner but is moderator, default to members
+      setActiveTab('members');
+    }
+  }, [isOwner, isModerator, location.search]);
 
   // Get notification counts for tabs (disable for NIP-29 groups)
   const { data: openReportsCount = 0 } = useOpenReportsCount(relay ? '' : groupId || '');
@@ -211,28 +220,17 @@ export default function GroupSettings() {
       return;
     }
 
+    if (!isOwner) {
+      toast.error("Only the group owner can update general settings");
+      return;
+    }
+
     if (!parsedId) {
       toast.error("Invalid group ID");
       return;
     }
 
     const communityEvent = community as NostrEvent;
-    const originalModPubkeys = communityEvent.tags
-      .filter(tag => tag[0] === "p")
-      .map(tag => tag[1]);
-
-    const moderatorsChanged = moderators.some(mod => !originalModPubkeys.includes(mod)) ||
-                             originalModPubkeys.some(mod => !moderators.includes(mod));
-
-    if (moderatorsChanged && !isOwner) {
-      toast.error("Only the group owner can add or remove moderators");
-      return;
-    }
-
-    if (!isModerator && !isOwner) {
-      toast.error("You must be a moderator or the group owner to update group settings");
-      return;
-    }
 
     try {
       // Create a new tags array with only unique tag types
@@ -490,9 +488,9 @@ export default function GroupSettings() {
       }} className="w-full space-y-6">
         <div className="md:flex md:justify-start">
           <TabsList className="mb-4 w-full md:w-auto flex">
-            <TabsTrigger value="general" className="flex-1 md:flex-none">
+            <TabsTrigger value="general" className="flex-1 md:flex-none" disabled={!isOwner}>
               <Shield className="h-4 w-4 mr-2" />
-              General
+              General {!isOwner && <span className="text-xs ml-1">(Owner Only)</span>}
             </TabsTrigger>
             {(isOwner || isModerator) && (
               <TabsTrigger value="members" className="flex-1 md:flex-none relative">
@@ -525,14 +523,31 @@ export default function GroupSettings() {
         </div>
 
         <TabsContent value="general" className="space-y-6 mt-3">
-          <form onSubmit={handleSubmit} className="w-full space-y-8">
+          {!isOwner ? (
             <Card>
               <CardHeader>
                 <CardTitle>General Settings</CardTitle>
                 <CardDescription>
-                  Update your group's basic information
+                  Only the group owner can modify general settings
                 </CardDescription>
               </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Shield className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>You don't have permission to modify general settings.</p>
+                  <p className="text-sm mt-2">Only the group owner can update the group's basic information, as these changes require updating the community definition event.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <form onSubmit={handleSubmit} className="w-full space-y-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>General Settings</CardTitle>
+                  <CardDescription>
+                    Update your group's basic information
+                  </CardDescription>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Group Name</Label>
@@ -745,7 +760,8 @@ export default function GroupSettings() {
                 </Card>
               </div>
             )}
-          </form>
+            </form>
+          )}
         </TabsContent>
 
         {(isOwner || isModerator) && (

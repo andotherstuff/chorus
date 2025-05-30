@@ -1,31 +1,27 @@
 {
-  "name": "+chorus",
+  "id": "chorus-nostr-groups",
+  "name": "+chorus - Nostr Groups",
   "short_name": "+chorus",
-  "description": "Join, create, and participate in decentralized groups powered by the Nostr protocol.",
+  "description": "Join, create, and participate in decentralized groups powered by the Nostr protocol. Connect with communities through censorship-resistant social networking.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
   "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
   "categories": ["social", "productivity"],
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
+      "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
@@ -33,13 +29,41 @@
       "src": "/screenshots/desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "+chorus desktop view showing group discussions"
     },
     {
       "src": "/screenshots/mobile.png",
       "sizes": "750x1334",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "+chorus mobile view for group chat"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Group",
+      "short_name": "New Group",
+      "description": "Create a new decentralized group",
+      "url": "/groups/new",
+      "icons": [
+        {
+          "src": "/web-app-manifest-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Notifications",
+      "description": "View your notifications",
+      "url": "/notifications",
+      "icons": [
+        {
+          "src": "/web-app-manifest-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

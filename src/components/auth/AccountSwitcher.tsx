@@ -28,8 +28,8 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar.tsx";
 import { useLoggedInAccounts } from "@/hooks/useLoggedInAccounts";
-import { useNavigate } from "react-router-dom";
-import { useUnreadNotificationsCount } from "@/hooks/useNotifications";
+import { Link, useNavigate } from "react-router-dom";
+import { useUnreadNotificationsCount, useMarkAllNotificationsAsRead } from "@/hooks/useNotifications";
 import { useCashuStore } from "@/stores/cashuStore";
 import { useState } from "react";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
@@ -43,6 +43,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
     useLoggedInAccounts();
   const navigate = useNavigate();
   const unreadCount = useUnreadNotificationsCount();
+  const markAllAsRead = useMarkAllNotificationsAsRead();
   const cashuStore = useCashuStore();
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
   const { isInstallable, isRunningAsPwa, promptInstall } = usePWA();
@@ -70,21 +71,28 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
             type="button"
             className="flex items-center gap-2 p-1.5 rounded-full w-full text-foreground max-w-56 focus:outline-none"
           >
-            <Avatar className="w-8 h-8 rounded-md">
-              <AvatarImage
-                src={currentUser.metadata.picture}
-                alt={currentUser.metadata.name}
-              />
-              {currentUser.metadata.name?.charAt(0) ? (
-                <AvatarFallback>
-                  {currentUser.metadata.name?.charAt(0)}
-                </AvatarFallback>
-              ) : (
-                <AvatarFallback>
-                  <UserIcon className="w-4 h-4" />
-                </AvatarFallback>
+            <div className="relative">
+              <Avatar className="w-8 h-8 rounded-md">
+                <AvatarImage
+                  src={currentUser.metadata.picture}
+                  alt={currentUser.metadata.name}
+                />
+                {currentUser.metadata.name?.charAt(0) ? (
+                  <AvatarFallback>
+                    {currentUser.metadata.name?.charAt(0)}
+                  </AvatarFallback>
+                ) : (
+                  <AvatarFallback>
+                    <UserIcon className="w-4 h-4" />
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              {unreadCount > 0 && (
+                <div className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-background">
+                  {unreadCount > 99 ? '99' : unreadCount}
+                </div>
               )}
-            </Avatar>
+            </div>
             <div className="flex-1 text-left hidden md:block truncate">
               <p className="font-medium text-xs truncate">
                 {currentUser.metadata.name || currentUser.pubkey}
@@ -98,53 +106,60 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
             asChild
             className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md font-bold text-sm md:gap-2 gap-3"
           >
-            <a href="/create-group">
+            <Link to="/create-group">
               <Plus className="w-3.5 h-3.5 font-bold md:w-3.5 md:h-3.5 w-4 h-4" />
               <span>Create Group</span>
-            </a>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="my-1" />
           <DropdownMenuItem
             asChild
             className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
           >
-            <a href={`/profile/${currentUser.pubkey}`}>
+            <Link to={`/profile/${currentUser.pubkey}`}>
               <User className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
               <span>View Profile</span>
-            </a>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem
             asChild
             className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
           >
-            <a href="/wallet">
+            <Link to="/wallet">
               <Wallet className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
               <span>Wallet</span>
-            </a>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="my-1" />
           <DropdownMenuItem
             asChild
             className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
           >
-            <a href="/settings/notifications">
+            <Link
+              to="/settings/notifications"
+              onClick={() => {
+                if (unreadCount > 0) {
+                  markAllAsRead();
+                }
+              }}
+            >
               <Bell className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
               <span>Notifications</span>
               {unreadCount > 0 && (
                 <span className="ml-auto bg-primary text-primary-foreground text-xs font-medium px-1.5 py-0.5 rounded-full">
-                  {unreadCount}
+                  {unreadCount > 99 ? '99' : unreadCount}
                 </span>
               )}
-            </a>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem
             asChild
             className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
           >
-            <a href="/settings">
+            <Link to="/settings">
               <Settings className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
               <span>Settings</span>
-            </a>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="my-1" />
 
@@ -152,10 +167,10 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
             asChild
             className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md text-sm md:gap-2 gap-3"
           >
-            <a href="/about">
+            <Link to="/about">
               <Info className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 w-4 h-4" />
               <span>About +chorus</span>
-            </a>
+            </Link>
           </DropdownMenuItem>
           {!isRunningAsPwa && (
             <>

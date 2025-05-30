@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useIsGroupDeleted } from "@/hooks/useGroupDeletionRequests";
 
 export default function Hashtag() {
   const { hashtag } = useParams<{ hashtag: string }>();
@@ -293,12 +294,19 @@ function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
     staleTime: 300000, // 5 minutes
   });
 
+  // Check if the community has been deleted
+  const { isDeleted: isCommunityDeleted } = useIsGroupDeleted(communityInfo?.id);
+
   // Extract community name from the community event
   const communityName = useMemo(() => {
     if (!community) return null;
+    
+    // If the community has been deleted, return "Deleted"
+    if (isCommunityDeleted) return "Deleted";
+    
     const nameTag = community.tags.find(tag => tag[0] === "name");
     return nameTag ? nameTag[1] : null;
-  }, [community]);
+  }, [community, isCommunityDeleted]);
 
   // Handle sharing the post
   const handleSharePost = async (postId: string) => {
@@ -431,20 +439,32 @@ function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground flex items-center h-7 px-2"
-                    asChild
-                  >
-                    <Link to={`/group/${encodeURIComponent(communityInfo.id)}`}>
+                  {isCommunityDeleted ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground flex items-center h-7 px-2 cursor-not-allowed"
+                      disabled
+                    >
                       <Users className="h-3.5 w-3.5 mr-1" />
                       <span className="text-xs">{communityName}</span>
-                    </Link>
-                  </Button>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-foreground flex items-center h-7 px-2"
+                      asChild
+                    >
+                      <Link to={`/group/${encodeURIComponent(communityInfo.id)}`}>
+                        <Users className="h-3.5 w-3.5 mr-1" />
+                        <span className="text-xs">{communityName}</span>
+                      </Link>
+                    </Button>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>View in community: {communityName}</p>
+                  <p>{isCommunityDeleted ? "This group has been deleted" : `View in community: ${communityName}`}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

@@ -29,7 +29,7 @@ export function NoteContent({
   const { getFirstUrl } = useExtractUrls();
 
   // Process text content with links, mentions, etc. - memoized with useCallback
-  const processTextContent = useCallback((text: string, currentImageUrls: string[], currentVideoUrls: string[], currentAudioUrls: string[]) => {
+  const processTextContent = useCallback((text: string, currentImageUrls: string[], currentVideoUrls: string[], currentAudioUrls: string[], currentLinkUrl: string | null) => {
     // Regular expressions for different patterns
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const nostrRegex = /nostr:(npub1|note1|nprofile1|nevent1)([a-z0-9]+)/g;
@@ -56,7 +56,7 @@ export function NoteContent({
             node
           });
         } else {
-          // For null nodes (like hidden image URLs), we still need to record the position
+          // For null nodes (like hidden URLs), we still need to record the position
           // but we'll handle them differently when building the content
           matchPositions.push({
             index: match.index,
@@ -82,8 +82,11 @@ export function NoteContent({
       // Check if this URL is an audio URL that will be displayed separately
       const isAudioUrl = currentAudioUrls.includes(url);
 
-      if (isImageUrl || isVideoUrl || isAudioUrl) {
-        // Return null for image/video/audio URLs - they'll be displayed as media below
+      // Check if this URL is the link preview URL that will be displayed separately
+      const isLinkPreviewUrl = currentLinkUrl === url;
+
+      if (isImageUrl || isVideoUrl || isAudioUrl || isLinkPreviewUrl) {
+        // Return null for URLs that will be displayed as media or link preview below
         return null;
       }
 
@@ -292,14 +295,7 @@ export function NoteContent({
         }
       }
 
-      // Extract the first non-image/video/audio URL for link preview
-      const allMediaUrls = [...extractedImages, ...extractedVideos, ...extractedAudios];
-      const firstUrl = getFirstUrl(event.content);
-      if (firstUrl && !allMediaUrls.includes(firstUrl)) {
-        setLinkUrl(firstUrl);
-      } else {
-        setLinkUrl(null);
-      }
+
     }
 
     // Set the extracted URLs
@@ -315,9 +311,17 @@ export function NoteContent({
 
     // Process the text content
     if (event.content) {
+      // We need to determine the link URL first before processing text content
+      const allMediaUrls = [...extractedImages, ...extractedVideos, ...extractedAudios];
+      const firstUrl = getFirstUrl(event.content);
+      const determinedLinkUrl = firstUrl && !allMediaUrls.includes(firstUrl) ? firstUrl : null;
+      
       // Process the content and update state in one go to prevent multiple renders
-      const processed = processTextContent(event.content, extractedImages, extractedVideos, extractedAudios);
+      const processed = processTextContent(event.content, extractedImages, extractedVideos, extractedAudios, determinedLinkUrl);
       setProcessedContent(processed);
+      
+      // Set the link URL for the preview
+      setLinkUrl(determinedLinkUrl);
     }
   }, [event, getFirstUrl, processTextContent]);
 
