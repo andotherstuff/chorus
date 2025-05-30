@@ -20,12 +20,19 @@ export function useNip29Groups(groupRelays: string[] = []) {
       }
 
       console.log('[NIP-29] Querying groups from relays:', groupRelays);
+      console.log('[NIP-29] Current user:', user?.pubkey ? `${user.pubkey.slice(0, 8)}...` : 'Not logged in');
       const allGroups: Nip29Group[] = [];
 
       // Process relays in parallel with individual timeouts
       const relayPromises = groupRelays.map(async (relayUrl) => {
         try {
           console.log(`[NIP-29] Querying groups from ${relayUrl}`);
+          
+          // If user is logged in, give time for authentication to complete
+          if (user) {
+            console.log(`[NIP-29] User ${user.pubkey.slice(0, 8)}... is logged in, waiting for auth...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
           
           // Use a shorter timeout for each relay to fail faster
           const signal = AbortSignal.any([
@@ -34,12 +41,22 @@ export function useNip29Groups(groupRelays: string[] = []) {
           ]);
           
           // Query for both group metadata and member lists
-          const [groupEvents, memberEvents] = await Promise.all([
-            // Group metadata events
-            nostr.query([{
+          // If user is logged in, we should get all groups including private ones they're members of
+          const filters = user ? [
+            {
+              kinds: [39000], // NIP-29 relay-generated group metadata
+              limit: 200 // Increase limit when authenticated to get more groups
+            }
+          ] : [
+            {
               kinds: [39000], // NIP-29 relay-generated group metadata
               limit: 100
-            }], { 
+            }
+          ];
+          
+          const [groupEvents, memberEvents] = await Promise.all([
+            // Group metadata events
+            nostr.query(filters, { 
               signal,
               relays: [relayUrl] // Specify the relay explicitly
             }),
