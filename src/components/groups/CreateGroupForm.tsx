@@ -97,6 +97,7 @@ export function CreateGroupForm({ onCancel }: CreateGroupFormProps) {
     try {
       // Create NIP-29 group creation event (kind 9007)
       const createTags = [
+        ["h", groupId], // Group ID is required!
         ["name", groupData.name],
       ];
       

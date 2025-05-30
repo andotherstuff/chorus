@@ -1,4 +1,5 @@
 import { useNostr } from "@/hooks/useNostr";
+import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,11 +8,13 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { DollarSign, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { parseNostrAddress } from "@/lib/nostr-utils";
+import { parseNostrAddress, parseGroupRouteId } from "@/lib/nostr-utils";
+import { parseGroupRouteId as parseGroupId } from "@/lib/group-utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { UserNutzapDialog } from "./UserNutzapDialog";
 import { KINDS } from "@/lib/nostr-kinds";
+import { useNip29GroupMembers } from "@/hooks/useNip29Groups";
 
 interface SimpleMembersListProps {
   communityId: string;
@@ -19,10 +22,15 @@ interface SimpleMembersListProps {
 
 export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
   const { nostr } = useNostr();
+  const { nostr: enhancedNostr } = useEnhancedNostr();
   const [showAllMembers, setShowAllMembers] = useState(false);
   
-  // Parse the community ID to get the community details
-  const parsedId = parseNostrAddress(decodeURIComponent(communityId));
+  // Parse the group ID to determine type
+  const parsedGroup = parseGroupId(decodeURIComponent(communityId));
+  const isNip29 = parsedGroup?.type === "nip29";
+  
+  // For NIP-72, parse the community ID to get the community details
+  const parsedId = !isNip29 ? parseNostrAddress(decodeURIComponent(communityId)) : null;
   
   // Query for community details to get moderators
   const { data: community } = useQuery({
@@ -43,15 +51,32 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
     enabled: !!nostr && !!parsedId,
   });
   
-  // Get approved members using the centralized hook
-  const { approvedMembers, isLoading } = useApprovedMembers(communityId);
+  // Get NIP-29 members if this is a NIP-29 group
+  const { data: nip29MemberData } = useNip29GroupMembers(
+    isNip29 ? parsedGroup.groupId : undefined,
+    isNip29 ? parsedGroup.relay : undefined
+  );
 
-  // Get moderators from community
-  const moderatorTags = community?.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator") || [];
+  // Get approved members using the centralized hook (for NIP-72)
+  const { approvedMembers, isLoading: isLoadingNip72 } = useApprovedMembers(
+    !isNip29 ? communityId : ''
+  );
+
+  // Combine member lists based on group type
+  const allMembers = isNip29 
+    ? (nip29MemberData?.members || [])
+    : approvedMembers;
+  
+  const isLoading = isNip29 ? !nip29MemberData : isLoadingNip72;
+
+  // Get moderators/admins based on group type
+  const moderatorTags = isNip29
+    ? (nip29MemberData?.admins || []).map(pubkey => ["p", pubkey, "", "admin"])
+    : community?.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator") || [];
   const moderators = moderatorTags.map(tag => tag[1]);
   
-  // Filter out owner and moderators from approved members to show only regular members
-  const regularMembers = approvedMembers.filter(member => 
+  // Filter out owner and moderators from members to show only regular members
+  const regularMembers = allMembers.filter(member => 
     member !== community?.pubkey && !moderators.includes(member)
   );
 
