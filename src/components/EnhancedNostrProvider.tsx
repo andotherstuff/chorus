@@ -164,7 +164,7 @@ export function EnhancedNostrProvider({
     // First ensure connection
     if (!relayConnections.current.has(relayUrl)) {
       console.log(`[NIP-42] Connecting to ${relayUrl}...`);
-      const relay = await openRelay(relayUrl);
+      const relay = open(relayUrl);
       relayConnections.current.set(relayUrl, relay);
     }
     
@@ -177,7 +177,7 @@ export function EnhancedNostrProvider({
     }
     
     return authenticatedRelays.current.has(relayUrl);
-  }, [openRelay, handleAuthChallenge]);
+  }, [open, handleAuthChallenge]);
 
   // Group relay management with hard-coded default
   const groupRelays = useRef<Map<string, string>>(new Map());
