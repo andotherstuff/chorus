@@ -159,6 +159,26 @@ export function EnhancedNostrProvider({
     }
   }, [signer]);
 
+  // Ensure relay is connected and authenticated
+  const ensureRelayAuth = useCallback(async (relayUrl: string) => {
+    // First ensure connection
+    if (!relayConnections.current.has(relayUrl)) {
+      console.log(`[NIP-42] Connecting to ${relayUrl}...`);
+      const relay = await openRelay(relayUrl);
+      relayConnections.current.set(relayUrl, relay);
+    }
+    
+    // Check if we have a pending auth challenge
+    if (pendingAuth.current.has(relayUrl) && !authenticatedRelays.current.has(relayUrl)) {
+      const challenge = pendingAuth.current.get(relayUrl)!;
+      await handleAuthChallenge(relayUrl, challenge);
+      // Wait for auth to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return authenticatedRelays.current.has(relayUrl);
+  }, [openRelay, handleAuthChallenge]);
+
   // Group relay management with hard-coded default
   const groupRelays = useRef<Map<string, string>>(new Map());
 
@@ -267,13 +287,7 @@ export function EnhancedNostrProvider({
     // If specific relays are provided, ensure they're authenticated
     if (opts?.relays) {
       for (const relay of opts.relays) {
-        // Check if this relay needs authentication
-        if (pendingAuth.current.has(relay) && !authenticatedRelays.current.has(relay)) {
-          const challenge = pendingAuth.current.get(relay)!;
-          await handleAuthChallenge(relay, challenge);
-          // Wait a bit for auth to complete
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
+        await ensureRelayAuth(relay);
       }
     }
 
@@ -288,7 +302,7 @@ export function EnhancedNostrProvider({
       console.log('[Query] Using base nostr for NIP-72 query');
       return baseNostr.nostr.query(filters, opts ? { signal: opts.signal } : undefined);
     }
-  }, [pool, handleAuthChallenge, baseNostr]);
+  }, [pool, ensureRelayAuth, baseNostr]);
 
   /**
    * Enhanced event publishing with group-aware routing

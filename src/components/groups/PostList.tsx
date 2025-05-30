@@ -190,9 +190,15 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       
       console.log(`[PostList] Fetching NIP-29 posts for group ${groupId} from ${relay}`);
       
+      // Wait a bit for authentication if user is logged in
+      if (user) {
+        console.log(`[PostList] User logged in, waiting for auth...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
       // Fetch posts from the NIP-29 relay
       const posts = enhancedNostr ? await enhancedNostr.query([{
-        kinds: [9], // NIP-29 text note
+        kinds: [9, 11], // NIP-29 text note and chat message
         "#h": [groupId],
         limit: 50
       }], { 
