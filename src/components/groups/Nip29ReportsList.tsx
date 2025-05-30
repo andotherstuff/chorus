@@ -40,7 +40,7 @@ export function Nip29ReportsList({ groupId, relay }: Nip29ReportsListProps) {
       // Query for reports that reference events in this group
       const events = await nostr.query([{ 
         kinds: [1984], // Report events
-        "#h": [groupId], // Group-specific reports
+        "#h": [groupId], // Group-specific reports (user event)
         limit: 100,
       }], { 
         signal,

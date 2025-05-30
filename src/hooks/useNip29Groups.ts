@@ -156,7 +156,7 @@ export function useNip29Group(groupId: string | undefined, relay: string | undef
 
       const events = await nostr.query([{
         kinds: [39000], // NIP-29 relay-generated group metadata
-        "#h": [groupId], // Group identifier
+        "#d": [groupId], // Group identifier (addressable event)
         limit: 1
       }], { 
         signal,
