@@ -8,7 +8,7 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { DollarSign, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { parseNostrAddress, parseGroupRouteId } from "@/lib/nostr-utils";
+import { parseNostrAddress } from "@/lib/nostr-utils";
 import { parseGroupRouteId as parseGroupId } from "@/lib/group-utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";

@@ -170,17 +170,32 @@ export function createGroupRouteId(group: Group): string {
  * Parse a group route ID back to components
  */
 export function parseGroupRouteId(routeId: string): { type: GroupType; pubkey?: string; identifier?: string; relay?: string; groupId?: string } | null {
-  const parts = routeId.split(":");
-  
-  if (parts[0] === "nip72" && parts.length >= 3) {
+  // First check if it starts with nip72: or nip29:
+  if (routeId.startsWith("nip72:")) {
+    const withoutPrefix = routeId.substring(6); // Remove "nip72:"
+    const colonIndex = withoutPrefix.indexOf(":");
+    if (colonIndex === -1) return null;
+    
+    const pubkey = withoutPrefix.substring(0, colonIndex);
+    const identifier = withoutPrefix.substring(colonIndex + 1);
+    
     return {
       type: "nip72",
-      pubkey: parts[1],
-      identifier: parts.slice(2).join(":") // Handle identifiers with colons
+      pubkey,
+      identifier
     };
-  } else if (parts[0] === "nip29" && parts.length >= 3) {
-    const relay = decodeURIComponent(parts[1]);
-    const groupId = parts.slice(2).join(":"); // Handle group IDs with colons
+  } else if (routeId.startsWith("nip29:")) {
+    const withoutPrefix = routeId.substring(6); // Remove "nip29:"
+    
+    // Find the last colon to separate relay URL from group ID
+    // This handles encoded URLs like wss%3A%2F%2Fcommunities.nos.social%2F
+    const lastColonIndex = withoutPrefix.lastIndexOf(":");
+    if (lastColonIndex === -1) return null;
+    
+    const encodedRelay = withoutPrefix.substring(0, lastColonIndex);
+    const groupId = withoutPrefix.substring(lastColonIndex + 1);
+    const relay = decodeURIComponent(encodedRelay);
+    
     return {
       type: "nip29",
       relay,

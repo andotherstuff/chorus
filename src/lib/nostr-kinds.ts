@@ -6,8 +6,10 @@ export const KINDS = {
   REACTION: 7,
   ZAP: 9735,
   REPORT: 1984,
-  GROUP_POST: 11,
+  NIP29_CHAT_MESSAGE: 9,
+  NIP29_GROUP_POST: 11,
   GROUP_POST_REPLY: 1111,
+  GROUP_POST: 1,  // NIP-72 posts are regular text notes (kind 1) with "a" tags
   GROUP_POST_APPROVAL: 4550,
   GROUP_POST_REMOVAL: 4551,
   GROUP_JOIN_REQUEST: 4552,

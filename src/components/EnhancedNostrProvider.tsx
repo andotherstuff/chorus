@@ -291,10 +291,31 @@ export function EnhancedNostrProvider({
       }
     }
 
-    // Use the enhanced pool for NIP-29 queries or when specific relays are provided
+    // If specific relays are provided, create a temporary pool for this query
+    if (opts?.relays && opts.relays.length > 0) {
+      console.log(`[Query] Creating temporary pool for relays:`, opts.relays);
+      const tempPool = new NPool({
+        open,
+        reqRouter: async (filters: NostrFilter[]) => {
+          const relayMap = new Map<string, NostrFilter[]>();
+          for (const relay of opts.relays!) {
+            relayMap.set(relay, filters);
+          }
+          return relayMap;
+        },
+        eventRouter: async (event: NostrEvent) => {
+          // Route events to all specified relays
+          return opts.relays || [];
+        }
+      });
+      const events = await tempPool.query(filters, opts);
+      return Array.from(events);
+    }
+    
+    // Use the enhanced pool for NIP-29 queries
     const isNip29Query = filters.some(f => f.kinds?.some(k => k >= 39000 && k <= 39003));
-    if (isNip29Query || opts?.relays) {
-      console.log(`[Query] Using enhanced pool for ${isNip29Query ? 'NIP-29' : 'custom relay'} query`);
+    if (isNip29Query) {
+      console.log(`[Query] Using enhanced pool for NIP-29 query`);
       const events = await pool.query(filters, opts);
       return Array.from(events);
     } else {
@@ -302,7 +323,7 @@ export function EnhancedNostrProvider({
       console.log('[Query] Using base nostr for NIP-72 query');
       return baseNostr.nostr.query(filters, opts ? { signal: opts.signal } : undefined);
     }
-  }, [pool, ensureRelayAuth, baseNostr]);
+  }, [pool, ensureRelayAuth, baseNostr, open]);
 
   /**
    * Enhanced event publishing with group-aware routing

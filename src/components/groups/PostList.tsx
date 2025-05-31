@@ -98,6 +98,15 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
   // Parse the group ID to determine if it's NIP-72 or NIP-29
   const parsedGroup = useMemo(() => parseGroupRouteId(communityId), [communityId]);
   const isNip29 = parsedGroup?.type === "nip29";
+  
+  // Convert the communityId to the proper format for queries
+  const queryId = useMemo(() => {
+    if (parsedGroup?.type === "nip72") {
+      // Convert from nip72:pubkey:identifier to 34550:pubkey:identifier
+      return `34550:${parsedGroup.pubkey}:${parsedGroup.identifier}`;
+    }
+    return communityId;
+  }, [communityId, parsedGroup]);
 
   // Query for approved posts
   const { data: approvedPosts, isLoading: isLoadingApproved } = useQuery({
@@ -107,7 +116,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
 
       const approvals = await nostr.query([{
         kinds: [KINDS.GROUP_POST_APPROVAL],
-        "#a": [communityId],
+        "#a": [queryId],
         limit: 50,
       }], { signal });
 
@@ -166,7 +175,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
 
       const removals = await nostr.query([{
         kinds: [KINDS.GROUP_POST_REMOVAL],
-        "#a": [communityId],
+        "#a": [queryId],
         limit: 50,
       }], { signal });
 
@@ -198,7 +207,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       
       // Fetch posts from the NIP-29 relay
       const posts = enhancedNostr ? await enhancedNostr.query([{
-        kinds: [9, 11], // NIP-29 text note and chat message
+        kinds: [KINDS.NIP29_CHAT_MESSAGE, KINDS.NIP29_GROUP_POST], // NIP-29 kinds 9 and 11
         "#h": [groupId],
         limit: 50
       }], { 
@@ -206,7 +215,11 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         relays: [relay]
       }) : [];
       
-      console.log(`[PostList] Found ${posts.length} NIP-29 posts`);
+      console.log(`[PostList] Found ${posts.length} NIP-29 posts:`, {
+        relay,
+        groupId,
+        posts: posts.map(p => ({ id: p.id, kind: p.kind, content: p.content.slice(0, 50) }))
+      });
       
       // Add approval info to all NIP-29 posts (they're all "approved" by default)
       return posts.map(post => ({
@@ -223,14 +236,19 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     enabled: !!enhancedNostr && !!parsedGroup && parsedGroup.type === "nip29",
   });
 
-  // Query for pending posts
+  // Query for pending posts (NIP-72 only - NIP-29 posts are handled separately)
   const { data: pendingPosts, isLoading: isLoadingPending } = useQuery({
-    queryKey: ["pending-posts", communityId],
+    queryKey: ["pending-posts", communityId, parsedGroup?.type],
     queryFn: async (c) => {
+      // Skip this query for NIP-29 groups
+      if (parsedGroup?.type === "nip29") return [];
+      
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      // For NIP-72 groups, query for kind 1 posts with "a" tags
       const posts = await nostr.query([{
-        kinds: [KINDS.GROUP_POST],
-        "#a": [communityId],
+        kinds: [1], // Regular text notes for NIP-72
+        "#a": [queryId],
         limit: 50,
       }], { signal });
 
@@ -251,7 +269,9 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       });
 
       // Debug logging
-      console.log("Filtered posts:", {
+      console.log("[PostList] NIP-72 posts:", {
+        communityId,
+        queryId,
         totalPosts: posts.length,
         filteredPosts: filteredPosts.length,
         removedReplies: posts.length - filteredPosts.length
@@ -259,7 +279,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
 
       return filteredPosts;
     },
-    enabled: !!nostr && !!communityId,
+    enabled: !!nostr && !!communityId && parsedGroup?.type !== "nip29",
   });
 
   // Get approved members using the centralized hook
@@ -270,8 +290,20 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     queryKey: ["community-details", communityId],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-      const parsedId = communityId.includes(':')
-        ? parseNostrAddress(communityId)
+      
+      // For NIP-72 groups, use the parsed data
+      if (parsedGroup?.type === "nip72" && parsedGroup.pubkey && parsedGroup.identifier) {
+        const events = await nostr.query([{
+          kinds: [KINDS.GROUP],
+          authors: [parsedGroup.pubkey],
+          "#d": [parsedGroup.identifier],
+        }], { signal });
+        return events[0] || null;
+      }
+      
+      // For other formats, try parseNostrAddress
+      const parsedId = queryId.includes(':')
+        ? parseNostrAddress(queryId)
         : null;
       if (!parsedId) return null;
       const events = await nostr.query([{

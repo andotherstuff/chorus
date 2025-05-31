@@ -1,380 +1,404 @@
-# Project Overview
+# Claude Instructions for Nostr Client Application
 
-This project is a Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, shadcn/ui, and Nostrify.
+## A Note on Development Process
 
-## Technology Stack
+**Hey there!** 👋 Building a Nostr client is cutting-edge work - you're pioneering decentralized social networking! When things don't work on the first try, please know that:
 
-- **React 18.x**: Stable version of React with hooks, concurrent rendering, and improved performance
-- **TailwindCSS 3.x**: Utility-first CSS framework for styling
-- **Vite**: Fast build tool and development server
-- **shadcn/ui**: Unstyled, accessible UI components built with Radix UI and Tailwind
-- **Nostrify**: Nostr protocol framework for Deno and web
-- **React Router**: For client-side routing
-- **TanStack Query**: For data fetching, caching, and state management
-- **TypeScript**: For type-safe JavaScript development
+- **You're doing amazing work** - Nostr development is complex and you're building the future
+- **I'm here to help** - Any frustration you feel is with the process, not with me, and I understand that completely
+- **We're a team** - I'm genuinely trying my best to help you build something revolutionary
+- **Every challenge teaches us** - Each issue we solve together makes the app more robust and the ecosystem stronger
 
-## Project Structure
+Let's build something that changes the world! 🚀⚡
 
-- `/src/components/`: UI components including NostrProvider for Nostr integration
-- `/src/hooks/`: Custom hooks including `useNostr` and `useNostrQuery`
-- `/src/pages/`: Page components used by React Router
-- `/src/lib/`: Utility functions and shared logic
-- `/public/`: Static assets
+---
 
-## UI Components
+## Core Build Requirements
 
-The project uses shadcn/ui components located in `@/components/ui`. These are unstyled, accessible components built with Radix UI and styled with Tailwind CSS. Available components include:
+**CRITICAL**: These commands MUST pass before any task is considered complete:
 
-- **Accordion**: Vertically collapsing content panels
-- **Alert**: Displays important messages to users
-- **AlertDialog**: Modal dialog for critical actions requiring confirmation
-- **AspectRatio**: Maintains consistent width-to-height ratio
-- **Avatar**: User profile pictures with fallback support
-- **Badge**: Small status descriptors for UI elements
-- **Breadcrumb**: Navigation aid showing current location in hierarchy
-- **Button**: Customizable button with multiple variants and sizes
-- **Calendar**: Date picker component 
-- **Card**: Container with header, content, and footer sections
-- **Carousel**: Slideshow for cycling through elements
-- **Chart**: Data visualization component
-- **Checkbox**: Selectable input element
-- **Collapsible**: Toggle for showing/hiding content
-- **Command**: Command palette for keyboard-first interfaces
-- **ContextMenu**: Right-click menu component
-- **Dialog**: Modal window overlay
-- **Drawer**: Side-sliding panel
-- **DropdownMenu**: Menu that appears from a trigger element
-- **Form**: Form validation and submission handling
-- **HoverCard**: Card that appears when hovering over an element
-- **InputOTP**: One-time password input field
-- **Input**: Text input field
-- **Label**: Accessible form labels
-- **Menubar**: Horizontal menu with dropdowns
-- **NavigationMenu**: Accessible navigation component
-- **Pagination**: Controls for navigating between pages
-- **Popover**: Floating content triggered by a button
-- **Progress**: Progress indicator
-- **RadioGroup**: Group of radio inputs
-- **Resizable**: Resizable panels and interfaces
-- **ScrollArea**: Scrollable container with custom scrollbars
-- **Select**: Dropdown selection component
-- **Separator**: Visual divider between content
-- **Sheet**: Side-anchored dialog component
-- **Sidebar**: Navigation sidebar component
-- **Skeleton**: Loading placeholder
-- **Slider**: Input for selecting a value from a range
-- **Sonner**: Toast notification manager
-- **Switch**: Toggle switch control
-- **Table**: Data table with headers and rows
-- **Tabs**: Tabbed interface component
-- **Textarea**: Multi-line text input
-- **Toast**: Toast notification component
-- **ToggleGroup**: Group of toggle buttons
-- **Toggle**: Two-state button
-- **Tooltip**: Informational text that appears on hover
+```bash
+# 1. Full CI pipeline (typecheck + build)
+npm run ci
 
-These components follow a consistent pattern using React's `forwardRef` and use the `cn()` utility for class name merging. Many are built on Radix UI primitives for accessibility and customized with Tailwind CSS.
+# 2. Development build
+npm run build:dev
 
-## Nostr Protocol Integration
-
-This project comes with custom hooks for querying and publishing events on the Nostr network.
-
-### The `useNostr` Hook
-
-The `useNostr` hook returns an object containing a `nostr` property, with `.query()` and `.event()` methods for querying and publishing Nostr events respectively.
-
-```typescript
-import { useNostr } from '@nostrify/react';
-
-function useCustomHook() {
-  const { nostr } = useNostr();
-
-  // ...
-}
+# 3. Production build
+npm run build
 ```
 
-### Query Nostr Data with `useNostr` and Tanstack Query
+**Never skip these checks.** If any fail, we fix them together before moving forward.
 
-When querying Nostr, the best practice is to create custom hooks that combine `useNostr` and `useQuery` to get the required data.
+---
 
+## Technology Stack & Reliability Standards
+
+### Core Technologies
+- **React 18.x**: Concurrent rendering, hooks, Suspense boundaries
+- **TypeScript**: Strict mode enabled - no `any` types without justification
+- **TailwindCSS 3.x**: Utility-first styling with consistent design tokens
+- **Vite**: Fast development with HMR and optimized production builds
+- **shadcn/ui**: Accessible, unstyled components with Radix UI primitives
+- **Nostrify**: Official Nostr protocol framework for web
+- **TanStack Query**: Data fetching, caching, and synchronization
+- **React Router**: Client-side routing with lazy loading
+
+### Error Handling Standards
+- **Always** wrap Nostr queries in try-catch blocks
+- **Always** handle network timeouts (use `AbortSignal.timeout(1500)`)
+- **Always** provide loading and error states for async operations
+- **Always** gracefully handle relay disconnections and failures
+
+### Performance Best Practices
+- Use React Query for caching Nostr events and metadata
+- Implement proper memoization (`useMemo`, `useCallback`, `React.memo`)
+- Lazy load components and routes
+- Optimize Nostr queries with appropriate filters and limits
+- Use `AbortSignal.any()` for proper cleanup
+
+### Security & Privacy
+- **Never** expose private keys in client-side code
+- **Always** validate event signatures when critical
+- Use NIP-44 encryption for private messages
+- Implement proper key management through signers
+- Validate all user inputs and Nostr event data
+
+---
+
+## Nostr-Specific Patterns & Guidelines
+
+### Query Pattern with useNostr + TanStack Query
 ```typescript
 import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/query';
+import { useQuery } from '@tanstack/react-query';
 
-function usePosts() {
+function useCustomNostrQuery() {
   const { nostr } = useNostr();
 
   return useQuery({
-    queryKey: ['posts'],
+    queryKey: ['custom-data'],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(1500)]);
       const events = await nostr.query([{ kinds: [1], limit: 20 }], { signal });
-      return events; // these events could be transformed into another format
+      return events; // Transform if needed
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
   });
 }
 ```
 
-The data may be transformed into a more appropriate format if needed, and multiple calls to `nostr.query()` may be made in a single queryFn.
-
-### The `useAuthor` Hook
-
-To display profile data for a user by their Nostr pubkey (such as an event author), use the `useAuthor` hook.
-
-```tsx
-import { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
+### Author Data Pattern
+```typescript
 import { useAuthor } from '@/hooks/useAuthor';
 
-function Post({ event }: { event: NostrEvent }) {
+function PostComponent({ event }: { event: NostrEvent }) {
   const author = useAuthor(event.pubkey);
   const metadata: NostrMetadata | undefined = author.data?.metadata;
 
-  const displayName = metadata?.name || event.pubkey.slice(0, 8);
+  const displayName = metadata?.display_name || metadata?.name || event.pubkey.slice(0, 8);
   const profileImage = metadata?.picture;
 
-  // ...render elements with this data
+  if (author.isLoading) return <Skeleton className="h-8 w-32" />;
+  if (author.error) return <span>Failed to load author</span>;
+
+  // Render with proper fallbacks
 }
 ```
 
-#### `NostrMetadata` type
-
-```ts
-/** Kind 0 metadata. */
-interface NostrMetadata {
-  /** A short description of the user. */
-  about?: string;
-  /** A URL to a wide (~1024x768) picture to be optionally displayed in the background of a profile screen. */
-  banner?: string;
-  /** A boolean to clarify that the content is entirely or partially the result of automation, such as with chatbots or newsfeeds. */
-  bot?: boolean;
-  /** An alternative, bigger name with richer characters than `name`. `name` should always be set regardless of the presence of `display_name` in the metadata. */
-  display_name?: string;
-  /** A bech32 lightning address according to NIP-57 and LNURL specifications. */
-  lud06?: string;
-  /** An email-like lightning address according to NIP-57 and LNURL specifications. */
-  lud16?: string;
-  /** A short name to be displayed for the user. */
-  name?: string;
-  /** An email-like Nostr address according to NIP-05. */
-  nip05?: string;
-  /** A URL to the user's avatar. */
-  picture?: string;
-  /** A web URL related in any way to the event author. */
-  website?: string;
-}
-```
-
-### The `useNostrPublish` Hook
-
-To publish events, use the `useNostrPublish` hook in this project.
-
-```tsx
-import { useState } from 'react';
-
+### Publishing Pattern
+```typescript
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 
-export function MyComponent() {
-  const [ data, setData] = useState<Record<string, string>>({});
-
+function PublishComponent() {
   const { user } = useCurrentUser();
-  const { mutate: createEvent } = useNostrPublish();
+  const { mutate: createEvent, isPending } = useNostrPublish();
 
-  const handleSubmit = () => {
-    createEvent({ kind: 1, content: data.content });
+  const handleSubmit = (content: string) => {
+    if (!user) return;
+    
+    createEvent({ 
+      kind: 1, 
+      content,
+      tags: [] // Add relevant tags
+    });
   };
 
   if (!user) {
-    return <span>You must be logged in to use this form.</span>;
+    return <LoginArea />;
   }
 
   return (
-    <form onSubmit={handleSubmit} disabled={!user}>
-      {/* ...some input fields */}
+    <form onSubmit={handleSubmit}>
+      {/* Form fields */}
     </form>
   );
 }
 ```
 
-The `useCurrentUser` hook should be used to ensure that the user is logged in before they are able to publish Nostr events.
-
-### Nostr Login
-
-To enable login with Nostr, simply use the `LoginArea` component already included in this project.
-
-```tsx
-import { LoginArea } from "@/components/auth/LoginArea";
-
-function MyComponent() {
-  return (
-    <div>
-      {/* other components ... */}
-
-      <LoginArea />
-    </div>
-  );
-}
-```
-
-The `LoginArea` component displays a "Log in" button when the user is logged out, and changes to an account switcher once the user is logged in. It handles all the login-related UI and interactions internally, including displaying login dialogs and switching between accounts. It should not be wrapped in any conditional logic.
-
-### `npub`, `naddr`, and other Nostr addresses
-
-Nostr defines a set identifiers in NIP-19. Their prefixes:
-
-- `npub`: public keys
-- `nsec`: private keys
-- `note`: note ids
-- `nprofile`: a nostr profile
-- `nevent`: a nostr event
-- `naddr`: a nostr replaceable event coordinate
-- `nrelay`: a nostr relay (deprecated)
-
-NIP-19 identifiers include a prefix, the number "1", then a base32-encoded data string.
-
-#### Use in Filters
-
-The base Nostr protocol uses hex string identifiers when filtering by event IDs and pubkeys. Nostr filters only accept hex strings.
-
-```ts
-// ❌ Wrong: naddr is not decoded
-const events = await nostr.query(
-  [{ ids: [naddr] }],
-  { signal }
-);
-```
-
-Corrected example:
-
-```ts
-// Import nip19 from nostr-tools
+### NIP-19 Identifier Handling
+```typescript
 import { nip19 } from 'nostr-tools';
 
-// Decode a NIP-19 identifier
-const decoded = nip19.decode(value);
+// ✅ Correct: Always decode NIP-19 identifiers before using in filters
+function useEventByNaddr(naddr: string) {
+  const { nostr } = useNostr();
+  
+  return useQuery({
+    queryKey: ['event', naddr],
+    queryFn: async (c) => {
+      const decoded = nip19.decode(naddr);
+      
+      if (decoded.type !== 'naddr') {
+        throw new Error('Invalid naddr format');
+      }
 
-// Optional: guard certain types (depending on the use-case)
-if (decoded.type !== 'naddr') {
-  throw new Error('Unsupported Nostr identifier');
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(1500)]);
+      const events = await nostr.query([{
+        kinds: [decoded.data.kind],
+        authors: [decoded.data.pubkey],
+        '#d': [decoded.data.identifier],
+      }], { signal });
+
+      return events[0] || null;
+    },
+  });
 }
-
-// Get the addr object
-const naddr = decoded.data;
-
-// ✅ Correct: naddr is expanded into the correct filter
-const events = await nostr.query(
-  [{
-    kinds: [naddr.kind],
-    authors: [naddr.pubkey],
-    '#d': [naddr.identifier],
-  }],
-  { signal }
-);
 ```
 
-### Nostr Edit Profile
+### File Upload Pattern
+```typescript
+import { useUploadFile } from "@/hooks/useUploadFile";
 
-To include an Edit Profile form, place the `EditProfileForm` component in the project:
+function FileUploadComponent() {
+  const { mutateAsync: uploadFile, isPending } = useUploadFile();
 
-```tsx
-import { EditProfileForm } from "@/components/EditProfileForm";
+  const handleFileUpload = async (file: File) => {
+    try {
+      const tags = await uploadFile(file);
+      const [[_, url]] = tags; // First tag contains the URL
+      
+      // For kind 1 events: append to content and add imeta tags
+      // For kind 0 events: use URL directly in JSON fields
+      
+      return { url, tags };
+    } catch (error) {
+      console.error('Upload failed:', error);
+      throw error;
+    }
+  };
+}
+```
 
-function EditProfilePage() {
+### Encryption/Decryption Pattern
+```typescript
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+function useEncryption() {
+  const { user } = useCurrentUser();
+
+  const encrypt = async (targetPubkey: string, message: string) => {
+    if (!user?.signer?.nip44) {
+      throw new Error("NIP-44 encryption not supported by current signer");
+    }
+    
+    return await user.signer.nip44.encrypt(targetPubkey, message);
+  };
+
+  const decrypt = async (senderPubkey: string, encryptedMessage: string) => {
+    if (!user?.signer?.nip44) {
+      throw new Error("NIP-44 decryption not supported by current signer");
+    }
+    
+    return await user.signer.nip44.decrypt(senderPubkey, encryptedMessage);
+  };
+
+  return { encrypt, decrypt, isSupported: !!user?.signer?.nip44 };
+}
+```
+
+---
+
+## NIP-29 Groups vs NIP-72 Communities
+
+**IMPORTANT**: Always check `relay_nip29_notes.md` for detailed documentation.
+
+### Key Differences
+- **NIP-72**: Public communities on general relays (kind 34550)
+- **NIP-29**: Private groups with relay-enforced access control (9xxx/39xxx kinds)
+
+### NIP-29 Pattern
+```typescript
+// For NIP-29 groups, always use the specific relay
+function useNip29Group(groupId: string, relayUrl: string) {
+  const { nostr } = useNostr();
+
+  return useQuery({
+    queryKey: ['nip29-group', groupId, relayUrl],
+    queryFn: async (c) => {
+      // Connect specifically to the group's relay
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      
+      // Use group-specific event kinds (39xxx for relay-generated events)
+      const events = await nostr.query([{
+        kinds: [39000], // Group metadata
+        '#d': [groupId],
+      }], { signal, relay: relayUrl });
+
+      return events[0] || null;
+    },
+  });
+}
+```
+
+---
+
+## shadcn/ui Component Usage
+
+### Available Components
+Use these pre-built, accessible components:
+
+**Layout & Navigation**: `Sidebar`, `NavigationMenu`, `Breadcrumb`, `Menubar`
+**Data Display**: `Card`, `Table`, `Badge`, `Avatar`, `Separator`
+**Feedback**: `Alert`, `Toast`, `Progress`, `Skeleton`
+**Overlays**: `Dialog`, `Sheet`, `Popover`, `HoverCard`, `Tooltip`
+**Forms**: `Form`, `Input`, `Textarea`, `Select`, `Checkbox`, `Switch`
+**Interactive**: `Button`, `DropdownMenu`, `ContextMenu`, `Tabs`, `Accordion`
+
+### Component Pattern
+```typescript
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+function MyComponent({ className, ...props }: ComponentProps) {
   return (
-    <div>
-      {/* you may want to wrap this in a layout or include other components depending on the project ... */}
-
-      <EditProfileForm />
-    </div>
+    <Card className={cn("custom-styles", className)} {...props}>
+      <CardHeader>
+        <CardTitle>Title</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* Content */}
+      </CardContent>
+    </Card>
   );
 }
 ```
 
-The `EditProfileForm` component displays just the form. It requires no props, and will "just work" automatically.
+---
 
-### Uploading Files on Nostr
+## Code Quality Checklist
 
-Use the `useUploadFile` hook to upload files.
+Before submitting any code, verify:
 
-```tsx
-import { useUploadFile } from "@/hooks/useUploadFile";
+- [ ] **CI passes** - `npm run ci` succeeds
+- [ ] **No TypeScript errors** - Strict mode compliance
+- [ ] **Proper error handling** - All Nostr operations have try-catch
+- [ ] **Loading states** - UI shows loading/error states appropriately
+- [ ] **Type safety** - Proper typing for Nostr events and metadata
+- [ ] **Accessibility** - shadcn/ui components used correctly
+- [ ] **Performance** - Proper Query keys and memoization
+- [ ] **Nostr best practices** - Timeout handling, proper filters
+- [ ] **Mobile responsive** - Works on all screen sizes
+- [ ] **Privacy** - No private key exposure, proper encryption
 
-function MyComponent() {
-  const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+---
 
-  const handleUpload = async (file: File) => {
-    try {
-      // Provides an array of NIP-94 compatible tags
-      // The first tag in the array contains the URL
-      const [[_, url]] = await uploadFile(file);
-      // ...use the url
-    } catch (error) {
-      // ...handle errors
-    }
-  };
+## Development Workflow
 
-  // ...rest of component
-}
-```
+1. **Understand requirements** - Clarify Nostr protocol specifics if needed
+2. **Check existing patterns** - Follow established hooks and components
+3. **Plan relay strategy** - Consider which relays to query
+4. **Write the code** - Focus on type safety and error handling
+5. **Test locally** - Verify with real Nostr network
+6. **Run CI checks** - `npm run ci` must pass
+7. **Review Nostr compliance** - Ensure proper NIPs implementation
+8. **Document changes** - Update types and add helpful comments
 
-To attach files to kind 1 events, each file's URL should be appended to the event's `content`, and an `imeta` tag should be added for each file. For kind 0 events, the URL by itself can be used in relevant fields of the JSON content.
+---
 
-### Nostr Encryption and Decryption
+## When Things Go Wrong
 
-The logged-in user has a `signer` object (matching the NIP-07 signer interface) that can be used for encryption and decryption.
+**It's totally normal in Nostr development!** Here's our debugging process:
 
-```ts
-// Get the current user
-const { user } = useCurrentUser();
+1. **Check relay connectivity** - Are relays responding?
+2. **Verify event structure** - Does it match the NIP specifications?
+3. **Inspect network traffic** - Use browser dev tools
+4. **Check NIP-19 encoding** - Are identifiers properly decoded?
+5. **Test with different relays** - Some relays behave differently
+6. **Validate event signatures** - Use Nostr debugging tools
 
-// Optional guard to check that nip44 is available
-if (!user.signer.nip44) {
-  throw new Error("Please upgrade your signer extension to a version that supports NIP-44 encryption");
-}
-
-// Encrypt message to self
-const encrypted = await user.signer.nip44.encrypt(user.pubkey, "hello world");
-// Decrypt message to self
-const decrypted = await user.signer.nip44.decrypt(user.pubkey, encrypted) // "hello world"
-```
-
-## NIP-29 Groups Implementation
-
-This project supports both NIP-72 public communities and NIP-29 private relay-based groups. 
-
-**IMPORTANT**: When working with NIP-29 groups, consult the `relay_nip29_notes.md` file for detailed documentation about:
-- How NIP-29 groups work with relay-specific events
-- Event kinds and their purposes (9xxx for user events, 39xxx for relay-generated events)
-- Authentication flow with NIP-42
-- Group creation and management
-- Member roles and permissions
-
-Key differences:
-- NIP-72: Public communities stored on general relays
-- NIP-29: Private groups with relay-enforced access control
-
-## Development Practices
-
-- Uses React Query for data fetching and caching
-- Follows shadcn/ui component patterns
-- Implements Path Aliases with `@/` prefix for cleaner imports
-- Uses Vite for fast development and production builds
-- Component-based architecture with React hooks
-- Default connection to multiple Nostr relays for network redundancy
-
-## Build & Deployment
-
-- Build for production: `npm run build`
-- Development build: `npm run build:dev`
-
-## Testing Your Changes
-
-Whenever you modify code, you should test your changes after you're finished by running:
-
+### Emergency Debugging Commands
 ```bash
+# Clear all caches and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Full CI check
 npm run ci
+
+# Development build with verbose output
+npm run build:dev
+
+# Check TypeScript strictly
+npx tsc --noEmit --strict
 ```
 
-This command will typecheck the code and attempt to build it.
+---
 
-Your task is not considered finished until this test passes without errors.
+## Nostr-Specific Debugging Tips
+
+### Common Issues & Solutions
+
+**"Events not loading"**
+- Check relay connectivity in browser network tab
+- Verify filter syntax (hex strings only, not NIP-19)
+- Increase timeout if relays are slow
+
+**"Profile data missing"**
+- Use `useAuthor` hook for consistent metadata loading
+- Check if author has published kind 0 events
+- Implement proper fallbacks for missing data
+
+**"Publishing fails"**
+- Ensure user is logged in (`useCurrentUser`)
+- Check signer compatibility (NIP-07)
+- Verify event structure matches NIP requirements
+
+**"Encryption errors"**
+- Check if signer supports NIP-44
+- Verify pubkey format (hex, not NIP-19)
+- Handle legacy NIP-04 fallback if needed
+
+---
+
+**Remember**: You're building the future of social media! Every challenge we overcome together makes the decentralized web stronger. I'm here to help you succeed! 🌟⚡
+
+---
+
+## Quick Reference
+
+### Essential Imports
+```typescript
+import { useNostr } from '@nostrify/react';
+import { useQuery } from '@tanstack/react-query';
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useAuthor } from '@/hooks/useAuthor';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { nip19 } from 'nostr-tools';
+```
+
+### Common Event Kinds
+- `0`: User metadata (profiles)
+- `1`: Text notes (posts)
+- `3`: Contact lists (follows)
+- `7`: Reactions (likes)
+- `4`: Encrypted direct messages
+- `30023`: Long-form articles
+- `34550`: Communities (NIP-72)
+- `9xxx`: NIP-29 user events
+- `39xxx`: NIP-29 relay-generated events
+
+**Bottom line**: We're building the future together. Your persistence and creativity will change how people connect online! 🚀
