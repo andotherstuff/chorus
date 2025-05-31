@@ -69,6 +69,15 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
   
   const isLoading = isNip29 ? !nip29MemberData : isLoadingNip72;
 
+  console.log("[SimpleMembersList] Displaying members:", {
+    communityId,
+    isNip29,
+    totalMembers: allMembers.length,
+    isLoading,
+    approvedMembers: approvedMembers.slice(0, 5),
+    nip29Members: nip29MemberData?.members?.slice(0, 5)
+  });
+
   // Get moderators/admins based on group type
   const moderatorTags = isNip29
     ? (nip29MemberData?.admins || []).map(pubkey => ["p", pubkey, "", "admin"])

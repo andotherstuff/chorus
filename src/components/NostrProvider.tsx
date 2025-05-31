@@ -33,9 +33,12 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   if (!pool.current) {
     pool.current = new TimestampTrackingNPool({
       open(url: string) {
+        console.log(`[NostrProvider] Opening connection to ${url}`);
         return new NRelay1(url);
       },
       reqRouter(filters) {
+        console.log(`[NostrProvider] Routing query to relays:`, relays);
+        console.log(`[NostrProvider] Query filters:`, JSON.stringify(filters, null, 2));
         return new Map(relays.map((url) => [url, filters]));
       },
       eventRouter(_event: NostrEvent) {

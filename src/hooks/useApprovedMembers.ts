@@ -33,11 +33,27 @@ export function useApprovedMembers(communityId: string) {
         }
       }
       
+      console.log("[useApprovedMembers] Querying approved members with filter:", {
+        kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+        authors: [...moderators],
+        "#d": [communityId],
+        moderatorCount: moderators.size
+      });
+      
       const events = await nostr.query([{ 
         kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         authors: [...moderators],
         "#d": [communityId],
       }], { signal });
+      
+      console.log("[useApprovedMembers] Approved members events received:", {
+        count: events.length,
+        events: events.map(e => ({
+          id: e.id,
+          author: e.pubkey,
+          memberTags: e.tags.filter(t => t[0] === "p").length
+        }))
+      });
       
       return events;
     },
@@ -77,6 +93,14 @@ export function useApprovedMembers(communityId: string) {
   const moderators = communityEvent?.tags
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
     .map(tag => tag[1]) || [];
+
+  console.log("[useApprovedMembers] Final results:", {
+    communityId,
+    approvedMembersCount: approvedMembers.length,
+    moderatorsCount: moderators.length,
+    approvedMembers: approvedMembers.slice(0, 5), // Show first 5 for brevity
+    moderators
+  });
 
   /**
    * Check if a user is an approved member or moderator

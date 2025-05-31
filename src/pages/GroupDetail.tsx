@@ -68,6 +68,8 @@ export default function GroupDetail() {
   const [imageLoading, setImageLoading] = useState(true);
   const [showQRCode, setShowQRCode] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
+  
+  console.log("[GroupDetail] Component rendered with groupId:", groupId, "relay:", relay);
 
   // Form state for management tab
   const [formName, setFormName] = useState("");
@@ -878,6 +880,7 @@ export default function GroupDetail() {
           </div>
 
           <div className="max-w-3xl mx-auto">
+            {console.log("[GroupDetail] Rendering PostList with groupId:", groupId, "showOnlyApproved:", showOnlyApproved)}
             <PostList
               communityId={groupId || ''}
               showOnlyApproved={showOnlyApproved}
