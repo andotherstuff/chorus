@@ -22,6 +22,7 @@ const CashuWallet = lazy(() => import("./pages/CashuWallet"));
 const LinkPreviewTest = lazy(() => import("./pages/LinkPreviewTest"));
 const AboutPage = lazy(() => import("@/pages/AboutPage"));
 const FaqPage = lazy(() => import("@/pages/FaqPage"));
+const Nip29Debug = lazy(() => import("@/components/debug/Nip29Debug").then(m => ({ default: m.Nip29Debug })));
 
 // Legacy NIP-29 redirect component
 function LegacyNip29Redirect() {
@@ -129,6 +130,11 @@ export function AppRouter() {
         <Route path="/faq" element={
           <Suspense fallback={<PageLoader />}>
             <FaqPage />
+          </Suspense>
+        } />
+        <Route path="/debug/nip29" element={
+          <Suspense fallback={<PageLoader />}>
+            <Nip29Debug />
           </Suspense>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
