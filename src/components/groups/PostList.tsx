@@ -368,6 +368,21 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     // If post already has approval info, return it as is
     if ('approval' in post) return post;
 
+    // For NIP-29 groups, all posts are considered approved by default
+    // since the relay handles access control
+    if (isNip29) {
+      return {
+        ...post,
+        approval: {
+          id: `nip29-approved-${post.id}`,
+          pubkey: post.pubkey,
+          created_at: post.created_at,
+          autoApproved: true,
+          kind: post.kind
+        }
+      };
+    }
+
     // Check if this is a reply by looking at the kind or tags
     const isReply = post.kind === KINDS.GROUP_POST_REPLY || post.tags.some(tag =>
       tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
@@ -488,7 +503,12 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     }
   }, [sortedPosts, onPostCountChange]);
 
-  if (isLoadingApproved || isLoadingPending || isLoadingNip29 || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
+  // Different loading conditions for NIP-29 vs NIP-72
+  const isLoading = isNip29 
+    ? (isLoadingNip29 || isLoadingPinnedPostIds || isLoadingPinnedPosts)
+    : (isLoadingApproved || isLoadingPending || isLoadingPinnedPostIds || isLoadingPinnedPosts);
+
+  if (isLoading) {
     return (
       <div className="space-y-0">
         {[1, 2, 3].map((i) => (

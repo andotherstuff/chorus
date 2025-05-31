@@ -54,6 +54,10 @@ export function useNip29Groups(groupRelays: string[] = []) {
             }
           ];
           
+          console.log(`[NIP-29] Querying relay ${relayUrl} for groups...`);
+          console.log(`[NIP-29] User authenticated: ${!!user}`);
+          console.log(`[NIP-29] Group metadata filter:`, JSON.stringify(filters[0]));
+          
           const [groupEvents, memberEvents] = await Promise.all([
             // Group metadata events
             nostr.query(filters, { 
@@ -70,6 +74,7 @@ export function useNip29Groups(groupRelays: string[] = []) {
             })
           ]);
 
+          console.log(`[NIP-29] Query complete for ${relayUrl}`);
           console.log(`[NIP-29] Found ${groupEvents.length} group metadata events and ${memberEvents.length} member events from ${relayUrl}`);
           if (groupEvents.length > 0) {
             console.log('[NIP-29] Sample group event:', groupEvents[0]);

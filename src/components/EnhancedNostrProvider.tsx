@@ -89,36 +89,58 @@ export function EnhancedNostrProvider({
     const relay = new NRelay1(url);
     relayConnections.current.set(url, relay);
     
-    // Log connection status (NRelay1 doesn't have addEventListener, so we'll add logging elsewhere)
-
-    // Set up WebSocket event listeners for NIP-42 auth
-    const ws = (relay as unknown as { socket?: WebSocket }).socket;
-    if (ws) {
-      const originalOnMessage = ws.onmessage;
-      ws.onmessage = async (event: MessageEvent) => {
-        try {
-          const message = JSON.parse(event.data);
-          
-          // Check for AUTH challenge
-          if (Array.isArray(message) && message[0] === 'AUTH' && message[1]) {
-            console.log(`[NIP-42] Received AUTH challenge from ${url}:`, message[1]);
-            pendingAuth.current.set(url, message[1]);
-            
-            // Automatically respond to AUTH challenge if we have a signer
-            if (signer && !authenticatedRelays.current.has(url)) {
-              await handleAuthChallenge(url, message[1]);
-            }
-          }
-        } catch (error) {
-          // Not JSON or parsing error, ignore
-        }
+    // Log connection status by monitoring the internal WebSocket
+    // We need to wait a bit for the socket to be created
+    setTimeout(() => {
+      const ws = (relay as unknown as { socket?: WebSocket }).socket;
+      if (ws) {
+        console.log(`[EnhancedNostrProvider] WebSocket state for ${url}: ${ws.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`);
         
-        // Call original handler
-        if (originalOnMessage) {
-          originalOnMessage.call(ws, event);
-        }
-      };
-    }
+        // Add connection event listeners
+        ws.addEventListener('open', () => {
+          console.log(`[EnhancedNostrProvider] WebSocket connected to ${url}`);
+        });
+        
+        ws.addEventListener('close', () => {
+          console.log(`[EnhancedNostrProvider] WebSocket disconnected from ${url}`);
+          relayConnections.current.delete(url);
+          authenticatedRelays.current.delete(url);
+        });
+        
+        ws.addEventListener('error', (error) => {
+          console.error(`[EnhancedNostrProvider] WebSocket error for ${url}:`, error);
+        });
+
+        // Set up message listener for NIP-42 auth
+        const originalOnMessage = ws.onmessage;
+        ws.onmessage = async (event: MessageEvent) => {
+          try {
+            const message = JSON.parse(event.data);
+            console.log(`[EnhancedNostrProvider] Received from ${url}:`, message);
+            
+            // Check for AUTH challenge
+            if (Array.isArray(message) && message[0] === 'AUTH' && message[1]) {
+              console.log(`[NIP-42] Received AUTH challenge from ${url}:`, message[1]);
+              pendingAuth.current.set(url, message[1]);
+              
+              // Automatically respond to AUTH challenge if we have a signer
+              if (signer && !authenticatedRelays.current.has(url)) {
+                await handleAuthChallenge(url, message[1]);
+              }
+            }
+          } catch (error) {
+            // Not JSON or parsing error, ignore
+          }
+          
+          // Call original handler
+          if (originalOnMessage) {
+            originalOnMessage.call(ws, event);
+          }
+        };
+      } else {
+        console.warn(`[EnhancedNostrProvider] No WebSocket found for ${url}`);
+      }
+    }, 100);
 
     return relay;
   }, [signer]);
@@ -284,8 +306,12 @@ export function EnhancedNostrProvider({
     filters: NostrFilter[],
     opts?: { signal?: AbortSignal; relays?: string[] }
   ): Promise<NostrEvent[]> => {
+    console.log('[Query] Starting query with filters:', JSON.stringify(filters, null, 2));
+    console.log('[Query] Query options:', { relays: opts?.relays, hasSignal: !!opts?.signal });
+    
     // If specific relays are provided, ensure they're authenticated
     if (opts?.relays) {
+      console.log('[Query] Ensuring authentication for relays:', opts.relays);
       for (const relay of opts.relays) {
         await ensureRelayAuth(relay);
       }
@@ -308,8 +334,21 @@ export function EnhancedNostrProvider({
           return opts.relays || [];
         }
       });
+      console.log('[Query] Executing query on temporary pool...');
       const events = await tempPool.query(filters, opts);
-      return Array.from(events);
+      const eventsArray = Array.from(events);
+      console.log(`[Query] Temporary pool returned ${eventsArray.length} events`);
+      eventsArray.forEach((event, index) => {
+        console.log(`[Query] Event ${index + 1}:`, {
+          id: event.id,
+          kind: event.kind,
+          pubkey: event.pubkey,
+          created_at: event.created_at,
+          tags: event.tags,
+          content: event.content.substring(0, 100) + (event.content.length > 100 ? '...' : '')
+        });
+      });
+      return eventsArray;
     }
     
     // Use the enhanced pool for NIP-29 queries
@@ -317,11 +356,15 @@ export function EnhancedNostrProvider({
     if (isNip29Query) {
       console.log(`[Query] Using enhanced pool for NIP-29 query`);
       const events = await pool.query(filters, opts);
-      return Array.from(events);
+      const eventsArray = Array.from(events);
+      console.log(`[Query] Enhanced pool returned ${eventsArray.length} events`);
+      return eventsArray;
     } else {
       // Use the base nostr for NIP-72 queries
       console.log('[Query] Using base nostr for NIP-72 query');
-      return baseNostr.nostr.query(filters, opts ? { signal: opts.signal } : undefined);
+      const events = await baseNostr.nostr.query(filters, opts ? { signal: opts.signal } : undefined);
+      console.log(`[Query] Base nostr returned ${events.length} events`);
+      return events;
     }
   }, [pool, ensureRelayAuth, baseNostr, open]);
 
