@@ -1,0 +1,32 @@
+{
+  "testAccounts": {
+    "alice": {
+      "name": "Alice Test",
+      "nsec": "nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5",
+      "npub": "npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6",
+      "hex": "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
+    },
+    "bob": {
+      "name": "Bob Test",
+      "nsec": "nsec1jufhdeeqkxhzcy3z6wqxlhf3lj83e9zgz7g4ezzn2jlqp843petqvld38t",
+      "npub": "npub1v0lxs8638u4lrn6nclvqfqxa38kqmhapw0cf6pxycswhc2e4nt0qpradnj",
+      "hex": "97137b3bb06bdea54ac2c2098b40768599742267c9e5cd1477f318e1ac5d3bed"
+    },
+    "charlie": {
+      "name": "Charlie Test",
+      "nsec": "nsec14m97e7k0yglqfemsm3h8wuley3mhc6qjp5tey3eyyx3xvh8w2nuqj5l4fc",
+      "npub": "npub15s8evnug5n3d3mngl3wshrhtxw0608qcvlg2cqt82u2kkf96l24syaetzj",
+      "hex": "aecb9e7ad3223e04e6e1dc6e775bf249377c6812152b92472421226662eeaaf8"
+    }
+  },
+  "testRelays": [
+    "wss://relay.damus.io",
+    "wss://relay.nostr.band",
+    "wss://nos.lol",
+    "wss://relay.primal.net"
+  ],
+  "nip29Relay": "wss://relay.groups.nip29.com",
+  "fileUploadService": "https://nostr.build/api/v2/upload/files",
+  "testGroupPrefix": "test-chorus-",
+  "testDataPrefix": "[TEST] "
+}

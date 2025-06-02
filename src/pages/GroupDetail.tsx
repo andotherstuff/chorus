@@ -909,7 +909,11 @@ export default function GroupDetail() {
 
         <TabsContent value="members" className="space-y-4">
           <div className="max-w-3xl mx-auto">
-            <SimpleMembersList communityId={groupId || ''} />
+            <SimpleMembersList communityId={
+              parsedRouteId?.type === 'nip29' 
+                ? `nip29:${encodeURIComponent(parsedRouteId.relay!)}:${parsedRouteId.groupId}`
+                : groupId || ''
+            } />
           </div>
         </TabsContent>
 

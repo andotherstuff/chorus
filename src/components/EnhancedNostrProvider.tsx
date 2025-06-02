@@ -232,8 +232,18 @@ export function EnhancedNostrProvider({
             console.log('[NIP-29] Detected NIP-29 query, routing to NIP-29 relays');
             
             // Check if we have a group ID in the filter
-            const groupId = filter['#h']?.[0];
+            // For kind 39002 (member lists), the group ID is in #d tag
+            // For other kinds, it might be in #h tag
+            const groupId = filter['#d']?.[0] || filter['#h']?.[0];
             const groupRelay = groupId ? getGroupRelay(groupId) : undefined;
+            
+            console.log('[NIP-29] Filter analysis:', {
+              kinds: filter.kinds,
+              dTag: filter['#d'],
+              hTag: filter['#h'],
+              groupId,
+              groupRelay
+            });
             
             // If we have a specific relay for this group, use it
             if (groupRelay) {

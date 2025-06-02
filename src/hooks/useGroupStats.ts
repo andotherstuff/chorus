@@ -172,6 +172,55 @@ export function useGroupStats(communities: NostrEvent[] | undefined, enabled = t
         }
       }
 
+      // 8. Get approved members lists (Kind 34551) for NIP-72 communities
+      const moderatorPubkeys = new Set<string>();
+      for (const community of communities) {
+        moderatorPubkeys.add(community.pubkey);
+        for (const tag of community.tags) {
+          if (tag[0] === "p" && tag[3] === "moderator") {
+            moderatorPubkeys.add(tag[1]);
+          }
+        }
+      }
+
+      if (moderatorPubkeys.size > 0) {
+        const approvedMembersEvents = await nostr.query([{
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+          authors: Array.from(moderatorPubkeys),
+          "#d": communities.map(c => {
+            const dTag = c.tags.find(tag => tag[0] === "d");
+            return dTag ? dTag[1] : "";
+          }).filter(d => d !== ""),
+          limit: 500
+        }], { signal });
+
+        // Process approved members lists
+        for (const event of approvedMembersEvents) {
+          const dTag = event.tags.find(tag => tag[0] === "d");
+          if (!dTag) continue;
+
+          // Find the matching community
+          const matchingCommunity = communities.find(c => {
+            const communityDTag = c.tags.find(tag => tag[0] === "d");
+            return communityDTag && communityDTag[1] === dTag[1];
+          });
+
+          if (!matchingCommunity) continue;
+
+          const communityDTag = matchingCommunity.tags.find(tag => tag[0] === "d");
+          const communityId = `${KINDS.GROUP}:${matchingCommunity.pubkey}:${communityDTag ? communityDTag[1] : ""}`;
+
+          if (!stats[communityId]) continue;
+
+          // Add all approved members to participants
+          for (const tag of event.tags) {
+            if (tag[0] === "p") {
+              stats[communityId].participants.add(tag[1]);
+            }
+          }
+        }
+      }
+
       return stats;
     },
     enabled: !!nostr && !!communities && communities.length > 0 && enabled,

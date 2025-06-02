@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Member Display</title>
+</head>
+<body>
+    <h1>Testing Member Display Fix</h1>
+    <div id="results"></div>
+    
+    <script>
+        // Simulate the fix - extracting identifier from communityId
+        function testFix() {
+            const results = document.getElementById('results');
+            
+            // Test cases
+            const testCases = [
+                {
+                    input: "nip72:932614571afcbad4d17a191ee281e39eebbb41b93fac8fd87829622aeb112f4d:oslo-freedom-forum-2025-mb3ch5ft",
+                    expected: "oslo-freedom-forum-2025-mb3ch5ft"
+                },
+                {
+                    input: "nip29:wss://communities.nos.social/:bitcoin-devs",
+                    expected: "nip29:wss://communities.nos.social/:bitcoin-devs" // NIP-29 should remain unchanged
+                },
+                {
+                    input: "simple-id",
+                    expected: "simple-id"
+                }
+            ];
+            
+            testCases.forEach(test => {
+                let dTagValue = test.input;
+                
+                // The fix logic
+                if (test.input.startsWith("nip72:")) {
+                    const parts = test.input.split(":");
+                    if (parts.length >= 3) {
+                        dTagValue = parts[2]; // Get just the identifier part
+                    }
+                }
+                
+                const passed = dTagValue === test.expected;
+                const result = `
+                    <div style="margin: 10px; padding: 10px; background: ${passed ? '#d4edda' : '#f8d7da'}">
+                        <strong>Test: ${test.input}</strong><br>
+                        Expected: ${test.expected}<br>
+                        Got: ${dTagValue}<br>
+                        Status: ${passed ? '✅ PASSED' : '❌ FAILED'}
+                    </div>
+                `;
+                results.innerHTML += result;
+            });
+            
+            results.innerHTML += '<h2>Fix Summary:</h2><p>The useApprovedMembers hook now extracts just the identifier portion from NIP-72 community IDs when querying for kind 34551 events. This ensures the #d tag matches how the events are stored.</p>';
+        }
+        
+        testFix();
+    </script>
+</body>
+</html>

@@ -141,6 +141,6 @@ export function useUnifiedGroups() {
         nip72Events: nip72Communities
       };
     },
-    enabled: !!nostr && !isNip29Loading,
+    enabled: !!nostr,
   });
 }
