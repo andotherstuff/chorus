@@ -12,6 +12,13 @@ export function useApprovedMembers(communityId: string) {
   const { nostr } = useNostr();
   const { data: group } = useGroup(communityId);
 
+  console.log("[useApprovedMembers] Starting with:", {
+    communityId,
+    groupFound: !!group,
+    groupPubkey: group?.pubkey,
+    groupTags: group?.tags
+  });
+
   const groupModsKey = group?.tags
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
     .map(([, value]) => value).join(",") || "";
@@ -21,6 +28,7 @@ export function useApprovedMembers(communityId: string) {
     queryKey: ["approved-members-list", communityId, groupModsKey],
     queryFn: async (c) => {
       if (!group) {
+        console.log("[useApprovedMembers] No group found, aborting query");
         throw new Error("Group not found");
       }
 
@@ -33,17 +41,43 @@ export function useApprovedMembers(communityId: string) {
         }
       }
       
+      // Extract the identifier from the communityId for NIP-72 groups
+      let dTagValue = communityId;
+      
+      // Parse different community ID formats
+      if (communityId.includes(":")) {
+        const parts = communityId.split(":");
+        console.log("[useApprovedMembers] Parsing community ID:", {
+          original: communityId,
+          parts,
+          partsCount: parts.length
+        });
+        
+        // Handle different formats:
+        // nip72:34550:pubkey:identifier
+        // 34550:pubkey:identifier  
+        if (parts.length >= 3) {
+          // Get the last part as the identifier
+          dTagValue = parts[parts.length - 1];
+        } else if (parts.length === 2) {
+          // Might be pubkey:identifier format
+          dTagValue = parts[1];
+        }
+      }
+      
       console.log("[useApprovedMembers] Querying approved members with filter:", {
         kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         authors: [...moderators],
-        "#d": [communityId],
-        moderatorCount: moderators.size
+        "#d": [dTagValue],
+        moderatorCount: moderators.size,
+        originalCommunityId: communityId,
+        extractedDTag: dTagValue
       });
       
       const events = await nostr.query([{ 
         kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
         authors: [...moderators],
-        "#d": [communityId],
+        "#d": [dTagValue],
       }], { signal });
       
       console.log("[useApprovedMembers] Approved members events received:", {
@@ -51,9 +85,50 @@ export function useApprovedMembers(communityId: string) {
         events: events.map(e => ({
           id: e.id,
           author: e.pubkey,
-          memberTags: e.tags.filter(t => t[0] === "p").length
+          dTag: e.tags.find(t => t[0] === "d")?.[1],
+          memberTags: e.tags.filter(t => t[0] === "p").length,
+          allTags: e.tags
         }))
       });
+      
+      // If no events found, let's check with alternate d-tag formats
+      if (events.length === 0) {
+        console.log("[useApprovedMembers] No events found with simple d-tag, trying full format...");
+        
+        // Try with the full a-tag format as d-tag
+        const fullDTag = `${KINDS.GROUP}:${group.pubkey}:${dTagValue}`;
+        const eventsWithFullTag = await nostr.query([{ 
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+          authors: [...moderators],
+          "#d": [fullDTag],
+        }], { signal });
+        
+        console.log("[useApprovedMembers] Results with full d-tag format:", {
+          fullDTag,
+          count: eventsWithFullTag.length
+        });
+        
+        if (eventsWithFullTag.length > 0) {
+          return eventsWithFullTag;
+        }
+        
+        // Also check if there are ANY kind 34551 events from these moderators
+        console.log("[useApprovedMembers] Checking for ANY kind 34551 from moderators...");
+        const anyEvents = await nostr.query([{ 
+          kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
+          authors: [...moderators],
+          limit: 5
+        }], { signal });
+        
+        console.log("[useApprovedMembers] ANY kind 34551 events from moderators:", {
+          count: anyEvents.length,
+          samples: anyEvents.map(e => ({
+            id: e.id,
+            dTag: e.tags.find(t => t[0] === "d")?.[1],
+            memberCount: e.tags.filter(t => t[0] === "p").length
+          }))
+        });
+      }
       
       return events;
     },

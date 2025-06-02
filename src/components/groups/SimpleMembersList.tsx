@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { UserNutzapDialog } from "./UserNutzapDialog";
 import { KINDS } from "@/lib/nostr-kinds";
 import { useNip29GroupMembers } from "@/hooks/useNip29Groups";
+import { useGroupPosters } from "@/hooks/useGroupPosters";
 
 interface SimpleMembersListProps {
   communityId: string;
@@ -61,13 +62,19 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
   const { approvedMembers, isLoading: isLoadingNip72 } = useApprovedMembers(
     !isNip29 ? communityId : ''
   );
+  
+  // Get active posters as a fallback for NIP-72 groups without approved members
+  const { data: activePosters = [], isLoading: isLoadingPosters } = useGroupPosters(
+    !isNip29 && approvedMembers.length === 0 ? communityId : ''
+  );
 
   // Combine member lists based on group type
+  // For NIP-72: Use approved members if available, otherwise use active posters
   const allMembers = isNip29 
     ? (nip29MemberData?.members || [])
-    : approvedMembers;
+    : (approvedMembers.length > 0 ? approvedMembers : activePosters);
   
-  const isLoading = isNip29 ? !nip29MemberData : isLoadingNip72;
+  const isLoading = isNip29 ? !nip29MemberData : (isLoadingNip72 || isLoadingPosters);
 
   console.log("[SimpleMembersList] Displaying members:", {
     communityId,
@@ -75,7 +82,9 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
     totalMembers: allMembers.length,
     isLoading,
     approvedMembers: approvedMembers.slice(0, 5),
-    nip29Members: nip29MemberData?.members?.slice(0, 5)
+    activePosters: activePosters.slice(0, 5),
+    nip29Members: nip29MemberData?.members?.slice(0, 5),
+    usingActivePosters: !isNip29 && approvedMembers.length === 0 && activePosters.length > 0
   });
 
   // Get moderators/admins based on group type
