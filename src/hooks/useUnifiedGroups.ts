@@ -9,7 +9,7 @@ import { usePinnedGroups } from "./usePinnedGroups";
 import { useNip29Groups } from "./useNip29Groups";
 
 export function useUnifiedGroups() {
-  const { nostr } = useNostr();
+  const { nostr: baseNostr } = useNostr(); // Base nostr for NIP-72 queries to chorus relay
   const { nostr: enhancedNostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
   const { pinnedGroups, isLoading: isPinnedGroupsLoading } = usePinnedGroups();
@@ -27,7 +27,7 @@ export function useUnifiedGroups() {
   return useQuery({
     queryKey: ["unified-groups", user?.pubkey, pinnedGroups, nip29Groups],
     queryFn: async (c) => {
-      if (!nostr) return {
+      if (!baseNostr) return {
         pinned: [] as Group[],
         owned: [] as Group[],
         moderated: [] as Group[],
@@ -38,12 +38,14 @@ export function useUnifiedGroups() {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
 
-      console.log('[Groups] Fetching unified groups');
+      console.log('[Groups] Fetching unified groups from base provider');
 
-      // Fetch NIP-72 communities using the base nostr provider (uses NIP-72 relays)
-      const nip72Communities = await nostr.query([
+      // Fetch NIP-72 communities using the base nostr provider (should use chorus relay)
+      const nip72Communities = await baseNostr.query([
         { kinds: [34550], limit: 100 }
       ], { signal });
+
+      console.log(`[NIP-72] Base provider query complete`);
 
       console.log(`[NIP-72] Found ${nip72Communities.length} communities`);
 
@@ -141,6 +143,6 @@ export function useUnifiedGroups() {
         nip72Events: nip72Communities
       };
     },
-    enabled: !!nostr,
+    enabled: !!baseNostr,
   });
 }
