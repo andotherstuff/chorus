@@ -18,10 +18,11 @@ import { useNip29GroupMembers } from "@/hooks/useNip29Groups";
 import { useGroupPosters } from "@/hooks/useGroupPosters";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { RefreshCw } from "lucide-react";
+import type { NostrEvent } from "@nostrify/nostrify";
 
 interface SimpleMembersListProps {
   communityId: string;
-  groupData?: any; // Optional: pass the already-fetched group data to ensure consistency
+  groupData?: NostrEvent; // Optional: pass the already-fetched group data to ensure consistency
 }
 
 export function SimpleMembersList({ communityId, groupData }: SimpleMembersListProps) {

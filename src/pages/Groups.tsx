@@ -3,11 +3,11 @@ import Header from "@/components/ui/Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { GroupSearch } from "@/components/groups/GroupSearch";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { TrendingUp } from "lucide-react";
 import { useGroupStats } from "@/hooks/useGroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
-import { useUnifiedGroups } from "@/hooks/useUnifiedGroups";
+import { useUnifiedGroupsWithCache } from "@/hooks/useUnifiedGroupsWithCache";
 import { useGroupDeletionRequests } from "@/hooks/useGroupDeletionRequests";
 import { useUserPendingJoinRequests } from "@/hooks/useUserPendingJoinRequests";
 import { GroupCard } from "@/components/groups/GroupCard";
@@ -49,41 +49,41 @@ export default function Groups() {
     };
   }, []);
 
-  // Fetch unified groups (both NIP-72 and NIP-29)
+  // Fetch unified groups (both NIP-72 and NIP-29) with caching
   const {
-    data: unifiedGroupsData,
+    groups: allGroups,
     isLoading: isLoadingGroups,
     error: groupsError,
-  } = useUnifiedGroups();
+    cacheStatus,
+  } = useUnifiedGroupsWithCache();
 
-  // Get all groups from the unified data
-  const allGroups: Group[] = useMemo(() => {
-    return unifiedGroupsData?.allGroups || [];
-  }, [unifiedGroupsData]);
+  // Extract NIP-72 groups for stats
+  const nip72GroupIds = useMemo(() => {
+    return allGroups.filter(g => g.type === 'nip72').map(g => g.id);
+  }, [allGroups]);
 
-  // Use NIP-72 events for group stats
-  const nip72Events = useMemo(() => {
-    return unifiedGroupsData?.nip72Events || [];
-  }, [unifiedGroupsData]);
-
-  const {
-    data: groupStatsResults = {},
-    isLoading: isLoadingStats,
-    refetch: refetchStats,
-  } = useGroupStats(nip72Events);
-
-  // Extract user groups from unified data
-  const userGroups = useMemo(() => {
-    if (!unifiedGroupsData) return [];
+  // Get user's role for each group
+  const getUserRoleForGroup = useCallback((group: Group): UserRole | null => {
+    if (!user) return null;
     
-    const { pinned, owned, moderated, member } = unifiedGroupsData;
-    const allUserGroups = [...pinned, ...owned, ...moderated, ...member];
+    if (group.pubkey === user.pubkey) {
+      return "owner";
+    }
     
-    return allUserGroups.map(group => ({
-      id: getCommunityId(group),
-      role: "member" as UserRole, // Default role, could be enhanced
-    }));
-  }, [unifiedGroupsData]);
+    if (group.type === "nip72" && group.moderators.includes(user.pubkey)) {
+      return "moderator";
+    }
+    
+    if (group.type === "nip29" && group.admins.includes(user.pubkey)) {
+      return "moderator"; // NIP-29 admins are equivalent to moderators
+    }
+    
+    if (group.type === "nip29" && group.members?.includes(user.pubkey)) {
+      return "member";
+    }
+    
+    return null;
+  }, [user]);
 
   // Get user's pending join requests
   const {
@@ -98,36 +98,7 @@ export default function Groups() {
   }, [allGroups]);
 
   // Check for deletion requests
-  const { data: deletionRequests } = useGroupDeletionRequests(groupIds);
-  // Create a map to track user's membership in groups
-  const userMembershipMap = useMemo(() => {
-    if (!userGroups || !user) return new Map<string, UserRole>();
-
-    const membershipMap = new Map<string, UserRole>();
-
-    // Process all of user's groups from unified data
-    if (unifiedGroupsData) {
-      // Add owned groups
-      for (const group of unifiedGroupsData.owned) {
-        membershipMap.set(getCommunityId(group), "owner");
-      }
-      
-      // Add moderated groups
-      for (const group of unifiedGroupsData.moderated) {
-        membershipMap.set(getCommunityId(group), "moderator");
-      }
-      
-      // Add member groups
-      for (const group of unifiedGroupsData.member) {
-        const communityId = getCommunityId(group);
-        if (!membershipMap.has(communityId)) {
-          membershipMap.set(communityId, "member");
-        }
-      }
-    }
-
-    return membershipMap;
-  }, [unifiedGroupsData, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data: deletionRequestsMap } = useGroupDeletionRequests(groupIds);
 
   // Create a set of pending join request community IDs for quick lookup
   const pendingJoinRequestsSet = useMemo(() => {
@@ -152,9 +123,9 @@ export default function Groups() {
 
     // Function to check if a group has been deleted
     const isGroupDeleted = (group: Group) => {
-      if (!deletionRequests) return false;
+      if (!deletionRequestsMap) return false;
       const groupId = getCommunityId(group);
-      const deletionRequest = deletionRequests.get(groupId);
+      const deletionRequest = deletionRequestsMap.get(groupId);
       return deletionRequest?.isValid || false;
     };
 
@@ -179,8 +150,8 @@ export default function Groups() {
         if (!aIsPinned && bIsPinned) return 1;
 
         // Get user roles and pending status
-        const aUserRole = userMembershipMap.get(aId);
-        const bUserRole = userMembershipMap.get(bId);
+        const aUserRole = getUserRoleForGroup(a);
+        const bUserRole = getUserRoleForGroup(b);
         const aHasPendingRequest = pendingJoinRequestsSet.has(aId);
         const bHasPendingRequest = pendingJoinRequestsSet.has(bId);
 
@@ -204,19 +175,7 @@ export default function Groups() {
           return aPriority - bPriority;
         }
 
-        // If same priority, sort by member count (descending), then alphabetically by name
-        const aStats = groupStatsResults ? groupStatsResults[aId] : undefined;
-        const bStats = groupStatsResults ? groupStatsResults[bId] : undefined;
-        
-        const aMemberCount = aStats ? aStats.participants.size : 0;
-        const bMemberCount = bStats ? bStats.participants.size : 0;
-        
-        // Sort by member count (descending)
-        if (aMemberCount !== bMemberCount) {
-          return bMemberCount - aMemberCount;
-        }
-        
-        // If same member count, sort alphabetically by name
+        // If same priority, sort alphabetically by name
         const aName = a.name?.toLowerCase() || "";
         const bName = b.name?.toLowerCase() || "";
 
@@ -230,22 +189,12 @@ export default function Groups() {
     allGroups,
     searchQuery,
     isGroupPinned,
-    userMembershipMap,
+    getUserRoleForGroup,
     pendingJoinRequestsSet,
-    groupStatsResults,
-    deletionRequests,
+    deletionRequestsMap,
   ]);
 
-  // Auto-refresh stats periodically
-  useEffect(() => {
-    if (allGroups.length > 0) {
-      const interval = setInterval(() => {
-        refetchStats();
-      }, 30000);
-
-      return () => clearInterval(interval);
-    }
-  }, [allGroups.length, refetchStats]);
+  // Auto-refresh could be added here if needed
 
   const isLoading = isLoadingGroups || isPendingRequestsLoading;
   const error = groupsError;
@@ -343,13 +292,9 @@ export default function Groups() {
                 try {
                   const communityId = getCommunityId(community);
                   const isPinned = isGroupPinned(communityId);
-                  const userRole = userMembershipMap.get(communityId);
-                  const isMember = userMembershipMap.has(communityId);
-                  const hasPendingRequest =
-                    pendingJoinRequestsSet.has(communityId);
-                  const stats = groupStatsResults
-                    ? groupStatsResults[communityId]
-                    : undefined;
+                  const userRole = getUserRoleForGroup(community);
+                  const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
+                  const hasActiveDeletionRequest = deletionRequestsMap?.has(communityId) || false;
 
                   return (
                     <GroupCard
@@ -359,11 +304,10 @@ export default function Groups() {
                       pinGroup={pinGroup}
                       unpinGroup={unpinGroup}
                       isUpdating={isUpdating}
-                      stats={stats}
-                      isLoadingStats={isLoadingStats}
-                      isMember={isMember}
-                      userRole={userRole}
+                      stats={undefined} // Stats would need to be fetched separately
                       hasPendingRequest={hasPendingRequest}
+                      userRole={userRole}
+                      isMember={userRole !== null}
                     />
                   );
                 } catch (error) {

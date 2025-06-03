@@ -245,9 +245,16 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       
       // Fetch posts from the NIP-29 relay
       // According to NIP-29: "Groups may accept any event kind, including chats, threads, long-form articles..."
-      // Chat messages are typically kind 1 with an "h" tag for the group ID
+      // Be liberal in what we accept - include various event kinds that different clients might use
       const posts = enhancedNostr ? await enhancedNostr.query([{
-        kinds: [1, KINDS.NIP29_CHAT_MESSAGE, KINDS.NIP29_GROUP_POST], // Include kind 1 for chat messages
+        kinds: [
+          1,                         // Regular text notes (kind 1)
+          KINDS.NIP29_CHAT_MESSAGE,  // NIP-29 chat messages (kind 9)
+          KINDS.NIP29_GROUP_POST,    // NIP-29 group posts (kind 11)
+          42,                        // Channel messages (from some clients)
+          30023,                     // Long-form content
+          1111                       // Some clients use this for threaded discussions
+        ],
         "#h": [groupId],
         limit: 50
       }], { 
@@ -286,7 +293,7 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
       console.log("[PostList] Querying NIP-72 posts with filter:", {
-        kinds: [1],
+        kinds: [1, 11],
         "#a": [queryId],
         limit: 50,
         parsedGroup,
@@ -296,9 +303,16 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         hasQuery: !!nostr.query
       });
       
-      // For NIP-72 groups, query for kind 1 posts with "a" tags
+      // For NIP-72 groups, be liberal in what we accept
+      // Different clients may use different event kinds for group posts
       const posts = await nostr.query([{
-        kinds: [1], // Regular text notes for NIP-72
+        kinds: [
+          1,      // Regular text notes (most common)
+          11,     // NIP-29 style group posts
+          42,     // Channel messages (some clients)
+          30023,  // Long-form content
+          1111    // Threaded discussions
+        ],
         "#a": [queryId],
         limit: 50,
       }], { signal });
@@ -387,9 +401,17 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
-      // Fetch the actual pinned posts
+      // Fetch the actual pinned posts (be liberal in what kinds we accept)
       const posts = await nostr.query([{
-        kinds: [1, KINDS.GROUP_POST],
+        kinds: [
+          1,                       // Regular text notes
+          KINDS.GROUP_POST,        // NIP-72 group posts
+          KINDS.NIP29_GROUP_POST,  // NIP-29 group posts
+          11,                      // Alternative group post kind
+          42,                      // Channel messages
+          30023,                   // Long-form content
+          1111                     // Threaded discussions
+        ],
         ids: pinnedPostIds,
       }], { signal });
 

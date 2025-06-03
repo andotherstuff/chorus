@@ -51,7 +51,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useNavigate } from "react-router-dom";
 import { useIsGroupDeleted } from "@/hooks/useGroupDeletionRequests";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, AlertCircle } from "lucide-react";
 
 export default function GroupDetail() {
   const { groupId, relay } = useParams<{ groupId: string; relay?: string }>();
@@ -882,7 +882,18 @@ export default function GroupDetail() {
             </div>
           )}
 
-          <div className="flex items-center justify-end mb-4 gap-2 max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-4 gap-2 max-w-3xl mx-auto">
+            {isModerator && pendingPostsCount > 0 && showOnlyApproved && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOnlyApproved(false)}
+                className="flex items-center gap-2"
+              >
+                <AlertCircle className="h-4 w-4 text-orange-500" />
+                Review {pendingPostsCount} Pending {pendingPostsCount === 1 ? 'Post' : 'Posts'}
+              </Button>
+            )}
             <div className="flex items-center space-x-2">
               <Switch
                 id="approved-only"

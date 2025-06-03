@@ -14,24 +14,29 @@ export function useUnifiedGroups() {
   const { user } = useCurrentUser();
   const { pinnedGroups, isLoading: isPinnedGroupsLoading } = usePinnedGroups();
   
-  console.log('[useUnifiedGroups] Hook initialized', { 
-    hasBaseNostr: !!baseNostr,
-    hasEnhancedNostr: !!enhancedNostr,
-    userPubkey: user?.pubkey?.slice(0, 8)
-  });
-
   // Define NIP-29 relays to query for public groups
   const nip29Relays = [
     'wss://communities.nos.social/',
     // 'wss://relays.groups.nip29.com', // Temporarily disabled - causing crashes
     'wss://groups.fiatjaf.com'
   ];
+  
+  // Get NIP-29 groups
+  const nip29Result = useNip29Groups(nip29Relays);
+  const nip29Groups = nip29Result.data || [];
+  const isNip29Loading = nip29Result.isLoading;
+  
+  console.log('[useUnifiedGroups] Hook initialized', { 
+    hasBaseNostr: !!baseNostr,
+    hasEnhancedNostr: !!enhancedNostr,
+    userPubkey: user?.pubkey?.slice(0, 8),
+    nip29GroupsCount: nip29Groups.length,
+    isNip29Loading
+  });
 
-  // Fetch NIP-29 groups from multiple relays
-  const { data: nip29Groups = [], isLoading: isNip29Loading } = useNip29Groups(nip29Relays);
 
   return useQuery({
-    queryKey: ["unified-groups", user?.pubkey, pinnedGroups],
+    queryKey: ["unified-groups", user?.pubkey, pinnedGroups, nip29Groups],
     queryFn: async (c) => {
       console.log('[useUnifiedGroups] queryFn called', { hasBaseNostr: !!baseNostr });
       

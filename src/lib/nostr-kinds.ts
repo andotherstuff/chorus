@@ -8,6 +8,8 @@ export const KINDS = {
   REPORT: 1984,
   NIP29_CHAT_MESSAGE: 9,
   NIP29_GROUP_POST: 11,
+  CHANNEL_MESSAGE: 42,  // Used by some clients for group/channel messages
+  LONG_FORM_CONTENT: 30023,  // NIP-23 long-form content (articles)
   GROUP_POST_REPLY: 1111,
   GROUP_POST: 1,  // NIP-72 posts are regular text notes (kind 1) with "a" tags
   GROUP_POST_APPROVAL: 4550,

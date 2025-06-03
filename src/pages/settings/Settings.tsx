@@ -12,6 +12,7 @@ import { nip19 } from 'nostr-tools';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
+import { CacheSettings } from "@/components/settings/CacheSettings";
 
 export default function Settings() {
   const { user } = useCurrentUser();
@@ -211,6 +212,9 @@ export default function Settings() {
             </Select>
           </CardContent>
         </Card>
+
+        {/* Cache Settings Section */}
+        <CacheSettings />
 
         {/* PWA Install Section */}
         <Card>
