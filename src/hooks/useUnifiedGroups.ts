@@ -13,6 +13,12 @@ export function useUnifiedGroups() {
   const { nostr: enhancedNostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
   const { pinnedGroups, isLoading: isPinnedGroupsLoading } = usePinnedGroups();
+  
+  console.log('[useUnifiedGroups] Hook initialized', { 
+    hasBaseNostr: !!baseNostr,
+    hasEnhancedNostr: !!enhancedNostr,
+    userPubkey: user?.pubkey?.slice(0, 8)
+  });
 
   // Define NIP-29 relays to query for public groups
   const nip29Relays = [
@@ -25,29 +31,46 @@ export function useUnifiedGroups() {
   const { data: nip29Groups = [], isLoading: isNip29Loading } = useNip29Groups(nip29Relays);
 
   return useQuery({
-    queryKey: ["unified-groups", user?.pubkey, pinnedGroups, nip29Groups],
+    queryKey: ["unified-groups", user?.pubkey, pinnedGroups],
     queryFn: async (c) => {
-      if (!baseNostr) return {
-        pinned: [] as Group[],
-        owned: [] as Group[],
-        moderated: [] as Group[],
-        member: [] as Group[],
-        allGroups: [] as Group[],
-        nip72Events: [] as NostrEvent[]
-      };
+      console.log('[useUnifiedGroups] queryFn called', { hasBaseNostr: !!baseNostr });
+      
+      if (!baseNostr) {
+        console.log('[useUnifiedGroups] No baseNostr, returning empty results');
+        return {
+          pinned: [] as Group[],
+          owned: [] as Group[],
+          moderated: [] as Group[],
+          member: [] as Group[],
+          allGroups: [] as Group[],
+          nip72Events: [] as NostrEvent[]
+        };
+      }
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
 
       console.log('[Groups] Fetching unified groups from base provider');
 
       // Fetch NIP-72 communities using the base nostr provider (should use chorus relay)
-      const nip72Communities = await baseNostr.query([
-        { kinds: [34550], limit: 100 }
-      ], { signal });
+      let nip72Communities: NostrEvent[] = [];
+      
+      try {
+        console.log('[NIP-72] Starting query for communities...');
+        nip72Communities = await baseNostr.query([
+          { kinds: [34550], limit: 100 }
+        ], { signal });
 
-      console.log(`[NIP-72] Base provider query complete`);
-
-      console.log(`[NIP-72] Found ${nip72Communities.length} communities`);
+        console.log(`[NIP-72] Base provider query complete`);
+        console.log(`[NIP-72] Found ${nip72Communities.length} communities`);
+        
+        if (nip72Communities.length > 0) {
+          const firstCommunity = nip72Communities[0];
+          const nameTag = firstCommunity.tags.find(t => t[0] === 'name');
+          console.log(`[NIP-72] First community: ${nameTag?.[1] || 'Unnamed'}`);
+        }
+      } catch (error) {
+        console.error('[NIP-72] Query error:', error);
+      }
 
       // Parse all events into unified Group format
       const allGroups: Group[] = [];

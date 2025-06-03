@@ -10,20 +10,24 @@ import { DollarSign, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { parseGroupRouteId as parseGroupId } from "@/lib/group-utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { UserNutzapDialog } from "./UserNutzapDialog";
 import { KINDS } from "@/lib/nostr-kinds";
 import { useNip29GroupMembers } from "@/hooks/useNip29Groups";
 import { useGroupPosters } from "@/hooks/useGroupPosters";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { RefreshCw } from "lucide-react";
 
 interface SimpleMembersListProps {
   communityId: string;
+  groupData?: any; // Optional: pass the already-fetched group data to ensure consistency
 }
 
-export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
+export function SimpleMembersList({ communityId, groupData }: SimpleMembersListProps) {
   const { nostr } = useNostr();
   const { nostr: enhancedNostr } = useEnhancedNostr();
+  const { user } = useCurrentUser();
   const [showAllMembers, setShowAllMembers] = useState(false);
   
   // Parse the group ID to determine type
@@ -34,7 +38,8 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
   const parsedId = !isNip29 ? parseNostrAddress(decodeURIComponent(communityId)) : null;
   
   // Query for community details to get moderators
-  const { data: community } = useQuery({
+  // If groupData is passed from parent, use it to ensure consistency
+  const { data: queriedCommunity, refetch: refetchCommunity } = useQuery({
     queryKey: ["community-simple", parsedId?.pubkey, parsedId?.identifier],
     queryFn: async (c) => {
       if (!parsedId) throw new Error("Invalid community ID");
@@ -49,8 +54,14 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
       if (events.length === 0) throw new Error("Community not found");
       return events[0];
     },
-    enabled: !!nostr && !!parsedId,
+    enabled: !!nostr && !!parsedId && !groupData, // Don't query if we already have groupData
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 60 * 1000, // Refetch every minute
   });
+  
+  // For NIP-72 groups, we need the raw event with tags, not the parsed group
+  // If groupData is passed and is NIP-72, we need to reconstruct the event format
+  const community = !isNip29 ? queriedCommunity : null;
   
   // Get NIP-29 members if this is a NIP-29 group
   const { data: nip29MemberData } = useNip29GroupMembers(
@@ -93,6 +104,33 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
     : community?.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator") || [];
   const moderators = moderatorTags.map(tag => tag[1]);
   
+  // Debug logging for moderator tags
+  console.log("[SimpleMembersList] Moderator extraction:", {
+    communityId,
+    isNip29,
+    currentUserPubkey: user?.pubkey,
+    communityPubkey: community?.pubkey,
+    allTags: community?.tags,
+    moderatorTags,
+    moderators,
+    pTagsWithModerator: community?.tags?.filter(tag => tag[0] === "p" && tag.length > 3),
+    isCurrentUserInModeratorTags: moderators.includes(user?.pubkey || ''),
+    isCurrentUserOwner: community?.pubkey === user?.pubkey,
+  });
+  
+  // Check if we need to manually add the current user to moderator display
+  // This helps debug cases where the moderator tag might be missing but the user is marked as moderator elsewhere
+  useEffect(() => {
+    if (user && community && !isNip29) {
+      const userModeratorTag = community.tags?.find(
+        tag => tag[0] === "p" && tag[1] === user.pubkey && tag[3] === "moderator"
+      );
+      if (!userModeratorTag) {
+        console.log("[SimpleMembersList] Current user NOT found in moderator tags despite being marked as moderator");
+      }
+    }
+  }, [user, community, isNip29]);
+  
   // Filter out owner and moderators from members to show only regular members
   const regularMembers = allMembers.filter(member => 
     member !== community?.pubkey && !moderators.includes(member)
@@ -109,10 +147,22 @@ export function SimpleMembersList({ communityId }: SimpleMembersListProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
         <CardHeader className="px-4 py-3">
-          <CardTitle className="text-lg flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            Group Owner & Moderators
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              Group Owner & Moderators
+            </CardTitle>
+            {!isNip29 && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => refetchCommunity()}
+                title="Refresh moderator list"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="px-3 pt-0 pb-3">
           <div className="space-y-1">

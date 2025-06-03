@@ -89,11 +89,7 @@ interface PostListProps {
 }
 
 export function PostList({ communityId, showOnlyApproved = false, pendingOnly = false, onPostCountChange }: PostListProps) {
-  console.log("[PostList] Component rendering with:", {
-    communityId,
-    showOnlyApproved,
-    pendingOnly
-  });
+  // PostList component rendering
   
   const { nostr } = useNostr();
   const { nostr: enhancedNostr } = useEnhancedNostr();
@@ -105,10 +101,13 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
   const parsedGroup = useMemo(() => parseGroupRouteId(communityId), [communityId]);
   const isNip29 = parsedGroup?.type === "nip29";
   
-  console.log("[PostList] Parsed group:", {
+  console.log("[PostList] Group parsing result:", {
+    communityId,
     parsedGroup,
     isNip29
   });
+  
+  // Group parsing complete
   
   // Convert the communityId to the proper format for queries
   const queryId = useMemo(() => {
@@ -245,8 +244,10 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       }
       
       // Fetch posts from the NIP-29 relay
+      // According to NIP-29: "Groups may accept any event kind, including chats, threads, long-form articles..."
+      // Chat messages are typically kind 1 with an "h" tag for the group ID
       const posts = enhancedNostr ? await enhancedNostr.query([{
-        kinds: [KINDS.NIP29_CHAT_MESSAGE, KINDS.NIP29_GROUP_POST], // NIP-29 kinds 9 and 11
+        kinds: [1, KINDS.NIP29_CHAT_MESSAGE, KINDS.NIP29_GROUP_POST], // Include kind 1 for chat messages
         "#h": [groupId],
         limit: 50
       }], { 
@@ -289,6 +290,8 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         "#a": [queryId],
         limit: 50,
         parsedGroup,
+        communityId,
+        queryId,
         nostrType: typeof nostr,
         hasQuery: !!nostr.query
       });
@@ -451,10 +454,11 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     // If it's a reply, don't auto-approve it as a top-level post
     if (isReply) return post;
 
-    // Auto-approve for approved members and moderators
+    // Auto-approve for group owner, approved members and moderators
+    const isOwner = communityEvent?.pubkey === post.pubkey;
     const isApprovedMember = approvedMembers.includes(post.pubkey);
     const isModerator = moderators.includes(post.pubkey);
-    if (isApprovedMember || isModerator) {
+    if (isOwner || isApprovedMember || isModerator) {
       return {
         ...post,
         approval: {
@@ -505,10 +509,11 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           return existingApproval;
         }
 
-        // Auto-approve for approved members and moderators
+        // Auto-approve for group owner, approved members and moderators
+        const isOwner = communityEvent?.pubkey === post.pubkey;
         const isApprovedMember = approvedMembers.includes(post.pubkey);
         const isModerator = moderators.includes(post.pubkey);
-        if (isApprovedMember || isModerator) {
+        if (isOwner || isApprovedMember || isModerator) {
           return {
             ...post,
             approval: {
@@ -554,7 +559,8 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
     showOnlyApproved, 
     pendingOnly, 
     filteredPosts, 
-    pinnedPostIds
+    pinnedPostIds,
+    communityEvent?.pubkey
   ]);
 
   useEffect(() => {

@@ -1,17 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useUploadFile } from "@/hooks/useUploadFile";
+import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/useToast";
 import Header from "@/components/ui/Header";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Info, Globe, Lock, Users, Shield } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -21,8 +23,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { KINDS } from "@/lib/nostr-kinds";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { GroupTypeSelector } from "@/components/groups/GroupTypeSelector";
+import type { GroupType } from "@/types/groups";
 
 // Create a schema for form validation
 const formSchema = z.object({
@@ -30,6 +35,19 @@ const formSchema = z.object({
   description: z.string().optional(),
   guidelines: z.string().optional(),
   imageUrl: z.string().optional(),
+  groupType: z.enum(["nip72", "nip29"] as const),
+  relay: z.string().url("Must be a valid relay URL").optional(),
+  isPrivate: z.boolean().default(false),
+  isClosed: z.boolean().default(false),
+}).refine((data) => {
+  // If NIP-29 is selected, relay is required
+  if (data.groupType === "nip29" && !data.relay) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Relay URL is required for NIP-29 groups",
+  path: ["relay"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -39,7 +57,9 @@ export default function CreateGroup() {
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent, isPending: isSubmitting } = useNostrPublish();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
+  const { nostr: enhancedNostr } = useEnhancedNostr();
   const { toast } = useToast();
+  const [isCreatingNip29, setIsCreatingNip29] = useState(false);
 
   // Initialize the form with react-hook-form
   const form = useForm<FormValues>({
@@ -49,8 +69,17 @@ export default function CreateGroup() {
       description: "",
       guidelines: "",
       imageUrl: "",
+      groupType: "nip72",
+      relay: "wss://communities.nos.social",
+      isPrivate: false,
+      isClosed: false,
     },
   });
+
+  const selectedGroupType = form.watch("groupType");
+  const selectedRelay = form.watch("relay");
+
+  // We'll create a manual NIP-29 group creation function since we can't use hooks conditionally
 
   // Generate a unique identifier based on the group name and timestamp
   const generateUniqueIdentifier = (name: string): string => {
@@ -95,52 +124,114 @@ export default function CreateGroup() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      // Generate unique identifier
-      const identifier = generateUniqueIdentifier(values.name);
-
-      // Create community event (kind 34550)
-      const tags = [
-        ["d", identifier],
-        ["name", values.name],
-      ];
-
-      // Add description tag if provided
-      if (values.description) {
-        tags.push(["description", values.description]);
+      if (values.groupType === "nip72") {
+        // Create NIP-72 community
+        await createNip72Group(values);
+      } else {
+        // Create NIP-29 group
+        await createNip29GroupHandler(values);
       }
-
-      // Add guidelines tag if provided
-      if (values.guidelines) {
-        tags.push(["guidelines", values.guidelines]);
-      }
-
-      // Add image tag if available
-      if (values.imageUrl) {
-        tags.push(["image", values.imageUrl]);
-      }
-
-      // Add current user as moderator
-      tags.push(["p", user.pubkey, "", "moderator"]);
-
-      // Publish the community event
-      await publishEvent({
-        kind: KINDS.GROUP,
-        tags,
-        content: "",
-      });
 
       toast({
         title: 'Success',
-        description: 'Group created successfully!',
+        description: `${values.groupType.toUpperCase()} group created successfully!`,
       });
       navigate("/groups");
     } catch (error) {
-      console.error("Error creating community:", error);
+      console.error("Error creating group:", error);
       toast({
         title: 'Error',
         description: 'Failed to create group. Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const createNip72Group = async (values: FormValues) => {
+    // Generate unique identifier
+    const identifier = generateUniqueIdentifier(values.name);
+
+    // Create community event (kind 34550)
+    const tags = [
+      ["d", identifier],
+      ["name", values.name],
+    ];
+
+    // Add description tag if provided
+    if (values.description) {
+      tags.push(["description", values.description]);
+    }
+
+    // Add guidelines tag if provided
+    if (values.guidelines) {
+      tags.push(["guidelines", values.guidelines]);
+    }
+
+    // Add image tag if available
+    if (values.imageUrl) {
+      tags.push(["image", values.imageUrl]);
+    }
+
+    // Add current user as moderator
+    tags.push(["p", user!.pubkey, "", "moderator"]);
+
+    // Publish the community event
+    await publishEvent({
+      kind: KINDS.GROUP,
+      tags,
+      content: "",
+    });
+  };
+
+  const createNip29GroupHandler = async (values: FormValues) => {
+    if (!values.relay) {
+      throw new Error("Relay URL is required for NIP-29 groups");
+    }
+
+    if (!user) {
+      throw new Error("Must be logged in to create a group");
+    }
+
+    setIsCreatingNip29(true);
+    try {
+      // Create NIP-29 group creation event (kind 9007)
+      const tags: string[][] = [
+        ["name", values.name],
+      ];
+
+      if (values.description) {
+        tags.push(["about", values.description]);
+      }
+
+      if (values.imageUrl) {
+        tags.push(["picture", values.imageUrl]);
+      }
+
+      if (values.isPrivate) {
+        tags.push(["private"]);
+      }
+
+      if (values.isClosed) {
+        tags.push(["closed"]);
+      }
+
+      // Create and sign the event manually since we need to send to specific relay
+      const event = await user.signer.signEvent({
+        kind: 9007, // GROUP_CREATE
+        tags,
+        content: "",
+        created_at: Math.floor(Date.now() / 1000),
+      });
+
+      // Send to the specific relay using enhanced nostr provider
+      if (!enhancedNostr) {
+        throw new Error("Enhanced Nostr provider not available");
+      }
+
+      await enhancedNostr.event(event, { relays: [values.relay] });
+      console.log('NIP-29 group creation event sent:', event);
+    } finally {
+      setIsCreatingNip29(false);
     }
   };
 
@@ -152,6 +243,39 @@ export default function CreateGroup() {
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Group Type Selection */}
+            <FormField
+              control={form.control}
+              name="groupType"
+              render={({ field }) => (
+                <FormItem>
+                  <GroupTypeSelector
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Info Alert about the selected type */}
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                {selectedGroupType === "nip72" ? (
+                  <>
+                    <strong>Public Communities (NIP-72)</strong> are discoverable by anyone and hosted on regular Nostr relays. 
+                    Anyone can request to join, but moderators approve new members. Perfect for open communities.
+                  </>
+                ) : (
+                  <>
+                    <strong>Private Groups (NIP-29)</strong> require a dedicated relay and offer enhanced privacy with 
+                    relay-level access control. You control who can join and all group data stays private.
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+
             <div className="flex flex-col items-center mb-6">
               <FormField
                 control={form.control}
@@ -199,6 +323,32 @@ export default function CreateGroup() {
             </div>
 
             <div className="space-y-4">
+              {/* NIP-29 Relay Selection */}
+              {selectedGroupType === "nip29" && (
+                <FormField
+                  control={form.control}
+                  name="relay"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Group Relay URL *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="wss://communities.nos.social" 
+                          {...field} 
+                          className="bg-background" 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The relay where your private group will be hosted. Must support NIP-29.
+                        <br />
+                        <strong>Popular NIP-29 relays:</strong> wss://communities.nos.social, wss://groups.fiatjaf.com, wss://groups.nostr.band
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <FormField
                 control={form.control}
                 name="name"
@@ -259,18 +409,70 @@ export default function CreateGroup() {
                   </FormItem>
                 )}
               />
+
+              {/* NIP-29 Privacy Settings */}
+              {selectedGroupType === "nip29" && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Privacy & Access Settings
+                  </h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="isPrivate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Private Group</FormLabel>
+                          <FormDescription>
+                            Group metadata and member list will be hidden from non-members
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="isClosed"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Closed Group</FormLabel>
+                          <FormDescription>
+                            Only admins can add new members (no join requests allowed)
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 pt-4">
               <Button
                 type="submit"
                 className="w-full max-w-[200px] flex items-center justify-center gap-2 mx-auto"
-                disabled={isSubmitting || isUploading || !form.watch('name')?.trim()}
+                disabled={isSubmitting || isUploading || isCreatingNip29 || !form.watch('name')?.trim()}
               >
-                {(isSubmitting || isUploading) && (
+                {(isSubmitting || isUploading || isCreatingNip29) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Create Group
+                Create {selectedGroupType === "nip29" ? "Private Group" : "Public Community"}
               </Button>
               
               <div className="text-center mt-2">

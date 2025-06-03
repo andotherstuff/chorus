@@ -73,8 +73,11 @@ export function useCashuWallet() {
         walletData.mints = [...new Set(walletData.mints)];
 
 
-        // fetch the mint info and keysets for each mint
-        await Promise.all(walletData.mints.map(async (mint) => {
+        // Activate mints with throttling to prevent overwhelming the browser
+        const activationPromises = walletData.mints.map(async (mint, index) => {
+          // Stagger mint activation requests to prevent overwhelming
+          await new Promise(resolve => setTimeout(resolve, index * 100));
+          
           // Check if this mint has already failed before
           const existingMint = cashuStore.getMint(mint);
           if (existingMint.error) {
@@ -110,15 +113,18 @@ export function useCashuWallet() {
               cashuStore.setMintError(mint, errorMessage);
             }
           }
-        }));
+        });
+
+        // Process mint activations with a reasonable timeout
+        await Promise.allSettled(activationPromises);
 
         cashuStore.setPrivkey(walletData.privkey);
 
         // log wallet data
         console.log('walletData', walletData);
 
-        // call getNip60TokensQuery
-        await getNip60TokensQuery.refetch();
+        // Note: Don't call refetch here as it creates infinite loops
+        // The token query will automatically run when enabled
         return {
           id: event.id,
           wallet: walletData,
@@ -257,7 +263,10 @@ export function useCashuWallet() {
 
       return nip60TokenEvents;
     },
-    enabled: !!user
+    enabled: !!user && !!walletQuery.data?.wallet, // Only run after wallet is loaded
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't automatically refetch on component mount
   });
 
   const updateProofsMutation = useMutation({

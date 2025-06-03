@@ -14,14 +14,18 @@ export function useWalletAutoLoader() {
   const hasTriggeredForUser = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only run once per user and when we have a user and wallet data hasn't been loaded yet
-    if (user && !wallet && !isLoading && hasTriggeredForUser.current !== user.pubkey) {
-      console.log(`[WalletAutoLoader] Triggering wallet load for user ${user.pubkey.slice(0, 8)}...`);
+    // Only run once per user when they first log in
+    if (user && hasTriggeredForUser.current !== user.pubkey) {
+      console.log(`[WalletAutoLoader] First login detected for user ${user.pubkey.slice(0, 8)}`);
       hasTriggeredForUser.current = user.pubkey;
       
-      // Invalidate the wallet query to force a refetch
-      queryClient.invalidateQueries({ queryKey: ['cashu', 'wallet', user.pubkey] });
-      queryClient.invalidateQueries({ queryKey: ['cashu', 'tokens', user.pubkey] });
+      // Only invalidate if no wallet data exists and not currently loading
+      // This prevents endless invalidation loops
+      if (!wallet && !isLoading) {
+        console.log(`[WalletAutoLoader] Triggering initial wallet load...`);
+        queryClient.invalidateQueries({ queryKey: ['cashu', 'wallet', user.pubkey] });
+        queryClient.invalidateQueries({ queryKey: ['cashu', 'tokens', user.pubkey] });
+      }
     }
     
     // Reset when user changes
@@ -33,7 +37,8 @@ export function useWalletAutoLoader() {
     if (user && wallet && hasTriggeredForUser.current === user.pubkey) {
       console.log(`[WalletAutoLoader] Wallet loaded successfully for user ${user.pubkey.slice(0, 8)}`);
     }
-  }, [user, wallet, isLoading, queryClient]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.pubkey, queryClient]); // Removed wallet and isLoading from deps to prevent loops
 
   return { wallet, isLoading };
 }

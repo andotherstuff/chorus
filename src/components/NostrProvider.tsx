@@ -31,6 +31,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   const pool = useRef<NPool | undefined>(undefined);
 
   if (!pool.current) {
+    console.log('[NostrProvider] Creating NPool with relays:', relays);
     pool.current = new TimestampTrackingNPool({
       open(url: string) {
         console.log(`[NostrProvider] Opening connection to ${url}`);

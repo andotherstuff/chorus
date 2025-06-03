@@ -20,7 +20,10 @@ export function GroupTypeSelector({ value, onChange }: GroupTypeSelectorProps) {
         className="grid grid-cols-1 md:grid-cols-2 gap-4"
       >
         {/* NIP-72 Public Communities */}
-        <Card className={`cursor-pointer transition-colors ${value === "nip72" ? "ring-2 ring-primary" : ""}`}>
+        <Card 
+          className={`cursor-pointer transition-colors ${value === "nip72" ? "ring-2 ring-primary" : ""}`}
+          onClick={() => onChange("nip72")}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="nip72" className="flex items-center gap-2 cursor-pointer">
@@ -53,7 +56,10 @@ export function GroupTypeSelector({ value, onChange }: GroupTypeSelectorProps) {
         </Card>
 
         {/* NIP-29 Private Groups */}
-        <Card className={`cursor-pointer transition-colors ${value === "nip29" ? "ring-2 ring-primary" : ""}`}>
+        <Card 
+          className={`cursor-pointer transition-colors ${value === "nip29" ? "ring-2 ring-primary" : ""}`}
+          onClick={() => onChange("nip29")}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="nip29" className="flex items-center gap-2 cursor-pointer">

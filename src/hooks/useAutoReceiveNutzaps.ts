@@ -28,6 +28,7 @@ export function useAutoReceiveNutzaps() {
   // Keep track of processed event IDs to avoid duplicates
   const processedEventIds = useRef<Set<string>>(new Set());
   const subscriptionController = useRef<AbortController | null>(null);
+  const refetchThrottle = useRef<NodeJS.Timeout | null>(null);
 
   // Format amount based on user preference
   const formatAmount = useCallback((sats: number) => {
@@ -79,6 +80,18 @@ export function useAutoReceiveNutzaps() {
     }
   }, [redeemNutzap, formatAmount, walletUiStore]);
 
+  // Throttled refetch function to prevent spam
+  const throttledRefetch = useCallback(() => {
+    if (refetchThrottle.current) {
+      clearTimeout(refetchThrottle.current);
+    }
+    
+    refetchThrottle.current = setTimeout(() => {
+      refetchNutzaps();
+      refetchThrottle.current = null;
+    }, 2000); // Wait 2 seconds before refetching
+  }, [refetchNutzaps]);
+
   // Process initial nutzaps on load
   useEffect(() => {
     if (!fetchedNutzaps || fetchedNutzaps.length === 0) return;
@@ -92,7 +105,8 @@ export function useAutoReceiveNutzaps() {
 
     // Add all fetched nutzap IDs to processed set
     fetchedNutzaps.forEach(n => processedEventIds.current.add(n.id));
-  }, [fetchedNutzaps, processNutzap]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedNutzaps]); // Removed processNutzap from dependencies to prevent loops
 
   // Set up real-time subscription
   useEffect(() => {
@@ -185,23 +199,23 @@ export function useAutoReceiveNutzaps() {
             // Process the nutzap
             await processNutzap(nutzap);
             
-            // Refresh the nutzaps list
-            refetchNutzaps();
+            // Refresh the nutzaps list with throttling to prevent spam
+            throttledRefetch();
             
           } catch (error) {
             console.error("Error processing nutzap event:", error);
           }
         }
 
-        // Set up polling interval for continuous updates
+        // Set up polling interval for continuous updates with increased interval
         if (!signal.aborted) {
-          setTimeout(subscribeToNutzaps, 5000); // Poll every 5 seconds
+          setTimeout(subscribeToNutzaps, 30000); // Poll every 30 seconds to reduce spam
         }
       } catch (error) {
         if (!signal.aborted) {
           console.error("Error in nutzap subscription:", error);
-          // Retry after delay
-          setTimeout(subscribeToNutzaps, 10000);
+          // Retry after longer delay to prevent spam
+          setTimeout(subscribeToNutzaps, 60000); // Wait 1 minute before retry
         }
       }
     };
@@ -215,11 +229,16 @@ export function useAutoReceiveNutzaps() {
         subscriptionController.current.abort();
         subscriptionController.current = null;
       }
+      if (refetchThrottle.current) {
+        clearTimeout(refetchThrottle.current);
+        refetchThrottle.current = null;
+      }
     };
-  }, [user, nutzapInfoQuery.data, nostr, processNutzap, refetchNutzaps]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.pubkey, nutzapInfoQuery.data?.mints, nostr]); // More specific dependencies to prevent loops
 
   return {
     // Expose refetch in case manual refresh is needed
-    refetchNutzaps,
+    refetchNutzaps: throttledRefetch,
   };
 }

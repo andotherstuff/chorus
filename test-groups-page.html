@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Groups Page</title>
+    <script type="module">
+        import { NRelay1, NPool } from 'https://esm.sh/@nostrify/nostrify@0.30.0';
+        
+        async function testGroupsLoading() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing groups loading...</p>';
+            
+            try {
+                // Test 1: Direct relay connection
+                resultsDiv.innerHTML += '<h3>Test 1: Direct Relay Connection</h3>';
+                const relay = new NRelay1('wss://relay.chorus.community/');
+                
+                // Wait for connection
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                const communities = await relay.query([
+                    { kinds: [34550], limit: 10 }
+                ]);
+                
+                resultsDiv.innerHTML += `<p>✅ Found ${communities.length} NIP-72 communities</p>`;
+                
+                if (communities.length > 0) {
+                    const first = communities[0];
+                    const nameTag = first.tags.find(t => t[0] === 'name');
+                    resultsDiv.innerHTML += `<p>First community: ${nameTag?.[1] || 'Unnamed'}</p>`;
+                }
+                
+                relay.close();
+                
+                // Test 2: Using NPool (like the app)
+                resultsDiv.innerHTML += '<h3>Test 2: Using NPool</h3>';
+                
+                const pool = new NPool({
+                    open(url) {
+                        console.log(`Opening connection to ${url}`);
+                        return new NRelay1(url);
+                    },
+                    reqRouter(filters) {
+                        return new Map([['wss://relay.chorus.community/', filters]]);
+                    },
+                    eventRouter(event) {
+                        return ['wss://relay.chorus.community/'];
+                    }
+                });
+                
+                const signal = AbortSignal.timeout(10000);
+                const poolEvents = await pool.query([
+                    { kinds: [34550], limit: 10 }
+                ], { signal });
+                
+                const eventsArray = Array.from(poolEvents);
+                resultsDiv.innerHTML += `<p>✅ Found ${eventsArray.length} communities via NPool</p>`;
+                
+                // Display communities
+                resultsDiv.innerHTML += '<h3>Communities Found:</h3>';
+                resultsDiv.innerHTML += '<ul>';
+                for (const event of eventsArray.slice(0, 5)) {
+                    const nameTag = event.tags.find(t => t[0] === 'name');
+                    const descTag = event.tags.find(t => t[0] === 'description');
+                    resultsDiv.innerHTML += `<li><strong>${nameTag?.[1] || 'Unnamed'}</strong> - ${descTag?.[1] || 'No description'}</li>`;
+                }
+                resultsDiv.innerHTML += '</ul>';
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                console.error(error);
+            }
+        }
+        
+        window.addEventListener('load', testGroupsLoading);
+    </script>
+</head>
+<body>
+    <h1>Groups Page Test</h1>
+    <div id="results">
+        <p>Loading...</p>
+    </div>
+</body>
+</html>

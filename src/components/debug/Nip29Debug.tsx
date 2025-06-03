@@ -4,12 +4,22 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { NostrEvent } from '@nostrify/nostrify';
 
 export function Nip29Debug() {
   const { nostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
   const [logs, setLogs] = useState<string[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
+  const [groups, setGroups] = useState<Array<{
+    id?: string;
+    name?: string;
+    about?: string;
+    picture?: string;
+    isPublic: boolean;
+    isOpen: boolean;
+    relay: string;
+    event: NostrEvent;
+  }>>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const addLog = (message: string) => {
@@ -23,6 +33,10 @@ export function Nip29Debug() {
     setIsLoading(true);
     
     try {
+      if (!nostr) {
+        throw new Error("Enhanced Nostr provider not available");
+      }
+
       // Wait a bit for auth if user is logged in
       if (user) {
         addLog(`User logged in as ${user.pubkey.slice(0, 8)}..., waiting for auth...`);
@@ -66,13 +80,13 @@ export function Nip29Debug() {
       addLog(`Parsed ${parsedGroups.length} groups successfully`);
 
       // Test querying members for the first group
-      if (parsedGroups.length > 0) {
+      if (parsedGroups.length > 0 && nostr) {
         const firstGroup = parsedGroups[0];
         addLog(`Testing member query for group "${firstGroup.name}" (${firstGroup.id})...`);
         
         const memberEvents = await nostr.query([{
           kinds: [39002],
-          "#d": [firstGroup.id],
+          "#d": [firstGroup.id || ""],
           limit: 1
         }], {
           signal: AbortSignal.timeout(5000),
@@ -88,7 +102,7 @@ export function Nip29Debug() {
       }
 
     } catch (error) {
-      addLog(`Error: ${error.message}`);
+      addLog(`Error: ${error instanceof Error ? error.message : String(error)}`);
       console.error('[NIP-29 Debug] Full error:', error);
     } finally {
       setIsLoading(false);

@@ -28,13 +28,14 @@ import { SimpleMembersList } from "@/components/groups/SimpleMembersList";
 import { GroupNutzapButton } from "@/components/groups/GroupNutzapButton";
 import { GroupNutzapTotal } from "@/components/groups/GroupNutzapTotal";
 import { GroupNutzapList } from "@/components/groups/GroupNutzapList";
-import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileText, Shield, UserPlus, Save, Trash2, FileWarning } from "lucide-react";
+import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileText, Shield, UserPlus, Save, Trash2, FileWarning, MessageCircle } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import type { Group } from "@/types/groups";
 import { parseGroupRouteId, parseGroup, parseNip29Group } from "@/lib/group-utils";
 import { MemberManagement } from "@/components/groups/MemberManagement";
 import { ReportsList } from "@/components/groups/ReportsList";
+import { Nip29ChatMessages } from "@/components/groups/Nip29ChatMessages";
 import { useAuthor } from "@/hooks/useAuthor";
 import { toast } from "sonner";
 import { NostrEvent } from "@nostrify/nostrify";
@@ -69,7 +70,7 @@ export default function GroupDetail() {
   const [showQRCode, setShowQRCode] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
   
-  console.log("[GroupDetail] Component rendered with groupId:", groupId, "relay:", relay);
+  // Reduced logging for performance
 
   // Form state for management tab
   const [formName, setFormName] = useState("");
@@ -89,7 +90,7 @@ export default function GroupDetail() {
         // This is a NIP-29 route: /group/nip29/:relay/:groupId
         const decodedRelay = decodeURIComponent(relay);
         const decodedGroupId = decodeURIComponent(groupId);
-        console.log(`[GroupDetail] NIP-29 route detected: ${decodedGroupId} @ ${decodedRelay}`);
+        // NIP-29 route detected
         setParsedRouteId({
           type: "nip29",
           groupId: decodedGroupId,
@@ -98,7 +99,7 @@ export default function GroupDetail() {
       } else {
         // This is a legacy route: /group/:groupId (could be NIP-72 or encoded NIP-29)
         const parsed = parseGroupRouteId(decodeURIComponent(groupId));
-        console.log(`[GroupDetail] Legacy route parsed: ${JSON.stringify(parsed)}`);
+        // Legacy route parsed
         setParsedRouteId(parsed);
       }
     }
@@ -126,7 +127,7 @@ export default function GroupDetail() {
         const relayUrl = parsedRouteId.relay!;
         const groupId = parsedRouteId.groupId!;
         
-        console.log(`[GroupDetail] Fetching NIP-29 group ${groupId} from ${relayUrl}`);
+        // Fetching NIP-29 group from relay
         
         // Fetch both group metadata and member list
         if (!enhancedNostr) throw new Error("Enhanced Nostr provider not available");
@@ -169,7 +170,7 @@ export default function GroupDetail() {
           group.members = memberPubkeys;
           group.admins = adminPubkeys;
           
-          console.log(`[GroupDetail] Group ${group.name} has ${memberPubkeys.length} members and ${adminPubkeys.length} admins`);
+          // Group loaded with members and admins
         }
         
         return group;
@@ -178,6 +179,9 @@ export default function GroupDetail() {
       throw new Error("Unknown group type");
     },
     enabled: !!nostr && !!enhancedNostr && !!parsedRouteId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Check if group has been deleted
@@ -561,8 +565,10 @@ export default function GroupDetail() {
 
   // Set active tab based on URL hash only
   useEffect(() => {
-    // Define valid tab values
-    const validTabs = ["posts", "members", "ecash", "manage"];
+    // Define valid tab values - include chat for NIP-29 groups
+    const validTabs = parsedRouteId?.type === "nip29" 
+      ? ["posts", "chat", "members", "ecash", "manage"]
+      : ["posts", "members", "ecash", "manage"];
 
     if (hash && validTabs.includes(hash)) {
       setActiveTab(hash);
@@ -581,7 +587,7 @@ export default function GroupDetail() {
 
     // Deliberately not including activeTab in the dependencies to prevent loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hash]);
+  }, [hash, parsedRouteId?.type]);
 
   // Handle initial load for special cases (reports, pending items) without affecting normal tab operation
   useEffect(() => {
@@ -825,11 +831,22 @@ export default function GroupDetail() {
         window.history.pushState(null, '', `#${value}`);
       }} className="w-full">
         <div className="flex justify-center">
-          <TabsList className={`mb-4 w-full md:w-auto grid ${isModerator ? 'grid-cols-4' : 'grid-cols-3'} gap-0`}>
+          <TabsList className={`mb-4 w-full md:w-auto grid ${
+            parsedRouteId?.type === "nip29" 
+              ? (isModerator ? 'grid-cols-5' : 'grid-cols-4')
+              : (isModerator ? 'grid-cols-4' : 'grid-cols-3')
+          } gap-0`}>
             <TabsTrigger value="posts" className="flex items-center justify-center">
               <MessageSquare className="h-4 w-4 mr-1" />
               Posts
             </TabsTrigger>
+
+            {parsedRouteId?.type === "nip29" && (
+              <TabsTrigger value="chat" className="flex items-center justify-center">
+                <MessageCircle className="h-4 w-4 mr-1" />
+                Chat
+              </TabsTrigger>
+            )}
 
             <TabsTrigger value="members" className="flex items-center justify-center">
               <Users className="h-4 w-4 mr-1" />
@@ -880,7 +897,6 @@ export default function GroupDetail() {
           </div>
 
           <div className="max-w-3xl mx-auto">
-            {console.log("[GroupDetail] Rendering PostList with groupId:", groupId, "showOnlyApproved:", showOnlyApproved)}
             <PostList
               communityId={groupId || ''}
               showOnlyApproved={showOnlyApproved}
@@ -888,6 +904,19 @@ export default function GroupDetail() {
             />
           </div>
         </TabsContent>
+
+        {parsedRouteId?.type === "nip29" && (
+          <TabsContent value="chat" className="space-y-4">
+            <div className="max-w-3xl mx-auto">
+              {parsedRouteId.groupId && parsedRouteId.relay && (
+                <Nip29ChatMessages
+                  groupId={parsedRouteId.groupId}
+                  relayUrl={parsedRouteId.relay}
+                />
+              )}
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="ecash" className="space-y-4">
           <div className="max-w-3xl mx-auto">

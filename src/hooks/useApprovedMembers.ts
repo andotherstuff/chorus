@@ -12,12 +12,7 @@ export function useApprovedMembers(communityId: string) {
   const { nostr } = useNostr();
   const { data: group } = useGroup(communityId);
 
-  console.log("[useApprovedMembers] Starting with:", {
-    communityId,
-    groupFound: !!group,
-    groupPubkey: group?.pubkey,
-    groupTags: group?.tags
-  });
+  // Removed excessive logging
 
   const groupModsKey = group?.tags
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
@@ -28,7 +23,6 @@ export function useApprovedMembers(communityId: string) {
     queryKey: ["approved-members-list", communityId, groupModsKey],
     queryFn: async (c) => {
       if (!group) {
-        console.log("[useApprovedMembers] No group found, aborting query");
         throw new Error("Group not found");
       }
 
@@ -133,6 +127,9 @@ export function useApprovedMembers(communityId: string) {
       return events;
     },
     enabled: !!group && !!communityId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Query for community details to get moderators
@@ -157,6 +154,9 @@ export function useApprovedMembers(communityId: string) {
       return events[0] || null;
     },
     enabled: !!nostr && !!communityId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Extract approved members pubkeys
@@ -169,13 +169,7 @@ export function useApprovedMembers(communityId: string) {
     .filter(tag => tag[0] === "p" && tag[3] === "moderator")
     .map(tag => tag[1]) || [];
 
-  console.log("[useApprovedMembers] Final results:", {
-    communityId,
-    approvedMembersCount: approvedMembers.length,
-    moderatorsCount: moderators.length,
-    approvedMembers: approvedMembers.slice(0, 5), // Show first 5 for brevity
-    moderators
-  });
+  // Removed excessive logging
 
   /**
    * Check if a user is an approved member or moderator
