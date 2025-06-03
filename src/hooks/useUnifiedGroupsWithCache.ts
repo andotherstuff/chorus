@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
-import { useNip29Groups } from './useNip29Groups';
+import { useNip29Groups } from './useNip29GroupsWithCache';
 import { usePinnedGroups } from './usePinnedGroups';
 import { useCurrentUser } from './useCurrentUser';
 import { Group } from '@/types/groups';

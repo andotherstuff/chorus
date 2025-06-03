@@ -195,14 +195,17 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
  * Default NIP-29 group relays to check
  */
 export const DEFAULT_NIP29_RELAYS = [
+  'wss://communities.nos.social',
   'wss://groups.fiatjaf.com',
-  'wss://relay.groups.nip29.com',
+  // Additional NIP-29 relays that are currently active
   'wss://pyramid.fiatjaf.com',
   'wss://nostrelites.org',
-  'wss://relay.0xchat.com',
-  'wss://communities.nip29.com',
-  'wss://groups.nostr.com',
-  'wss://relay29.com',
+  // Note: The following relays are currently offline or have issues:
+  // 'wss://relay.0xchat.com' - certificate expired
+  // 'wss://communities.nip29.com' - DNS not found
+  // 'wss://groups.nostr.com' - DNS not found
+  // 'wss://relay29.com' - DNS not found
+  // 'wss://relay.groups.nip29.com' - temporarily disabled - causing crashes
 ];
 
 /**

@@ -269,7 +269,7 @@ export default function Groups() {
           <div>
             <h1 className="text-3xl font-bold">Groups</h1>
             <p className="text-muted-foreground mt-2">
-              Discover and join communities. Now supports both public communities (NIP-72) and private groups (NIP-29)!
+              Discover and join communities.
             </p>
           </div>
 
