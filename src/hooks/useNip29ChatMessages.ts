@@ -29,9 +29,10 @@ export function useNip29ChatMessages({
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
-      // Query for kind 11 events (NIP-29 group posts/chat messages) with the h tag for this group
+      // Query for kind 1 events (text notes) with the h tag for this group
+      // NIP-29 groups use regular event kinds with the 'h' tag
       const events = await nostr.query([{
-        kinds: [11], // NIP-29 group posts/chat messages
+        kinds: [1], // Text notes (used for chat messages in NIP-29)
         '#h': [groupId], // Events targeting this group
         limit
       }], {

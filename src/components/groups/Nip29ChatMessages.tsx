@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNip29ChatMessages, Nip29ChatMessage } from "@/hooks/useNip29ChatMessages";
 import { useAuthor } from "@/hooks/useAuthor";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useNostrPublish } from "@/hooks/useNostrPublish";
+import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,8 @@ interface Nip29ChatMessagesProps {
 
 export function Nip29ChatMessages({ groupId, relayUrl }: Nip29ChatMessagesProps) {
   const { user } = useCurrentUser();
-  const { mutateAsync: publishEvent } = useNostrPublish();
+  const { nostr } = useEnhancedNostr();
+  const queryClient = useQueryClient();
   const [messageContent, setMessageContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,19 +55,28 @@ export function Nip29ChatMessages({ groupId, relayUrl }: Nip29ChatMessagesProps)
     setIsSubmitting(true);
 
     try {
-      await publishEvent({
+      if (!nostr) {
+        throw new Error("Nostr client not available");
+      }
+
+      const event = await user.signer.signEvent({
         kind: 1, // Text note
         content: messageContent.trim(),
         tags: [
           ["h", groupId] // NIP-29 group tag
-        ]
+        ],
+        created_at: Math.floor(Date.now() / 1000)
       });
+
+      // Publish to the specific NIP-29 relay
+      await nostr.event(event, { relays: [relayUrl] });
 
       setMessageContent("");
       toast.success("Message sent!");
       
-      // Refetch to show the new message
-      setTimeout(() => refetch(), 1000);
+      // Invalidate and refetch messages immediately
+      queryClient.invalidateQueries({ queryKey: ['nip29-chat-messages', groupId, relayUrl] });
+      refetch();
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
