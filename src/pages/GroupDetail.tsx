@@ -52,6 +52,7 @@ import { useNavigate } from "react-router-dom";
 import { useIsGroupDeleted } from "@/hooks/useGroupDeletionRequests";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, AlertCircle } from "lucide-react";
+import { useNip29GroupCreator } from "@/hooks/useNip29GroupCreator";
 
 export default function GroupDetail() {
   const { groupId, relay } = useParams<{ groupId: string; relay?: string }>();
@@ -192,7 +193,23 @@ export default function GroupDetail() {
   // Get approved members using the centralized hook
   const { approvedMembers } = useApprovedMembers(groupId || '');
 
-  const isOwner = user && groupData && user.pubkey === groupData.pubkey;
+  // For NIP-29 groups, find the actual creator
+  const { data: creatorInfo } = useNip29GroupCreator(
+    parsedRouteId?.type === "nip29" ? parsedRouteId.groupId : undefined,
+    parsedRouteId?.type === "nip29" ? parsedRouteId.relay : undefined
+  );
+
+  // Determine ownership based on group type
+  const isOwner = user && groupData && (
+    parsedRouteId?.type === "nip29" 
+      ? (creatorInfo?.creatorPubkey === user.pubkey)
+      : (user.pubkey === groupData.pubkey)
+  );
+  
+  // Get the actual owner pubkey for eCash
+  const ownerPubkey = parsedRouteId?.type === "nip29"
+    ? (creatorInfo?.creatorPubkey || groupData?.pubkey || '')
+    : (groupData?.pubkey || '');
   
   // Get moderators/admins based on group type
   const moderators = groupData?.type === "nip72" 
@@ -758,9 +775,11 @@ export default function GroupDetail() {
               {user && groupData && (
                 <GroupNutzapButton
                   groupId={groupData.id}
-                  ownerPubkey={groupData.pubkey}
+                  ownerPubkey={ownerPubkey}
                   variant="outline"
                   className="w-full h-full"
+                  groupType={parsedRouteId?.type === "nip29" ? "nip29" : "nip72"}
+                  relayUrl={parsedRouteId?.type === "nip29" ? parsedRouteId.relay : undefined}
                 />
               )}
             </div>
@@ -937,8 +956,10 @@ export default function GroupDetail() {
                 <div className="flex-shrink-0">
                   <GroupNutzapButton
                     groupId={groupData.id}
-                    ownerPubkey={groupData.pubkey}
+                    ownerPubkey={ownerPubkey}
                     className="w-auto"
+                    groupType={parsedRouteId?.type === "nip29" ? "nip29" : "nip72"}
+                    relayUrl={parsedRouteId?.type === "nip29" ? parsedRouteId.relay : undefined}
                   />
                 </div>
               )}

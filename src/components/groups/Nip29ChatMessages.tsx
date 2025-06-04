@@ -15,6 +15,7 @@ import { MessageCircle, Send } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { NoteContent } from "../NoteContent";
 import { Link } from "react-router-dom";
+import { KINDS } from "@/lib/nostr-kinds";
 
 interface Nip29ChatMessagesProps {
   groupId: string;
@@ -60,7 +61,7 @@ export function Nip29ChatMessages({ groupId, relayUrl }: Nip29ChatMessagesProps)
       }
 
       const event = await user.signer.signEvent({
-        kind: 1, // Text note
+        kind: KINDS.NIP29_CHAT_MESSAGE, // Kind 9 for NIP-29 chat messages
         content: messageContent.trim(),
         tags: [
           ["h", groupId] // NIP-29 group tag

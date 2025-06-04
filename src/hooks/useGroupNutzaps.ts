@@ -1,32 +1,55 @@
 import { useNostr } from '@/hooks/useNostr';
+import { useEnhancedNostr } from '@/components/EnhancedNostrProvider';
 import { useQuery } from '@tanstack/react-query';
 import { CASHU_EVENT_KINDS } from '@/lib/cashu';
 import { NostrEvent } from 'nostr-tools';
+import { parseGroupRouteId } from '@/lib/group-utils';
 
 /**
  * Hook to fetch nutzaps for a specific group
+ * Supports both NIP-72 (public) and NIP-29 (private) groups
  */
 export function useGroupNutzaps(groupId?: string) {
   const { nostr } = useNostr();
+  const { nostr: enhancedNostr } = useEnhancedNostr();
+  
+  // Parse the group ID to determine type
+  const parsedGroup = groupId ? parseGroupRouteId(groupId) : null;
+  const isNip29 = parsedGroup?.type === 'nip29';
 
   return useQuery({
     queryKey: ['nutzaps', 'group', groupId],
     queryFn: async ({ signal }) => {
       if (!groupId) throw new Error('Group ID is required');
 
-      // Query for nutzap events that have an a-tag matching the group ID
-      const events = await nostr.query([
-        { 
-          kinds: [CASHU_EVENT_KINDS.ZAP], 
-          '#a': [groupId],
-          limit: 50 
-        }
-      ], { signal });
+      // For NIP-29 groups, query from the specific relay with h tag
+      // For NIP-72 groups, query from general relays with a tag
+      if (isNip29 && parsedGroup && enhancedNostr) {
+        const events = await enhancedNostr.query([
+          { 
+            kinds: [CASHU_EVENT_KINDS.ZAP], 
+            '#h': [parsedGroup.groupId!], // NIP-29 uses h tag
+            limit: 50 
+          }
+        ], { 
+          signal,
+          relays: [parsedGroup.relay!] // Query from the group's specific relay
+        });
+        return events.sort((a, b) => b.created_at - a.created_at);
+      } else {
+        // NIP-72 groups use a tag
+        const events = await nostr.query([
+          { 
+            kinds: [CASHU_EVENT_KINDS.ZAP], 
+            '#a': [groupId],
+            limit: 50 
+          }
+        ], { signal });
+        return events.sort((a, b) => b.created_at - a.created_at);
+      }
 
-      // Sort by created_at in descending order (newest first)
-      return events.sort((a, b) => b.created_at - a.created_at);
     },
-    enabled: !!nostr && !!groupId
+    enabled: (isNip29 ? !!enhancedNostr : !!nostr) && !!groupId
   });
 }
 

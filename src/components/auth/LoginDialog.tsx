@@ -2,19 +2,21 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useRef, useState } from 'react';
-import { Shield, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button.tsx';
-import { Input } from '@/components/ui/input.tsx';
+import { Shield, Upload, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog.tsx';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx';
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { useProfileSync } from '@/hooks/useProfileSync';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -26,25 +28,47 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
   const [isLoading, setIsLoading] = useState(false);
   const [nsec, setNsec] = useState('');
   const [bunkerUri, setBunkerUri] = useState('');
+  const [extensionError, setExtensionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const login = useLoginActions();
   const { syncProfile } = useProfileSync();
 
   const handleExtensionLogin = async () => {
     setIsLoading(true);
+    setExtensionError(null);
+    
     try {
+      // Check if extension exists
       if (!('nostr' in window)) {
-        throw new Error('Nostr extension not found. Please install a NIP-07 extension.');
+        const errorMsg = 'Nostr extension not found. Please install a NIP-07 extension like Alby or nos2x.';
+        setExtensionError(errorMsg);
+        toast.error(errorMsg);
+        return;
       }
+      
+      // Check if extension is accessible
+      if (!window.nostr?.getPublicKey) {
+        const errorMsg = 'Nostr extension is not properly initialized. Please reload the page.';
+        setExtensionError(errorMsg);
+        toast.error(errorMsg);
+        return;
+      }
+      
+      console.log('Attempting extension login...');
       const loginInfo = await login.extension();
+      console.log('Extension login successful:', loginInfo.pubkey);
       
       // Sync profile after successful login
       await syncProfile(loginInfo.pubkey);
       
+      toast.success('Successfully logged in with extension');
       onLogin();
       onClose();
     } catch (error) {
       console.error('Extension login failed:', error);
+      const errorMsg = (error instanceof Error ? error.message : String(error)) || 'Failed to login with extension. Please try again.';
+      setExtensionError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -124,13 +148,28 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin }) =
                 <div className='text-sm text-muted-foreground mb-4'>
                   Login with one click using the browser extension
                 </div>
+                {extensionError && (
+                  <Alert className="mb-4 bg-destructive/10 border-destructive/20">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      {extensionError}
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <Button
                   className='w-full rounded-full py-6'
                   onClick={handleExtensionLogin}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Logging in...' : 'Login with Extension'}
+                  {isLoading ? 'Connecting to extension...' : 'Login with Extension'}
                 </Button>
+                {'nostr' in window ? (
+                  <p className="text-xs text-muted-foreground mt-2">Extension detected</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    No extension detected. Install <a href="https://getalby.com" target="_blank" rel="noopener noreferrer" className="underline">Alby</a> or another NIP-07 extension.
+                  </p>
+                )}
               </div>
             </TabsContent>
 

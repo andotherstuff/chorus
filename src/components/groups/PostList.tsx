@@ -246,10 +246,10 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       // Fetch posts from the NIP-29 relay
       // According to NIP-29: "Groups may accept any event kind, including chats, threads, long-form articles..."
       // Be liberal in what we accept - include various event kinds that different clients might use
+      // BUT exclude kind 9 (chat messages) which are shown in the chat tab
       const posts = enhancedNostr ? await enhancedNostr.query([{
         kinds: [
           1,                         // Regular text notes (kind 1)
-          KINDS.NIP29_CHAT_MESSAGE,  // NIP-29 chat messages (kind 9)
           KINDS.NIP29_GROUP_POST,    // NIP-29 group posts (kind 11)
           42,                        // Channel messages (from some clients)
           30023,                     // Long-form content

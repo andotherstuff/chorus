@@ -1,8 +1,0 @@
-src/components/groups/JoinRequestButton.tsx(149,10): error TS2304: Cannot find name 'XCircle'.
-src/components/groups/PostList.tsx(307,11): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
-  Type 'undefined' is not assignable to type 'boolean'.
-src/components/groups/PostList.tsx(357,28): error TS2304: Cannot find name 'nostr'.
-src/components/groups/PostList.tsx(365,16): error TS2304: Cannot find name 'nostr'.
-src/pages/GroupSettings.tsx(94,7): error TS2448: Block-scoped variable 'community' used before its declaration.
-src/pages/GroupSettings.tsx(609,29): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
-  Type 'undefined' is not assignable to type 'boolean'.

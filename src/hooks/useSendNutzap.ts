@@ -1,4 +1,5 @@
 import { useNostr } from '@/hooks/useNostr';
+import { useEnhancedNostr } from '@/components/EnhancedNostrProvider';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CASHU_EVENT_KINDS } from '@/lib/cashu';
@@ -117,6 +118,7 @@ export function useFetchNutzapInfo() {
  */
 export function useSendNutzap() {
   const { nostr } = useNostr();
+  const { nostr: enhancedNostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
   const { verifyMintCompatibility } = useVerifyMintCompatibility();
   const queryClient = useQueryClient();
@@ -130,7 +132,8 @@ export function useSendNutzap() {
       mintUrl,
       eventId,
       relayHint,
-      tags: additionalTags = []
+      tags: additionalTags = [],
+      relays: customRelays = []
     }: {
       recipientInfo: NutzapInformationalEvent;
       comment?: string;
@@ -139,6 +142,7 @@ export function useSendNutzap() {
       eventId?: string; // Event being nutzapped (optional)
       relayHint?: string; // Hint for relay where the event can be found
       tags?: string[][]; // Additional tags (for group nutzaps)
+      relays?: string[]; // Custom relays to publish to (for NIP-29)
     }) => {
       if (!user) throw new Error('User not logged in');
 
@@ -179,8 +183,14 @@ export function useSendNutzap() {
         created_at: Math.floor(Date.now() / 1000)
       });
 
-      // Publish the event to the recipient's relays
-      await nostr.event(event);
+      // Publish the event to the specified relays or recipient's relays
+      if (customRelays.length > 0 && enhancedNostr) {
+        // For NIP-29 groups, publish to the group's specific relay
+        await enhancedNostr.event(event, { relays: customRelays });
+      } else {
+        // Default: publish to recipient's relays
+        await nostr.event(event);
+      }
 
       // Invalidate relevant queries
       if (eventId) {

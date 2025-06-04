@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEnhancedNostr } from '@/components/EnhancedNostrProvider';
 import { NostrEvent } from '@nostrify/nostrify';
+import { KINDS } from '@/lib/nostr-kinds';
 
 export interface Nip29ChatMessage extends NostrEvent {
   groupId: string;
@@ -29,10 +30,10 @@ export function useNip29ChatMessages({
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
-      // Query for kind 1 events (text notes) with the h tag for this group
-      // NIP-29 groups use regular event kinds with the 'h' tag
+      // Query for chat message events with the h tag for this group
+      // NIP-29 uses kind 9 for chat messages, kind 11 for posts
       const events = await nostr.query([{
-        kinds: [1], // Text notes (used for chat messages in NIP-29)
+        kinds: [KINDS.NIP29_CHAT_MESSAGE], // Kind 9 for NIP-29 chat messages
         '#h': [groupId], // Events targeting this group
         limit
       }], {

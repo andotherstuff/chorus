@@ -223,7 +223,7 @@ function useEncryption() {
 
 ## NIP-29 Groups vs NIP-72 Communities
 
-**IMPORTANT**: Always check `relay_nip29_notes.md` for detailed documentation.
+**IMPORTANT**: Always check `docs/relay_nip29_notes.md` for detailed documentation.
 
 ### Key Differences
 - **NIP-72**: Public communities on general relays (kind 34550)

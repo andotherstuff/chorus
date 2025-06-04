@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, DollarSign, Bitcoin, AlertCircle, Wallet, Loader2 } from "lucide-react";
+import { Zap, DollarSign, Bitcoin, AlertCircle, Wallet, Loader2, HelpCircle } from "lucide-react";
 import {
   useSendNutzap,
   useFetchNutzapInfo,
@@ -34,6 +34,8 @@ interface GroupNutzapButtonProps {
   variant?: "default" | "outline" | "secondary" | "ghost";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  groupType?: "nip72" | "nip29";
+  relayUrl?: string; // Required for NIP-29 groups
 }
 
 export function GroupNutzapButton({
@@ -42,6 +44,8 @@ export function GroupNutzapButton({
   variant = "default",
   size = "default",
   className = "",
+  groupType = "nip72",
+  relayUrl,
 }: GroupNutzapButtonProps) {
   const { user } = useCurrentUser();
   const { wallet } = useCashuWallet();
@@ -183,15 +187,21 @@ export function GroupNutzapButton({
         recipientInfo.p2pkPubkey
       )) as Proof[];
 
-      // Send nutzap using recipient info, but with the group's a-tag instead of an e-tag
+      // Send nutzap using recipient info
+      // For NIP-29 groups, use h tag and publish to the group's relay
+      // For NIP-72 groups, use a tag and publish to general relays
+      const nutzapTags = groupType === "nip29" 
+        ? [["h", groupId]] // NIP-29 uses h tag for group ID
+        : [["a", groupId]]; // NIP-72 uses a tag
+      
       await sendNutzap({
         recipientInfo,
         comment,
         proofs,
         mintUrl: compatibleMintUrl,
-        // Instead of eventId, we'll add the a-tag in the tags array
-        // We're using the groupId which is in the format "34550:pubkey:identifier"
-        tags: [["a", groupId]], // Add the group identifier as an a-tag
+        tags: nutzapTags,
+        // For NIP-29, publish to the group's specific relay
+        relays: groupType === "nip29" && relayUrl ? [relayUrl] : [],
       });
 
       toast.success(
@@ -230,7 +240,13 @@ export function GroupNutzapButton({
           <DialogHeader>
             <DialogTitle>Support this Group</DialogTitle>
             <DialogDescription>
-              Send eCash to the group owner to show your support.
+              {groupType === "nip29" ? (
+                <>
+                  Send eCash to support this group. In NIP-29 groups, eCash is managed by the relay.
+                </>
+              ) : (
+                <>Send eCash to the group owner to show your support.</>
+              )}
             </DialogDescription>
           </DialogHeader>
 
