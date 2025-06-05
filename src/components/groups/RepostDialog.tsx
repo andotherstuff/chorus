@@ -81,7 +81,7 @@ export function RepostDialog({ isOpen, onClose, post, sourceCommunityId }: Repos
     try {
       // Create a new post with the same content but for the selected group
       const repostEvent = {
-        kind: KINDS.GROUP_POST,
+        kind: KINDS.REPOST,
         content: post.content,
         tags: [
           // Add selected group as the target
@@ -93,7 +93,7 @@ export function RepostDialog({ isOpen, onClose, post, sourceCommunityId }: Repos
           // Add reference to the original source group
           ["r", sourceCommunityId],
           // Add repost tag to clearly mark this as a repost
-          ["k", "repost"]
+          ["k", String(post.kind)],
         ]
       };
       

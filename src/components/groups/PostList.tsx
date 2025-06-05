@@ -89,11 +89,11 @@ function RepostCount({ postId }: { postId: string }) {
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
-      // Get all kind 1101 posts (group posts) that reference this post with a "k" "repost" tag
+      // Get all group posts that reference this post with a "k" tag
       const events = await nostr.query([{
         kinds: [KINDS.GROUP_POST],
         "#e": [postId],
-        "#k": ["repost"],
+        "#k": [String(KINDS.REPOST)],
         limit: 100,
       }], { signal });
 
@@ -759,7 +759,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {post.tags.find(tag => tag[0] === "k" && tag[1] === "repost") && (
+                {post.tags.find(tag => tag[0] === "k" && tag[1] === String(KINDS.REPOST)) && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
