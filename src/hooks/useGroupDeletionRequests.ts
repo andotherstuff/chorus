@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNostr } from "@/hooks/useNostr";
 import { KINDS } from "@/lib/nostr-kinds";
-import type { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@jsr/nostrify__nostrify";
 
 interface GroupDeletionRequest {
   deletionEvent: NostrEvent;

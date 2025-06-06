@@ -20,7 +20,7 @@ import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { toast } from "sonner";
 import { ArrowLeft, Save, UserPlus, Users, Shield, Trash2, FileWarning, Upload, Loader2 } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
-import type { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@jsr/nostrify__nostrify";
 import Header from "@/components/ui/Header";
 import { ReportsList } from "@/components/groups/ReportsList";
 import { MemberManagement } from "@/components/groups/MemberManagement";

@@ -1,5 +1,5 @@
-import { NKinds } from "@nostrify/nostrify";
-import { useNostr } from "@nostrify/react";
+import { NKinds } from "@jsr/nostrify__nostrify";
+import { useNostr } from "@jsr/nostrify__react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "./useCurrentUser";
 import { getPostExpirationTimestamp } from "../lib/utils";

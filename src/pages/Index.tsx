@@ -5,7 +5,7 @@ import LoginDialog from "@/components/auth/LoginDialog";
 import { useLoggedInAccounts } from "@/hooks/useLoggedInAccounts";
 import { EditProfileForm } from "@/components/EditProfileForm";
 import { generateFakeName } from "@/lib/utils";
-import { useNostrLogin, NLogin } from "@nostrify/react/login";
+import { useNostrLogin, NLogin } from "@jsr/nostrify__react/login";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { generateSecretKey, nip19 } from "nostr-tools";
 import { toast } from "@/hooks/useToast";

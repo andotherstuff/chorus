@@ -9,6 +9,7 @@ import GroupDetail from "./pages/GroupDetail";
 import Profile from "./pages/Profile";
 import Hashtag from "./pages/Hashtag";
 import Trending from "./pages/Trending";
+import GroupPostsFeed from "./pages/GroupPostsFeed";
 
 // Lazy load less frequently used pages
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -47,6 +48,7 @@ export function AppRouter() {
         <Route path="/profile/:pubkey" element={<Profile />} />
         <Route path="/t/:hashtag" element={<Hashtag />} />
         <Route path="/trending" element={<Trending />} />
+        <Route path="/feed" element={<GroupPostsFeed />} />
         
         {/* Lazy loaded routes */}
         <Route path="/group/:groupId/settings" element={

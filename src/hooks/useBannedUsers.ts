@@ -3,7 +3,7 @@ import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { KINDS } from "@/lib/nostr-kinds";
-import { NostrFilter } from "@nostrify/nostrify";
+import { NostrFilter } from "@jsr/nostrify__nostrify";
 import { useGroup } from "./useGroup";
 
 /**

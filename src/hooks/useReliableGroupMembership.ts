@@ -1,4 +1,4 @@
-import { useNostr } from "@nostrify/react";
+import { useNostr } from "@jsr/nostrify__react";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "./useCurrentUser";
 import { parseNostrAddress } from "@/lib/nostr-utils";

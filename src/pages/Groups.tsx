@@ -15,7 +15,7 @@ import { useUserPendingJoinRequests } from "@/hooks/useUserPendingJoinRequests";
 import { GroupCard } from "@/components/groups/GroupCard";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
-import type { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@jsr/nostrify__nostrify";
 import type { UserRole } from "@/hooks/useUserRole";
 import { KINDS } from "@/lib/nostr-kinds";
 import { useCashuWallet } from "@/hooks/useCashuWallet";

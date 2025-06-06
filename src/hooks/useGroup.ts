@@ -1,4 +1,4 @@
-import { useNostr } from "@nostrify/react";
+import { useNostr } from "@jsr/nostrify__react";
 import { useQuery } from "@tanstack/react-query";
 import { KINDS } from "@/lib/nostr-kinds";
 import { parseNostrAddress } from "@/lib/nostr-utils";

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2, Send, AlertTriangle, Image, Mic, Square, XCircle } from "lucide-react";
-import { NostrEvent } from "@nostrify/nostrify";
+import { NostrEvent } from "@jsr/nostrify__nostrify";
 import { Link } from "react-router-dom";
 import { KINDS } from "@/lib/nostr-kinds";
 

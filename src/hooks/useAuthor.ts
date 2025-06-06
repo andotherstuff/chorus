@@ -1,5 +1,5 @@
-import { type NostrEvent, type NostrMetadata, NSchema as n } from '@nostrify/nostrify';
-import { useNostr } from '@nostrify/react';
+import { type NostrEvent, type NostrMetadata, NSchema as n } from '@jsr/nostrify__nostrify';
+import { useNostr } from '@jsr/nostrify__react';
 import { useQuery } from '@tanstack/react-query';
 import { KINDS } from "@/lib/nostr-kinds";
 

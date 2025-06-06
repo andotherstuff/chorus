@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { RichText } from "@/components/ui/RichText";
 import { Users, Crown, Shield, User, ArrowRight } from "lucide-react";
-import type { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@jsr/nostrify__nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { useAuthor } from "@/hooks/useAuthor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NostrEvent } from "@nostrify/nostrify";
+import { NostrEvent } from "@jsr/nostrify__nostrify";
 import { useReplies, useNestedReplies } from "@/hooks/useReplies";
 import { useAuthor } from "@/hooks/useAuthor";
 import { useCurrentUser } from "@/hooks/useCurrentUser";

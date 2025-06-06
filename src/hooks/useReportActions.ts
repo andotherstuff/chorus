@@ -3,7 +3,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { useBannedUsers } from "@/hooks/useBannedUsers";
 import { useNostr } from "@/hooks/useNostr";
-import { NostrEvent } from "@nostrify/nostrify";
+import { NostrEvent } from "@jsr/nostrify__nostrify";
 import { useUpdateApprovedMembers } from "@/hooks/useUpdateApprovedMembers";
 import { KINDS } from "@/lib/nostr-kinds";
 

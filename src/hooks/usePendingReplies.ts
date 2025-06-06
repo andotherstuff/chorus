@@ -1,6 +1,6 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
-import { NostrEvent } from "@nostrify/nostrify";
+import { NostrEvent } from "@jsr/nostrify__nostrify";
 import { useApprovedMembers } from "./useApprovedMembers";
 import { useReplyApprovals } from "./useReplyApprovals";
 import { parseNostrAddress } from "@/lib/nostr-utils";

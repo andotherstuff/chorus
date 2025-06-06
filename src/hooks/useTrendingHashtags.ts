@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useNostr } from '@nostrify/react';
+import { useNostr } from '@jsr/nostrify__react';
 import { KINDS } from "@/lib/nostr-kinds";
 
 export interface TrendingHashtag {

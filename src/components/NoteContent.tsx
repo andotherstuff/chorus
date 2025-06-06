@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent } from '@jsr/nostrify__nostrify';
 import { Link } from 'react-router-dom';
 import { nip19 } from 'nostr-tools';
 import { useAuthor } from '@/hooks/useAuthor';
@@ -314,7 +314,32 @@ export function NoteContent({
       // We need to determine the link URL first before processing text content
       const allMediaUrls = [...extractedImages, ...extractedVideos, ...extractedAudios];
       const firstUrl = getFirstUrl(event.content);
-      const determinedLinkUrl = firstUrl && !allMediaUrls.includes(firstUrl) ? firstUrl : null;
+      
+      // Only create link preview for certain types of URLs (avoid API/data URLs)
+      const shouldCreateLinkPreview = (url: string): boolean => {
+        // Skip preview for these domains/URL patterns
+        const skipPatterns = [
+          'api.', // API endpoint
+          'data:', // Data URL
+          '.json', // JSON file
+          '.csv',  // CSV file
+          '.pdf',  // PDF file
+          '.xml',  // XML file
+          'localhost', // Local development
+          '127.0.0.1', // Local IP
+          'blockstream.info' // Bitcoin explorer (often used for transaction links)
+        ];
+        
+        // Skip preview if the URL is already displayed as media
+        if (allMediaUrls.includes(url)) return false;
+        
+        // Skip if it matches any of the patterns
+        if (skipPatterns.some(pattern => url.includes(pattern))) return false;
+        
+        return true;
+      };
+      
+      const determinedLinkUrl = firstUrl && shouldCreateLinkPreview(firstUrl) ? firstUrl : null;
       
       // Process the content and update state in one go to prevent multiple renders
       const processed = processTextContent(event.content, extractedImages, extractedVideos, extractedAudios, determinedLinkUrl);

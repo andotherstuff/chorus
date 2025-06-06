@@ -1,7 +1,7 @@
-import { useNostr } from '@nostrify/react';
-import { useNostrLogin } from '@nostrify/react/login';
+import { useNostr } from '@jsr/nostrify__react';
+import { useNostrLogin } from '@jsr/nostrify__react/login';
 import { useQuery } from '@tanstack/react-query';
-import { NSchema as n, NostrEvent, NostrMetadata } from '@nostrify/nostrify';
+import { NSchema as n, NostrEvent, NostrMetadata } from '@jsr/nostrify__nostrify';
 import { KINDS } from "@/lib/nostr-kinds";
 
 export interface Account {

@@ -12,6 +12,8 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@nostrify/nostrify": "@jsr/nostrify__nostrify",
+      "@nostrify/react": "@jsr/nostrify__react"
     },
   },
 }));

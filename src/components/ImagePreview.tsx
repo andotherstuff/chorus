@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ImageOff } from 'lucide-react';
 
 interface ImagePreviewProps {
   src: string;
@@ -13,6 +13,7 @@ export function ImagePreview({ src, alt = 'Image', className }: ImagePreviewProp
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   
   // Process and normalize the URL
   useEffect(() => {
@@ -43,8 +44,14 @@ export function ImagePreview({ src, alt = 'Image', className }: ImagePreviewProp
         // Remove size parameters for Twitter images
         url = url.replace(/&name=[^&]+/, '');
       }
+
+      // 4. Handle Discord CDN URLs
+      if (url.includes('cdn.discordapp.com/attachments')) {
+        // Add cache-busting parameter for Discord images
+        url = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+      }
       
-      // 4. Handle URLs with unescaped characters
+      // 5. Handle URLs with unescaped characters
       if (url.includes(' ')) {
         url = url.replace(/ /g, '%20');
       }
@@ -53,6 +60,7 @@ export function ImagePreview({ src, alt = 'Image', className }: ImagePreviewProp
       setImageUrl(url);
       setIsLoading(true);
       setHasError(false);
+      setRetryCount(0);
       
     } catch (error) {
       console.error('Error processing image URL:', src, error);
@@ -65,23 +73,59 @@ export function ImagePreview({ src, alt = 'Image', className }: ImagePreviewProp
   };
   
   const handleError = () => {
-    console.error('Failed to load image:', imageUrl, 'Original URL:', src);
-    setIsLoading(false);
-    setHasError(true);
+    console.error(`Failed to load image (attempt ${retryCount + 1}):`, imageUrl, 'Original URL:', src);
+
+    // Max retry attempts
+    if (retryCount >= 2) {
+      setIsLoading(false);
+      setHasError(true);
+      return;
+    }
+
+    // Increment retry counter
+    setRetryCount(prev => prev + 1);
     
-    // Try alternative URL formats if the original fails
-    if (!imageUrl.includes('?format=')) {
-      // Some services support format parameter
-      const newUrl = `${imageUrl}?format=jpg`;
-      console.log('Trying alternative URL format:', newUrl);
+    // Try alternative formats based on retry count
+    if (retryCount === 0) {
+      // First retry: Try different format
+      if (imageUrl.includes('.png')) {
+        // Try jpg instead
+        const newUrl = imageUrl.replace('.png', '.jpg');
+        console.log('Trying JPG format:', newUrl);
+        setImageUrl(newUrl);
+        setIsLoading(true);
+      } else if (imageUrl.includes('.jpg') || imageUrl.includes('.jpeg')) {
+        // Try png instead
+        const newUrl = imageUrl.replace(/\.(jpg|jpeg)/, '.png');
+        console.log('Trying PNG format:', newUrl);
+        setImageUrl(newUrl);
+        setIsLoading(true);
+      } else {
+        // Add format parameter
+        const newUrl = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}format=jpg`;
+        console.log('Trying with format parameter:', newUrl);
+        setImageUrl(newUrl);
+        setIsLoading(true);
+      }
+    } else if (retryCount === 1) {
+      // Second retry: Try with cache busting parameter
+      const cacheBuster = Date.now();
+      const newUrl = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}_=${cacheBuster}`;
+      console.log('Trying with cache buster:', newUrl);
       setImageUrl(newUrl);
       setIsLoading(true);
-      setHasError(false);
     }
   };
   
   if (!imageUrl || (hasError && !isLoading)) {
-    return null;
+    return (
+      <div className={cn("flex items-center justify-center bg-muted/20 rounded-md my-2 h-32", className)}>
+        <div className="flex flex-col items-center text-muted-foreground">
+          <ImageOff size={24} className="mb-2" />
+          <span className="text-xs">Image unavailable</span>
+        </div>
+      </div>
+    );
   }
   
   return (

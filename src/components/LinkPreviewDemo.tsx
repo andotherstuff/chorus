@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LinkPreview } from './LinkPreview';
 import { NoteContent } from './NoteContent';
-import type { NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent } from '@jsr/nostrify__nostrify';
 
 export function LinkPreviewDemo() {
   const [url, setUrl] = useState('https://github.com/nostr-protocol/nips');

@@ -1,5 +1,5 @@
-import { useNostr } from '@nostrify/react';
-import { NLogin, useNostrLogin } from '@nostrify/react/login';
+import { useNostr } from '@jsr/nostrify__react';
+import { NLogin, useNostrLogin } from '@jsr/nostrify__react/login';
 
 // NOTE: This file should not be edited except for adding new login methods.
 

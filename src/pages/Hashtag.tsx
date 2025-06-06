@@ -15,7 +15,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { ArrowLeft, Hash, MessageSquare, MoreVertical, Flag, Share2, Users, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
-import type { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@jsr/nostrify__nostrify";
 import { nip19 } from "nostr-tools";
 import { shareContent } from "@/lib/share";
 import { ReplyList } from "@/components/groups/ReplyList";

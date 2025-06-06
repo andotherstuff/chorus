@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, Upload } from "lucide-react";
-import { NSchema as n, type NostrMetadata } from "@nostrify/nostrify";
+import { NSchema as n, type NostrMetadata } from "@jsr/nostrify__nostrify";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUploadFile } from "@/hooks/useUploadFile";
 import { useNavigate } from "react-router-dom";

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useGroupDeletionRequests } from "./useGroupDeletionRequests";
-import type { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@jsr/nostrify__nostrify";
 import { KINDS } from "@/lib/nostr-kinds";
 
 // Helper function to get a unique community ID

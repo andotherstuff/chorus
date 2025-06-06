@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { BlossomUploader } from '@nostrify/nostrify/uploaders';
+import { BlossomUploader } from '@jsr/nostrify__nostrify/uploaders';
 
 import { useCurrentUser } from "./useCurrentUser";
 

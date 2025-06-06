@@ -1,5 +1,5 @@
-import { NostrEvent, NPool, NRelay1 } from "@nostrify/nostrify";
-import { NostrContext } from "@nostrify/react";
+import { NostrEvent, NPool, NRelay1 } from "@jsr/nostrify__nostrify";
+import { NostrContext } from "@jsr/nostrify__react";
 import React, { useRef } from "react";
 import { storeEventTimestamp } from "@/lib/nostrTimestamps";
 

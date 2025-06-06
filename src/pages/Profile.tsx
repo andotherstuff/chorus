@@ -38,7 +38,7 @@ import {
   Timer
 } from "lucide-react";
 import { toast } from "sonner";
-import type { NostrEvent } from "@nostrify/nostrify";
+import type { NostrEvent } from "@jsr/nostrify__nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import { VerifiedNip05 } from "@/components/VerifiedNip05";

@@ -12,7 +12,7 @@ import { NoteContent } from "../NoteContent";
 import { Link } from "react-router-dom";
 import { CheckCircle, AlertCircle, MessageSquare, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
-import { NostrEvent } from "@nostrify/nostrify";
+import { NostrEvent } from "@jsr/nostrify__nostrify";
 import { KINDS } from "@/lib/nostr-kinds";
 
 interface PendingRepliesListProps {

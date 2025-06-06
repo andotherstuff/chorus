@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { NostrLoginProvider } from '@nostrify/react/login';
+import { NostrLoginProvider } from '@jsr/nostrify__react/login';
 import AppRouter from './AppRouter';
 import { useSystemTheme } from '@/hooks/useSystemTheme';
 import { JoinDialogProvider } from '@/components/groups/JoinDialogProvider';

@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthor } from "@/hooks/useAuthor";
 import { toast } from "sonner";
 import { UserPlus, Users, CheckCircle, XCircle, UserX, Ban } from "lucide-react";
-import { NostrEvent } from "@nostrify/nostrify";
+import { NostrEvent } from "@jsr/nostrify__nostrify";
 import { Link, useLocation } from "react-router-dom";
 import { KINDS } from "@/lib/nostr-kinds";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";

@@ -1,7 +1,7 @@
 import { useNostr } from "./useNostr";
 import { useCurrentUser } from "./useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
-import type { NostrEvent, NostrFilter } from "@nostrify/nostrify";
+import type { NostrEvent, NostrFilter } from "@jsr/nostrify__nostrify";
 import { usePinnedGroups } from "./usePinnedGroups";
 import { KINDS } from "@/lib/nostr-kinds";
 import { useGroupDeletionRequests } from "./useGroupDeletionRequests";

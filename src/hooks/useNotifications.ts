@@ -2,7 +2,7 @@ import { useNostr } from '@/hooks/useNostr';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserGroups } from '@/hooks/useUserGroups';
-import { NostrEvent } from '@nostrify/nostrify';
+import { NostrEvent } from '@jsr/nostrify__nostrify';
 import { KINDS } from '@/lib/nostr-kinds';
 
 export interface Notification {

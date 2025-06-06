@@ -6,7 +6,7 @@ import { NostrEvent, getPublicKey } from 'nostr-tools';
 import { useCashuStore, Nip60TokenEvent } from '@/stores/cashuStore';
 import { Proof } from '@cashu/cashu-ts';
 import { getLastEventTimestamp } from '@/lib/nostrTimestamps';
-import { NSchema as n } from '@nostrify/nostrify';
+import { NSchema as n } from '@jsr/nostrify__nostrify';
 import { z } from 'zod';
 import { useNutzaps } from '@/hooks/useNutzaps';
 import { hexToBytes } from '@noble/hashes/utils';
