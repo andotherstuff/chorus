@@ -10,28 +10,22 @@ export interface GroupStats {
 
 /**
  * Hook to fetch and calculate statistics for Nostr groups
- * @param communities Array of community events to fetch stats for
+ * @param communityRefs Array of community references (e.g., "34550:pubkey:identifier") to fetch stats for
  * @param enabled Whether the query should run
  * @returns Object with stats for each community indexed by communityId
  */
-export function useGroupStats(communities: NostrEvent[] | undefined, enabled = true) {
+export function useGroupStats(communityRefs: string[] | undefined, enabled = true) {
   const { nostr } = useNostr();
 
   return useQuery({
-    queryKey: ["group-stats", communities?.map(c => c.id).join(",")],
+    queryKey: ["group-stats", communityRefs?.join(",")],
     queryFn: async (c) => {
-      if (!communities || communities.length === 0 || !nostr) {
+      if (!communityRefs || communityRefs.length === 0 || !nostr) {
         return {};
       }
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
       const stats: Record<string, GroupStats> = {};
-
-      // Create a filter for all communities to get posts in a single query
-      const communityRefs = communities.map(community => {
-        const dTag = community.tags.find(tag => tag[0] === "d");
-        return `${KINDS.GROUP}:${community.pubkey}:${dTag ? dTag[1] : ""}`;
-      });
 
       // Initialize stats objects for all communities
       for (const communityId of communityRefs) {

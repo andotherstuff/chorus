@@ -101,7 +101,16 @@ export default function GroupDetail() {
         });
       } else {
         // This is a legacy route: /group/:groupId (could be NIP-72 or encoded NIP-29)
-        const parsed = parseGroupRouteId(decodeURIComponent(groupId));
+        const decodedGroupId = decodeURIComponent(groupId);
+        const parsed = parseGroupRouteId(decodedGroupId);
+        
+        if (!parsed) {
+          // If parsing fails, it might be a simple identifier without the full format
+          // Log warning and set to null to trigger the "Group not found" message
+          console.warn(`[GroupDetail] Could not parse group ID: ${decodedGroupId}`);
+          console.warn(`[GroupDetail] Expected format: nip72:pubkey:identifier or nip29:relay:groupId`);
+        }
+        
         // Legacy route parsed
         setParsedRouteId(parsed);
       }
@@ -599,6 +608,12 @@ export default function GroupDetail() {
         setActiveTab("posts");
       }
       
+      // If viewing a specific post and user is a moderator, ensure all posts are visible
+      // so the moderator can approve unapproved posts
+      if (isModerator && showOnlyApproved) {
+        setShowOnlyApproved(false);
+      }
+      
       // Wait for content to render before attempting to scroll
       setTimeout(() => {
         const postElement = document.getElementById(hash);
@@ -619,7 +634,7 @@ export default function GroupDetail() {
 
     // Deliberately not including activeTab in the dependencies to prevent loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hash, parsedRouteId?.type]);
+  }, [hash, parsedRouteId?.type, isModerator]);
 
   // Handle initial load for special cases (reports, pending items) without affecting normal tab operation
   useEffect(() => {
@@ -696,7 +711,19 @@ export default function GroupDetail() {
       <div className="container mx-auto py-1 px-3 sm:px-4">
         <Header />
         <h1 className="text-2xl font-bold mb-4">Group not found</h1>
-        <p>The group you're looking for doesn't exist or has been deleted.</p>
+        <p className="mb-4">The group you're looking for doesn't exist or has been deleted.</p>
+        {!parsedRouteId && groupId && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
+            <p className="text-sm mb-2">
+              <strong>Invalid group ID format:</strong> "{groupId}"
+            </p>
+            <p className="text-sm">
+              Expected format: 
+              <br />• For NIP-72 groups: <code className="bg-muted px-1 rounded">nip72:pubkey:identifier</code>
+              <br />• For NIP-29 groups: <code className="bg-muted px-1 rounded">nip29:relay:groupId</code>
+            </p>
+          </div>
+        )}
         <Button asChild className="mt-2">
           <Link to="/groups">Back to Groups</Link>
         </Button>

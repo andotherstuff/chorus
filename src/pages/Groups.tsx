@@ -58,9 +58,25 @@ export default function Groups() {
   } = useUnifiedGroupsWithCache();
 
   // Extract NIP-72 groups for stats
-  const nip72GroupIds = useMemo(() => {
-    return allGroups.filter(g => g.type === 'nip72').map(g => g.id);
+  const nip72Groups = useMemo(() => {
+    return allGroups.filter(g => g.type === 'nip72');
   }, [allGroups]);
+
+  // Get community references for stats fetching
+  const communityRefs = useMemo(() => {
+    return nip72Groups.map(group => {
+      if (group.type === 'nip72') {
+        return `34550:${group.pubkey}:${group.identifier}`;
+      }
+      return null;
+    }).filter(Boolean) as string[];
+  }, [nip72Groups]);
+
+  // Fetch stats for NIP-72 groups using community references
+  const { data: groupStats, isLoading: isLoadingStats } = useGroupStats(
+    communityRefs,
+    !isLoadingGroups && communityRefs.length > 0
+  );
 
   // Get user's role for each group
   const getUserRoleForGroup = useCallback((group: Group): UserRole | null => {
@@ -175,7 +191,26 @@ export default function Groups() {
           return aPriority - bPriority;
         }
 
-        // If same priority, sort alphabetically by name
+        // Third priority: Sort by activity (posts count + participants count)
+        if (groupStats && a.type === 'nip72' && b.type === 'nip72') {
+          const aId = getCommunityId(a);
+          const bId = getCommunityId(b);
+          const aStats = groupStats[aId];
+          const bStats = groupStats[bId];
+          
+          if (aStats && bStats) {
+            // Calculate activity score (posts + participants)
+            const aActivity = aStats.posts + aStats.participants.size;
+            const bActivity = bStats.posts + bStats.participants.size;
+            
+            // Higher activity comes first
+            if (aActivity !== bActivity) {
+              return bActivity - aActivity;
+            }
+          }
+        }
+
+        // Final priority: Sort alphabetically by name
         const aName = a.name?.toLowerCase() || "";
         const bName = b.name?.toLowerCase() || "";
 
@@ -192,6 +227,7 @@ export default function Groups() {
     getUserRoleForGroup,
     pendingJoinRequestsSet,
     deletionRequestsMap,
+    groupStats,
   ]);
 
   // Auto-refresh could be added here if needed
@@ -295,6 +331,9 @@ export default function Groups() {
                   const userRole = getUserRoleForGroup(community);
                   const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
                   const hasActiveDeletionRequest = deletionRequestsMap?.has(communityId) || false;
+                  
+                  // Get stats for this group (only for NIP-72 groups)
+                  const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
 
                   return (
                     <GroupCard
@@ -304,7 +343,8 @@ export default function Groups() {
                       pinGroup={pinGroup}
                       unpinGroup={unpinGroup}
                       isUpdating={isUpdating}
-                      stats={undefined} // Stats would need to be fetched separately
+                      stats={stats}
+                      isLoadingStats={isLoadingStats && community.type === 'nip72'}
                       hasPendingRequest={hasPendingRequest}
                       userRole={userRole}
                       isMember={userRole !== null}
