@@ -4,13 +4,14 @@
 
 ### Core Features Working
 1. **NIP-29 Groups** - Full support with chat, posts, and eCash
-2. **NIP-72 Communities** - Standard public communities 
+2. **NIP-72 Communities** - Standard public communities with activity stats
 3. **Group Caching** - Advanced caching infrastructure already implemented
 4. **Member Management** - Works across both group types
 5. **Push Notifications** - Complete PWA notification system deployed
 6. **eCash Integration** - Nutzaps working with proper relay routing
 7. **Authentication** - Multiple login methods, account switching
 8. **Repository Structure** - Clean, organized codebase
+9. **Group Stats & Sorting** - Activity-based sorting with posts/participants display
 
 ### Build Status
 - ✅ CI Pipeline passes (TypeScript + ESLint + Build)
@@ -18,6 +19,14 @@
 - ✅ Production build successful
 - ✅ No linting errors
 - ✅ Repository cleaned of temporary files
+
+### Recent Fixes
+- ✅ Fixed NIP-29 groups not loading on Groups page
+- ✅ Fixed NIP-29 chat messages not showing after posting  
+- ✅ Made PostList component more liberal in accepting event kinds
+- ✅ Added debug logging and refresh button to SimpleMembersList
+- ✅ Fixed group activity stats display on Groups page
+- ✅ Implemented activity-based sorting for groups (posts + participants)
 
 ## Assessment: What Needs Work
 

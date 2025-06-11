@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file.
 - Post approval button now visible when moderators view individual unapproved posts via direct link
 - Improved error handling for invalid group ID formats (e.g., "protest.net" without full ID)
 - Auto-disable "Show only approved posts" filter when moderator navigates to specific post
+- **Group Activity Stats**: Fixed display of posts and participants counts on Groups page
+  - Updated `useGroupStats` hook to work with community references instead of events
+  - Group cards now show actual activity metrics instead of 0/0
+  - Added activity-based sorting (posts + participants) to group ordering
+  - Groups are now sorted by: pinned status > user role > activity > name
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
