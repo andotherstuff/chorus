@@ -64,12 +64,15 @@ export default function Groups() {
 
   // Get community references for stats fetching
   const communityRefs = useMemo(() => {
-    return nip72Groups.map(group => {
+    const refs = nip72Groups.map(group => {
       if (group.type === 'nip72') {
         return `34550:${group.pubkey}:${group.identifier}`;
       }
       return null;
     }).filter(Boolean) as string[];
+    
+    console.log("Groups page: Generated community refs:", refs);
+    return refs;
   }, [nip72Groups]);
 
   // Fetch stats for NIP-72 groups using community references
@@ -77,6 +80,13 @@ export default function Groups() {
     communityRefs,
     !isLoadingGroups && communityRefs.length > 0
   );
+
+  // Log received stats
+  useEffect(() => {
+    if (groupStats) {
+      console.log("Groups page: Received stats:", groupStats);
+    }
+  }, [groupStats]);
 
   // Get user's role for each group
   const getUserRoleForGroup = useCallback((group: Group): UserRole | null => {
@@ -334,6 +344,10 @@ export default function Groups() {
                   
                   // Get stats for this group (only for NIP-72 groups)
                   const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+                  
+                  if (community.type === 'nip72') {
+                    console.log(`Groups page: Stats for ${communityId}:`, stats);
+                  }
 
                   return (
                     <GroupCard
