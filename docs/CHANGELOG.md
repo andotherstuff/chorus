@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Project Structure Reorganization**: Cleaned up repository for better maintainability
+  - Moved all documentation files to `/docs` directory
+  - Removed temporary debugging scripts and fix utilities
+  - Consolidated test configuration in `/test/test-config.json`
+  - Removed backup files and temporary artifacts from version control
+  - Maintained only essential configuration and source files in project root
+
 ### Added
 - **Push Notification System**: Complete native Nostr push notification infrastructure
   - Cloudflare Worker for NIP-72 relay polling and monitoring group activity

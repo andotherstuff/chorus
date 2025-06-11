@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { KINDS } from "@/lib/nostr-kinds";
 import { useGroupDeletionRequests } from "@/hooks/useGroupDeletionRequests";
+import { GroupAvatar } from "@/components/ui/GroupAvatar";
+import type { Group, Nip72Group } from "@/types/groups";
 
 interface CommonGroup {
   id: string;
@@ -331,25 +333,24 @@ export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsList
               <div className="p-4">
                 {/* Group info section */}
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="h-14 w-14 rounded-lg overflow-hidden flex-shrink-0 bg-muted relative">
-                    {group.image ? (
-                      <img
-                        src={group.image}
-                        alt={group.name}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = "flex";
-                        }}
-                      />
-                    ) : null}
-                    <div 
-                      className={`absolute inset-0 bg-primary/10 text-primary font-bold text-lg flex items-center justify-center ${group.image ? 'hidden' : 'flex'}`}
-                    >
-                      {group.name.charAt(0).toUpperCase()}
-                    </div>
-                  </div>
+                  <GroupAvatar 
+                    group={{
+                      id: group.id,
+                      name: group.name,
+                      description: group.description,
+                      image: group.image,
+                      type: "nip72",
+                      pubkey: group.groupEvent.pubkey,
+                      identifier: group.groupEvent.tags.find(tag => tag[0] === "d")?.[1] || "",
+                      moderators: group.groupEvent.tags
+                        .filter(tag => tag[0] === "p" && tag[3] === "moderator")
+                        .map(tag => tag[1]),
+                      tags: group.groupEvent.tags,
+                      created_at: group.groupEvent.created_at
+                    } as Nip72Group} 
+                    size="lg" 
+                    className="h-14 w-14" 
+                  />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">

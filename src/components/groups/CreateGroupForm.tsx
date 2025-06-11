@@ -331,6 +331,9 @@ export function CreateGroupForm({ onCancel }: CreateGroupFormProps) {
                     src={previewUrl}
                     alt="Preview"
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder-community.svg";
+                    }}
                   />
                 </div>
               )}

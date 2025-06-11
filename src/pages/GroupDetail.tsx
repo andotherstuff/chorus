@@ -28,7 +28,7 @@ import { SimpleMembersList } from "@/components/groups/SimpleMembersList";
 import { GroupNutzapButton } from "@/components/groups/GroupNutzapButton";
 import { GroupNutzapTotal } from "@/components/groups/GroupNutzapTotal";
 import { GroupNutzapList } from "@/components/groups/GroupNutzapList";
-import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileText, Shield, UserPlus, Save, Trash2, FileWarning, MessageCircle } from "lucide-react";
+import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileText, Shield, UserPlus, Save, Trash2, FileWarning, MessageCircle, Server } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import type { Group } from "@/types/groups";
@@ -52,6 +52,7 @@ import { useNavigate } from "react-router-dom";
 import { useIsGroupDeleted } from "@/hooks/useGroupDeletionRequests";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, AlertCircle } from "lucide-react";
+import { GroupAvatar } from "@/components/ui/GroupAvatar";
 import { useNip29GroupCreator } from "@/hooks/useNip29GroupCreator";
 
 export default function GroupDetail() {
@@ -840,6 +841,21 @@ export default function GroupDetail() {
               className="w-auto max-w-[180px]"
             />
           </div>
+          {parsedRouteId?.type === "nip29" && parsedRouteId.relay && (
+            <div className="flex items-center gap-2 mb-2">
+              <Server className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Relay: {(() => {
+                  try {
+                    const url = new URL(parsedRouteId.relay);
+                    return url.hostname;
+                  } catch {
+                    return parsedRouteId.relay;
+                  }
+                })()}
+              </span>
+            </div>
+          )}
           <RichText className="text-xs text-muted-foreground">{description}</RichText>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Globe, Lock, Clock } from "lucide-react";
+import { GroupAvatar } from "@/components/ui/GroupAvatar";
+import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Globe, Lock, Clock, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/groups/RoleBadge";
@@ -112,10 +112,14 @@ export function GroupCard({
     }
   };
 
-  // Get the first letter of the group name for avatar fallback
-  const getInitials = () => {
-    if (community.type === "nip29") return "";
-    return name.charAt(0).toUpperCase();
+  // Format relay URL for display
+  const getRelayDisplayName = (relay: string) => {
+    try {
+      const url = new URL(relay);
+      return url.hostname;
+    } catch {
+      return relay;
+    }
   };
 
   // Determine if user is a member or owner of this group
@@ -198,14 +202,9 @@ export function GroupCard({
 
         <CardHeader className="flex flex-row items-center space-y-0 gap-3 pt-4 pb-2 px-3">
           <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 rounded-md">
-              <AvatarImage src={image} alt={name} />
-              <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                {community.type === "nip29" ? <Lock className="h-5 w-5" /> : getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-1">
-              <CardTitle className="text-sm font-medium leading-tight">{name}</CardTitle>
+            <GroupAvatar group={community} size="md" />
+            <div className="space-y-1 flex-1 min-w-0">
+              <CardTitle className="text-sm font-medium leading-tight truncate">{name}</CardTitle>
               <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
                 {isLoadingStats ? (
                   <>
@@ -231,10 +230,16 @@ export function GroupCard({
                   </>
                 ) : null}
                 {community.type === "nip29" && (
-                  <div className="inline-flex items-center py-0.5 px-1.5 bg-secondary rounded text-[10px]">
-                    <Lock className="h-2.5 w-2.5 mr-0.5" />
-                    Private
-                  </div>
+                  <>
+                    <div className="inline-flex items-center py-0.5 px-1.5 bg-secondary rounded text-[10px]">
+                      <Lock className="h-2.5 w-2.5 mr-0.5" />
+                      Private
+                    </div>
+                    <div className="inline-flex items-center py-0.5 px-1.5 bg-primary/10 rounded text-[10px] max-w-[150px]">
+                      <Server className="h-2.5 w-2.5 mr-0.5 flex-shrink-0" />
+                      <span className="truncate">{getRelayDisplayName(community.relay)}</span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
