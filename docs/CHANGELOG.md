@@ -8,12 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- **NIP-29 Group Images**: Fixed flashing broken images issue
+- **NIP-29 Group Images**: Completely fixed broken image display issues
   - Created new `GroupAvatar` component with proper fallback behavior
   - Added `SafeImage` component that pre-loads images to prevent broken image flash
   - Updated GroupDetail page to use SafeImage for the main group banner
+  - Fixed issue where groups without images would still show broken image icon
+  - Added placeholder SVG file for fallback display
   - Shows Lock icon for NIP-29 groups and Users icon for NIP-72 groups when image fails
-  - Images are now tested before display, eliminating the broken image flash
+  - Images are now tested before display, eliminating the broken image flash entirely
 - **NIP-29 Relay Display**: Added relay server information to group UI
   - Shows relay hostname in group cards for better identification
   - Added relay display in group detail page header

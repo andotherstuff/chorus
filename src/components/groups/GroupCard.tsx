@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GroupAvatar } from "@/components/ui/GroupAvatar";
-import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Clock, Server } from "lucide-react";
+import { Pin, PinOff, MessageSquare, Activity, MoreVertical, UserPlus, AlertTriangle, Clock, Server, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RoleBadge } from "@/components/groups/RoleBadge";
@@ -14,7 +14,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
 import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { toast } from "sonner";
-import type { NostrEvent } from "@nostrify/nostrify";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -120,7 +119,10 @@ export function GroupCard({
     }
     
     e.preventDefault();
-    navigate(`/group/${encodeURIComponent(communityId)}`);
+    const groupUrl = community.type === "nip29"
+      ? `/group/nip29/${encodeURIComponent(community.relay)}/${encodeURIComponent(community.groupId)}`
+      : `/group/${encodeURIComponent(communityId)}`;
+    navigate(groupUrl);
   };
 
   return (
