@@ -980,15 +980,24 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                 )}
 
                 {!isApproved && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleApprovePost}
-                    className="text-green-600 h-6 w-6 mx-0"
-                  >
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    <span className="sr-only">Approve</span>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleApprovePost}
+                          className="text-green-600 h-6 px-2 mx-0 flex items-center gap-1"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          <span className="text-xs">Approve</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Approve this post</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1012,6 +1021,11 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                         {!isApproved && (
                           <DropdownMenuItem onClick={handleApprovePost} className="text-xs">
                             <CheckCircle className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Approve Post
+                          </DropdownMenuItem>
+                        )}
+                        {isApproved && !post.approval?.autoApproved && (
+                          <DropdownMenuItem onClick={() => setIsRemoveDialogOpen(true)} className="text-amber-600 text-xs">
+                            <XCircle className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Reject Post
                           </DropdownMenuItem>
                         )}
                         {isPinned ? (

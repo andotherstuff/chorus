@@ -61,8 +61,8 @@ export function SimpleMembersList({ communityId, groupData }: SimpleMembersListP
   });
   
   // For NIP-72 groups, we need the raw event with tags, not the parsed group
-  // If groupData is passed and is NIP-72, we need to reconstruct the event format
-  const community = !isNip29 ? queriedCommunity : null;
+  // Use passed groupData if available, otherwise use queried data
+  const community = !isNip29 ? (groupData || queriedCommunity) : null;
   
   // Get NIP-29 members if this is a NIP-29 group
   const { data: nip29MemberData } = useNip29GroupMembers(
@@ -103,7 +103,17 @@ export function SimpleMembersList({ communityId, groupData }: SimpleMembersListP
   const moderatorTags = isNip29
     ? (nip29MemberData?.admins || []).map(pubkey => ["p", pubkey, "", "admin"])
     : community?.tags.filter(tag => tag[0] === "p" && tag[3] === "moderator") || [];
-  const moderators = moderatorTags.map(tag => tag[1]);
+  
+  // For NIP-72 groups, check if the owner is also marked as a moderator
+  // If not, add them to the moderator tags to ensure they appear in the moderator section
+  const ownerPubkey = community?.pubkey;
+  const ownerIsInModeratorTags = moderatorTags.some(tag => tag[1] === ownerPubkey);
+  
+  // If the owner isn't in the moderator tags but should be (they have moderation capabilities)
+  // we should still show them in the moderator section
+  const displayModeratorTags = [...moderatorTags];
+  
+  const moderators = displayModeratorTags.map(tag => tag[1]);
   
   // Debug logging for moderator tags
   console.log("[SimpleMembersList] Moderator extraction:", {
@@ -111,9 +121,14 @@ export function SimpleMembersList({ communityId, groupData }: SimpleMembersListP
     isNip29,
     currentUserPubkey: user?.pubkey,
     communityPubkey: community?.pubkey,
+    community: community,
+    groupData: groupData,
+    queriedCommunity: queriedCommunity,
     allTags: community?.tags,
     moderatorTags,
+    displayModeratorTags,
     moderators,
+    ownerIsInModeratorTags,
     pTagsWithModerator: community?.tags?.filter(tag => tag[0] === "p" && tag.length > 3),
     isCurrentUserInModeratorTags: moderators.includes(user?.pubkey || ''),
     isCurrentUserOwner: community?.pubkey === user?.pubkey,
@@ -168,7 +183,7 @@ export function SimpleMembersList({ communityId, groupData }: SimpleMembersListP
         <CardContent className="px-3 pt-0 pb-3">
           <div className="space-y-1">
             {community && <ModeratorItem key={community.pubkey} pubkey={community.pubkey} isCreator />}
-            {moderatorTags
+            {displayModeratorTags
               .filter(tag => tag[1] !== community?.pubkey)
               .map((tag) => (
                 <ModeratorItem key={tag[1]} pubkey={tag[1]} />

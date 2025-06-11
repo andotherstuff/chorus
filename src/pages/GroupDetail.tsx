@@ -36,6 +36,7 @@ import type { Group } from "@/types/groups";
 import { parseGroupRouteId, parseGroup, parseNip29Group } from "@/lib/group-utils";
 import { MemberManagement } from "@/components/groups/MemberManagement";
 import { ReportsList } from "@/components/groups/ReportsList";
+import { PendingPostsList } from "@/components/groups/PendingPostsList";
 import { Nip29ChatMessages } from "@/components/groups/Nip29ChatMessages";
 import { useAuthor } from "@/hooks/useAuthor";
 import { toast } from "sonner";
@@ -1031,11 +1032,22 @@ export default function GroupDetail() {
 
         <TabsContent value="members" className="space-y-4">
           <div className="max-w-3xl mx-auto">
-            <SimpleMembersList communityId={
-              parsedRouteId?.type === 'nip29' 
-                ? `nip29:${encodeURIComponent(parsedRouteId.relay!)}:${parsedRouteId.groupId}`
-                : groupId || ''
-            } />
+            <SimpleMembersList 
+              communityId={
+                parsedRouteId?.type === 'nip29' 
+                  ? `nip29:${encodeURIComponent(parsedRouteId.relay!)}:${parsedRouteId.groupId}`
+                  : groupId || ''
+              }
+              groupData={groupData?.type === 'nip72' ? { 
+                id: groupData.id,
+                pubkey: groupData.pubkey, 
+                tags: groupData.tags,
+                created_at: groupData.created_at,
+                kind: KINDS.GROUP,
+                content: "",
+                sig: ""
+              } as NostrEvent : undefined}
+            />
           </div>
         </TabsContent>
 
@@ -1043,7 +1055,7 @@ export default function GroupDetail() {
           <TabsContent value="manage" className="space-y-4">
             <div className="max-w-3xl mx-auto">
               <Tabs defaultValue={isOwner ? "general" : "member-management"} className="w-full space-y-6">
-                <TabsList className="grid grid-cols-3 mb-4">
+                <TabsList className={`grid ${parsedRouteId?.type === "nip72" ? 'grid-cols-4' : 'grid-cols-3'} mb-4`}>
                   <TabsTrigger value="general" className="flex items-center gap-2" disabled={!isOwner}>
                     <Shield className="h-4 w-4" />
                     General {!isOwner && <span className="text-xs">(Owner Only)</span>}
@@ -1059,6 +1071,19 @@ export default function GroupDetail() {
                       </Badge>
                     )}
                   </TabsTrigger>
+                  {parsedRouteId?.type === "nip72" && (
+                    <TabsTrigger value="pending-posts" className="flex items-center gap-2 relative">
+                      <MessageSquare className="h-4 w-4" />
+                      Pending
+                      {totalPendingCount > 0 && (
+                        <Badge
+                          className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-amber-500 hover:bg-amber-600 z-10"
+                        >
+                          {totalPendingCount > 99 ? '99+' : totalPendingCount}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="reports" className="flex items-center gap-2 relative">
                     <FileWarning className="h-4 w-4" />
                     Reports
@@ -1287,6 +1312,25 @@ export default function GroupDetail() {
                 <TabsContent value="member-management" className="mt-3">
                   <MemberManagement communityId={groupId || ""} isModerator={isModerator || false} />
                 </TabsContent>
+
+                {parsedRouteId?.type === "nip72" && (
+                  <TabsContent value="pending-posts" className="mt-3">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <MessageSquare className="h-5 w-5 mr-2" />
+                          Pending Posts
+                        </CardTitle>
+                        <CardDescription>
+                          Review and approve posts from non-approved members
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <PendingPostsList communityId={groupId || ""} />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                )}
 
                 <TabsContent value="reports" className="mt-3">
                   <Card>

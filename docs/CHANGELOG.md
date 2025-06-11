@@ -15,6 +15,9 @@ All notable changes to this project will be documented in this file.
   - Added activity-based sorting (posts + participants) to group ordering
   - Groups are now sorted by: pinned status > user role > activity > name
   - Debug: Posts are correctly tagged with "a" tags in format "34550:pubkey:identifier"
+- **Group Owner Display**: Fixed group owner not appearing in "Group Owner & Moderators" section
+  - SimpleMembersList component now correctly receives parsed group data with tags
+  - Group owner is properly displayed even if not explicitly tagged as moderator
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
