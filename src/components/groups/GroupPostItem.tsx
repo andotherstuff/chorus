@@ -136,7 +136,7 @@ export function GroupPostItem({ post }: GroupPost) {
     } catch (error) {
       console.error("Error creating share URL:", error);
       // Fallback to the original URL format
-      const shareUrl = `${window.location.origin}/group/${encodeURIComponent(post.communityId)}#${post.id}`;
+      const shareUrl = `${window.location.origin}/group/nip72:${post.communityId.substring(6)}#${post.id}`;
       
       await shareContent({
         title: "Check out this post",
@@ -207,7 +207,7 @@ export function GroupPostItem({ post }: GroupPost) {
       {/* Group Badge - links to the group */}
       <div className="mb-2">
         <Link 
-          to={`/group/${encodeURIComponent(post.communityId)}`}
+          to={`/group/nip72:${post.communityId.substring(6)}`}
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
           <Avatar className="h-5 w-5 rounded-sm">
@@ -287,7 +287,7 @@ export function GroupPostItem({ post }: GroupPost) {
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-6 md:gap-8">
             <Link 
-              to={`/group/${encodeURIComponent(post.communityId)}#${post.id}`}
+              to={`/group/nip72:${post.communityId.substring(6)}#${post.id}`}
               className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
             >
               <Icon name="MessageSquare" size={14} />
@@ -327,7 +327,7 @@ export function GroupPostItem({ post }: GroupPost) {
                     className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5 md:hidden"
                     asChild
                   >
-                    <Link to={`/group/${encodeURIComponent(post.communityId)}#${post.id}`} state={{ scrollToPostId: post.id }}>
+                    <Link to={`/group/nip72:${post.communityId.substring(6)}#${post.id}`} state={{ scrollToPostId: post.id }}>
                       <Icon name="ExternalLink" size={14} />
                     </Link>
                   </Button>
@@ -341,7 +341,7 @@ export function GroupPostItem({ post }: GroupPost) {
           
           {/* Only show text version on desktop */}
           <Link 
-            to={`/group/${encodeURIComponent(post.communityId)}#${post.id}`}
+            to={`/group/nip72:${post.communityId.substring(6)}#${post.id}`}
             state={{ scrollToPostId: post.id }}
             className="text-xs text-primary hover:underline items-center hidden md:flex"
           >
