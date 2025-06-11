@@ -379,17 +379,19 @@ This command will typecheck the code and attempt to build it.
 
 Your task is not considered finished until this test passes without errors.
 
-# NostrGroups Project
+# Chorus Project
 
-NostrGroups is a Facebook-inspired groups platform built on the Nostr protocol using NIP-72 for moderated communities. This section provides specific information about the NostrGroups implementation.
+Chorus is a Facebook-inspired groups platform built on the Nostr protocol using NIP-72 for moderated communities. This section provides specific information about the Chorus implementation.
 
 ## NIP-72 Implementation
 
-NostrGroups implements [NIP-72](https://github.com/nostr-protocol/nips/blob/master/72.md), which defines a standard for moderated communities on Nostr. The implementation uses:
+Chorus implements [NIP-72](https://github.com/nostr-protocol/nips/blob/master/72.md), which defines a standard for moderated communities on Nostr, along with custom extensions documented in `NIP.md`. The implementation uses:
 
 - **Kind 34550**: Community definition events that include community metadata and moderator lists
 - **Kind 4550**: Post approval events that moderators use to approve posts
 - **Kind 11**: Text note events used for posts within communities
+
+**📋 IMPORTANT: This project extends NIP-72 with custom event kinds documented in `NIP.md`. When working with group functionality, always reference this specification and update it when making changes to event kinds or their usage patterns.**
 
 ## Key Features
 
@@ -542,7 +544,7 @@ await publishEvent({
 
 ## Development Guidelines
 
-When extending the NostrGroups platform:
+When extending the Chorus platform:
 
 1. Follow the established patterns for Nostr event creation and querying
 2. Use the existing hooks for Nostr integration (`useNostr`, `useNostrPublish`, etc.)
@@ -553,3 +555,5 @@ When extending the NostrGroups platform:
 7. Always use `for...of` instead of `forEach` in loops
 8. **Always use constants from `@/lib/nostr-kinds` instead of hardcoded event kind literals**
 9. **Follow the correct tagging patterns for addressable vs regular events as documented above**
+10. **When adding new event kinds or modifying existing ones, update `NIP.md` to reflect the changes**
+11. **Reference `NIP.md` for the complete specification of all custom event kinds used in this project**

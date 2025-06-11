@@ -54,7 +54,20 @@ export function SafeImage({
     };
   }, [src, fallbackSrc, onLoadSuccess, onLoadError]);
 
-  // Don't render anything until we know if the image loads
+  // Show placeholder while loading
+  if (!imageSrc && isLoading) {
+    return (
+      <div 
+        className={cn(
+          "bg-muted animate-pulse",
+          className
+        )}
+        style={{ width: '100%', height: '100%' }}
+      />
+    );
+  }
+  
+  // Don't render anything if no image source
   if (!imageSrc) {
     return null;
   }

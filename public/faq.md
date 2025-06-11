@@ -30,6 +30,25 @@ Nope. There are no accounts to create. +chorus uses cryptographic key pairs inst
 
 This means **you control your identity** — no company owns your login.
 
+## What is the role of group owners and moderators?
+
+**Group Owner**
+
+The person who creates a group automatically becomes its Owner. Owners have full administrative control, including the ability to:
+- Add or remove moderators
+- Manage group settings and permissions
+- Rename the group
+- Manage contributions to the group
+
+**Moderators**
+
+Moderators help maintain a productive and respectful environment. They can:
+- Approve or remove members
+- Pin important messages
+- Enforce the group’s community guidelines
+
+Groups can have multiple moderators, but only one owner. Owners can promote other members to moderators at any time.
+
 ## What is a cryptographic key?
 
 A cryptographic key is a string of characters used to secure your identity and content. Think of it like a master password that proves who you are and allows you to post, sign messages, and access your communities.

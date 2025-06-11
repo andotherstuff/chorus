@@ -582,7 +582,7 @@ export default function GroupDetail() {
     }
   };
 
-  // Set active tab based on URL hash only
+  // Set active tab based on URL hash, handle post anchoring
   useEffect(() => {
     // Define valid tab values - include chat for NIP-29 groups
     const validTabs = parsedRouteId?.type === "nip29" 
@@ -592,12 +592,25 @@ export default function GroupDetail() {
     if (hash && validTabs.includes(hash)) {
       setActiveTab(hash);
     }
-    // If the hash references an invalid tab, default to "posts"
+    // If the hash references a post ID (not a tab name), scroll to it
     else if (hash) {
-      // Only update if not already on posts tab to avoid unnecessary re-renders
+      // Set active tab to posts to show the post content
       if (activeTab !== "posts") {
         setActiveTab("posts");
       }
+      
+      // Wait for content to render before attempting to scroll
+      setTimeout(() => {
+        const postElement = document.getElementById(hash);
+        if (postElement) {
+          postElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Optional: add a highlight effect on the post
+          postElement.classList.add('bg-amber-50', 'dark:bg-amber-900/20');
+          setTimeout(() => {
+            postElement.classList.remove('bg-amber-50', 'dark:bg-amber-900/20');
+          }, 2000);
+        }
+      }, 500);
     }
     // Only set these fallbacks on initial mount to avoid constantly resetting
     else if (!activeTab || !validTabs.includes(activeTab)) {
@@ -753,7 +766,7 @@ export default function GroupDetail() {
                     }
                   }}
                 />
-              ) : (
+              ) : image ? (
                 <SafeImage
                   src={image}
                   alt={name}
@@ -762,6 +775,10 @@ export default function GroupDetail() {
                   onLoadSuccess={() => setImageLoading(false)}
                   onLoadError={() => setImageLoading(false)}
                 />
+              ) : (
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <GroupAvatar group={groupData} size="xl" />
+                </div>
               )}
             </div>
           </div>

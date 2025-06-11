@@ -79,7 +79,7 @@ export function useReportActions() {
                   ["p", pubkey], 
                   ["k", postKind]
                 ],
-                content: JSON.stringify(post), // Include the full post event as JSON
+                content: "", // Empty content - do not redistribute removed content
               });
               
               // Also publish a separate event with the reason if provided

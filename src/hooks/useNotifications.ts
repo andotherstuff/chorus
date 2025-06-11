@@ -52,6 +52,9 @@ export function useNotifications() {
       );
 
       for (const event of events) {
+        // Skip notifications from the user themselves
+        if (event.pubkey === user.pubkey) continue;
+        
         // Extract group ID from 'a' tag if present (for all notification types)
         const communityRef = event.tags.find(tag => tag[0] === 'a')?.[1];
         const communityParts = communityRef?.split(':');
@@ -201,6 +204,9 @@ export function useNotifications() {
 
         // Process report events
         for (const event of reportEvents) {
+          // Skip notifications from the user themselves
+          if (event.pubkey === user.pubkey) continue;
+          
           const groupId = event.tags.find(tag => tag[0] === 'a')?.[1];
           if (!groupId) continue;
 
@@ -230,11 +236,11 @@ export function useNotifications() {
 
         // Process report action events
         for (const event of reportActionEvents) {
+          // Skip notifications from the user themselves
+          if (event.pubkey === user.pubkey) continue;
+          
           const groupId = event.tags.find(tag => tag[0] === 'a')?.[1];
           if (!groupId) continue;
-
-          // Skip if the action was taken by the current user
-          if (event.pubkey === user.pubkey) continue;
 
           const reportId = event.tags.find(tag => tag[0] === 'e')?.[1];
           const actionType = event.tags.find(tag => tag[0] === 't')?.[1] || 'unknown action';
@@ -257,8 +263,11 @@ export function useNotifications() {
           });
         }
 
-        // Process join request events (these are already handled in the existing code)
+        // Process join request events
         for (const event of joinRequestEvents) {
+          // Skip notifications from the user themselves
+          if (event.pubkey === user.pubkey) continue;
+          
           const groupId = event.tags.find(tag => tag[0] === 'a')?.[1];
           if (!groupId) continue;
 
@@ -281,6 +290,9 @@ export function useNotifications() {
 
         // Process leave request events
         for (const event of leaveRequestEvents) {
+          // Skip notifications from the user themselves
+          if (event.pubkey === user.pubkey) continue;
+          
           const groupId = event.tags.find(tag => tag[0] === 'a')?.[1];
           if (!groupId) continue;
 
