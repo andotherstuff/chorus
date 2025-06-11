@@ -200,6 +200,7 @@ export const DEFAULT_NIP29_RELAYS = [
   // Additional NIP-29 relays that are currently active
   'wss://pyramid.fiatjaf.com',
   'wss://nostrelites.org',
+  'wss://protest.net', // Add protest.net relay
   // Note: The following relays are currently offline or have issues:
   // 'wss://relay.0xchat.com' - certificate expired
   // 'wss://communities.nip29.com' - DNS not found

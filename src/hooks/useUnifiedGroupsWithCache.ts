@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
-import { useNip29Groups } from './useNip29GroupsWithCache';
+import { useNip29Groups, useNip29GroupsWithCache } from './useNip29GroupsWithCache';
 import { usePinnedGroups } from './usePinnedGroups';
 import { useCurrentUser } from './useCurrentUser';
 import { Group } from '@/types/groups';
@@ -9,6 +9,7 @@ import { parseGroup } from '@/lib/group-utils';
 import { NostrEvent } from '@nostrify/nostrify';
 import { groupCache } from '@/lib/cache/groupCache';
 import { nip29Cache } from '@/lib/cache/nip29Cache';
+import { useNip29RelayDiscovery } from './useNip29RelayDiscovery';
 
 /**
  * Hook that returns both NIP-72 and NIP-29 groups with caching
@@ -18,8 +19,11 @@ export function useUnifiedGroupsWithCache() {
   const { user } = useCurrentUser();
   const { pinnedGroups } = usePinnedGroups();
   
-  // Get NIP-29 groups (already has its own caching internally)
-  const nip29Result = useNip29Groups();
+  // Discover additional NIP-29 relays
+  const { data: discoveredRelays } = useNip29RelayDiscovery();
+  
+  // Get NIP-29 groups from discovered relays
+  const nip29Result = useNip29GroupsWithCache(discoveredRelays || []);
   const nip29Groups = useMemo(() => nip29Result.data || [], [nip29Result.data]);
   const isLoadingNip29 = nip29Result.isLoading;
   const nip29Error = nip29Result.error;

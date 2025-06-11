@@ -265,7 +265,12 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       console.log(`[PostList] Found ${posts.length} NIP-29 posts:`, {
         relay,
         groupId,
-        posts: posts.map(p => ({ id: p.id, kind: p.kind, content: p.content.slice(0, 50) }))
+        posts: posts.map(p => ({ 
+          id: p.id, 
+          kind: p.kind, 
+          content: p.content.slice(0, 50),
+          tags: p.tags // Log all tags to see group references
+        }))
       });
       
       // Add approval info to all NIP-29 posts (they're all "approved" by default)
@@ -323,6 +328,15 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         tags: p.tags,
         created_at: p.created_at
       })));
+      
+      // Log any posts that mention protest.net
+      const protestPosts = posts.filter(p => 
+        p.content.toLowerCase().includes('protest') || 
+        p.tags.some(t => t.some(v => typeof v === 'string' && v.toLowerCase().includes('protest')))
+      );
+      if (protestPosts.length > 0) {
+        console.log("[PostList] Found posts mentioning protest:", protestPosts);
+      }
 
       // Filter out replies (kind 1111) and any posts with a parent reference
       const filteredPosts = posts.filter(post => {

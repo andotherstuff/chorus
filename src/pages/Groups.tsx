@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { GroupSearch } from "@/components/groups/GroupSearch";
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Pin, Users, Clock, Activity } from "lucide-react";
 import { useGroupStats } from "@/hooks/useGroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { useUnifiedGroupsWithCache } from "@/hooks/useUnifiedGroupsWithCache";
@@ -16,12 +16,13 @@ import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
 import type { NostrEvent } from "@nostrify/nostrify";
 import type { UserRole } from "@/hooks/useUserRole";
 import type { Group } from "@/types/groups";
-import { getCommunityId } from "@/lib/group-utils";
+import { getCommunityId, parseGroup } from "@/lib/group-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/Icon";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
 import { useSearchParams } from "react-router-dom";
+import { useUserGroups } from "@/hooks/useUserGroups";
 
 export default function Groups() {
   const { user } = useCurrentUser();
@@ -31,6 +32,9 @@ export default function Groups() {
   const { wallet, isLoading: isWalletLoading } = useCashuWallet();
   const [searchParams] = useSearchParams();
   const filterMyGroups = searchParams.get("filter") === "my-groups";
+  
+  // Get the user's groups for membership checking
+  const { data: userGroups } = useUserGroups();
 
   // Log wallet data when it loads
   useEffect(() => {
@@ -127,9 +131,36 @@ export default function Groups() {
     return new Set(pendingJoinRequests);
   }, [pendingJoinRequests]);
 
-  // Filter and sort all groups
-  const sortedAndFilteredGroups = useMemo(() => {
-    if (!allGroups || allGroups.length === 0) return [];
+  // Create a set of group IDs where the user is a member
+  const userGroupIds = useMemo(() => {
+    const groupIds = new Set<string>();
+    
+    if (userGroups?.allGroups) {
+      // Add all NIP-72 groups from useUserGroups
+      userGroups.allGroups.forEach(event => {
+        const group = parseGroup(event);
+        if (group) {
+          groupIds.add(getCommunityId(group));
+        }
+      });
+    }
+    
+    return groupIds;
+  }, [userGroups]);
+
+  // Filter and categorize all groups
+  const { categorizedGroups, allFilteredGroups } = useMemo(() => {
+    if (!allGroups || allGroups.length === 0) return { 
+      categorizedGroups: {
+        pinned: [],
+        owned: [],
+        moderated: [],
+        member: [],
+        pending: [],
+        other: []
+      },
+      allFilteredGroups: []
+    };
 
     // Function to check if a group matches the search query
     const matchesSearch = (group: Group) => {
@@ -155,76 +186,83 @@ export default function Groups() {
     const isUserGroup = (group: Group) => {
       if (!user || !filterMyGroups) return true;
       
+      const groupId = getCommunityId(group);
+      
       // Check if user is owner
-      if (group.pubkey === user.pubkey) return true;
+      if (group.pubkey === user.pubkey) {
+        return true;
+      }
       
       // Check if user is moderator/admin
-      if (group.type === "nip72" && group.moderators.includes(user.pubkey)) return true;
-      if (group.type === "nip29" && group.admins.includes(user.pubkey)) return true;
+      if (group.type === "nip72" && group.moderators.includes(user.pubkey)) {
+        return true;
+      }
+      if (group.type === "nip29" && group.admins.includes(user.pubkey)) {
+        return true;
+      }
       
       // Check if user is member
-      if (group.type === "nip29" && group.members?.includes(user.pubkey)) return true;
+      if (group.type === "nip29" && group.members?.includes(user.pubkey)) {
+        return true;
+      }
       
       // Check if user has pending request
-      const groupId = getCommunityId(group);
-      if (pendingJoinRequestsSet.has(groupId)) return true;
+      if (pendingJoinRequestsSet.has(groupId)) {
+        return true;
+      }
       
-      // For NIP-72 groups, check approved members
-      if (group.type === "nip72") {
-        const userRole = getUserRoleForGroup(group);
-        if (userRole === "member") return true;
+      // Check if this group is in the user's group IDs set (for NIP-72 membership)
+      if (userGroupIds.has(groupId)) {
+        return true;
       }
       
       return false;
     };
 
-    // Create a stable copy of the array to avoid mutation issues
+    // Create a stable copy of the array and filter
     const stableGroups = [...allGroups];
+    const filteredGroups = stableGroups.filter(group => matchesSearch(group) && !isGroupDeleted(group) && isUserGroup(group));
 
-    return stableGroups
-      .filter(group => matchesSearch(group) && !isGroupDeleted(group) && isUserGroup(group))
-      .sort((a, b) => {
-      // Ensure both a and b are valid objects
-      if (!a || !b) return 0;
+    // Categorize groups
+    const categories = {
+      pinned: [] as Group[],
+      owned: [] as Group[],
+      moderated: [] as Group[],
+      member: [] as Group[],
+      pending: [] as Group[],
+      other: [] as Group[]
+    };
 
+    for (const group of filteredGroups) {
       try {
-        const aId = getCommunityId(a);
-        const bId = getCommunityId(b);
+        const groupId = getCommunityId(group);
+        const isPinned = isGroupPinned(groupId);
+        const userRole = getUserRoleForGroup(group);
+        const hasPendingRequest = pendingJoinRequestsSet.has(groupId);
 
-        const aIsPinned = isGroupPinned(aId);
-        const bIsPinned = isGroupPinned(bId);
-
-        // First priority: pinned groups
-        if (aIsPinned && !bIsPinned) return -1;
-        if (!aIsPinned && bIsPinned) return 1;
-
-        // Get user roles and pending status
-        const aUserRole = getUserRoleForGroup(a);
-        const bUserRole = getUserRoleForGroup(b);
-        const aHasPendingRequest = pendingJoinRequestsSet.has(aId);
-        const bHasPendingRequest = pendingJoinRequestsSet.has(bId);
-
-        // Define role priority (lower number = higher priority)
-        const getRolePriority = (
-          role: UserRole | undefined,
-          hasPending: boolean
-        ) => {
-          if (role === "owner") return 1;
-          if (role === "moderator") return 2;
-          if (role === "member") return 3;
-          if (hasPending) return 4;
-          return 5; // Not a member and no pending request
-        };
-
-        const aPriority = getRolePriority(aUserRole, aHasPendingRequest);
-        const bPriority = getRolePriority(bUserRole, bHasPendingRequest);
-
-        // Second priority: user's relationship to the group (owner > mod > member > pending > other)
-        if (aPriority !== bPriority) {
-          return aPriority - bPriority;
+        if (isPinned) {
+          categories.pinned.push(group);
+        } else if (userRole === "owner") {
+          categories.owned.push(group);
+        } else if (userRole === "moderator") {
+          categories.moderated.push(group);
+        } else if (userRole === "member" || userGroupIds.has(groupId)) {
+          categories.member.push(group);
+        } else if (hasPendingRequest) {
+          categories.pending.push(group);
+        } else {
+          categories.other.push(group);
         }
+      } catch (error) {
+        console.error("Error categorizing group:", error);
+        categories.other.push(group);
+      }
+    }
 
-        // Third priority: Sort by activity (posts count + participants count)
+    // Sort function that prioritizes activity
+    const sortByActivity = (a: Group, b: Group) => {
+      try {
+        // First try activity-based sorting for NIP-72 groups
         if (groupStats && a.type === 'nip72' && b.type === 'nip72') {
           const aId = getCommunityId(a);
           const bId = getCommunityId(b);
@@ -232,27 +270,44 @@ export default function Groups() {
           const bStats = groupStats[bId];
           
           if (aStats && bStats) {
-            // Calculate activity score (posts + participants)
             const aActivity = aStats.posts + aStats.participants.size;
             const bActivity = bStats.posts + bStats.participants.size;
             
-            // Higher activity comes first
             if (aActivity !== bActivity) {
-              return bActivity - aActivity;
+              return bActivity - aActivity; // Higher activity first
             }
           }
         }
 
-        // Final priority: Sort alphabetically by name
+        // Fall back to alphabetical sorting
         const aName = a.name?.toLowerCase() || "";
         const bName = b.name?.toLowerCase() || "";
-
         return aName.localeCompare(bName);
       } catch (error) {
         console.error("Error sorting groups:", error);
         return 0;
       }
+    };
+
+    // Sort each category by activity
+    Object.values(categories).forEach(category => {
+      category.sort(sortByActivity);
     });
+
+    // Combine categories in order
+    const allSorted = [
+      ...categories.pinned,
+      ...categories.owned,
+      ...categories.moderated,
+      ...categories.member,
+      ...categories.pending,
+      ...categories.other
+    ];
+
+    return {
+      categorizedGroups: categories,
+      allFilteredGroups: allSorted
+    };
   }, [
     allGroups,
     searchQuery,
@@ -263,6 +318,7 @@ export default function Groups() {
     groupStats,
     filterMyGroups,
     user,
+    userGroupIds,
   ]);
 
   // Auto-refresh could be added here if needed
@@ -369,10 +425,123 @@ export default function Groups() {
               {renderSkeletons()}
             </div>
           ) : allGroups &&
-            sortedAndFilteredGroups &&
-            sortedAndFilteredGroups.length > 0 ? (
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-              {sortedAndFilteredGroups.map((community) => {
+            allFilteredGroups &&
+            allFilteredGroups.length > 0 ? (
+            <div className="space-y-6">
+              {/* Pinned Groups */}
+              {categorizedGroups.pinned.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Pin className="w-4 h-4" />
+                    Pinned Groups
+                  </h3>
+                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                    {categorizedGroups.pinned.map((community) => {
+                      const communityId = getCommunityId(community);
+                      const isPinned = isGroupPinned(communityId);
+                      const userRole = getUserRoleForGroup(community);
+                      const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
+                      const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+
+                      return (
+                        <GroupCard
+                          key={`pinned-${community.id}-${communityId}`}
+                          community={community}
+                          isPinned={isPinned}
+                          pinGroup={pinGroup}
+                          unpinGroup={unpinGroup}
+                          isUpdating={isUpdating}
+                          stats={stats}
+                          isLoadingStats={isLoadingStats && community.type === 'nip72'}
+                          hasPendingRequest={hasPendingRequest}
+                          userRole={userRole}
+                          isMember={userRole !== null}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Your Groups */}
+              {(categorizedGroups.owned.length > 0 || categorizedGroups.moderated.length > 0 || categorizedGroups.member.length > 0) && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Your Groups
+                  </h3>
+                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                    {[...categorizedGroups.owned, ...categorizedGroups.moderated, ...categorizedGroups.member].map((community) => {
+                      const communityId = getCommunityId(community);
+                      const isPinned = isGroupPinned(communityId);
+                      const userRole = getUserRoleForGroup(community);
+                      const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
+                      const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+
+                      return (
+                        <GroupCard
+                          key={`your-${community.id}-${communityId}`}
+                          community={community}
+                          isPinned={isPinned}
+                          pinGroup={pinGroup}
+                          unpinGroup={unpinGroup}
+                          isUpdating={isUpdating}
+                          stats={stats}
+                          isLoadingStats={isLoadingStats && community.type === 'nip72'}
+                          hasPendingRequest={hasPendingRequest}
+                          userRole={userRole}
+                          isMember={userRole !== null}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Requests */}
+              {categorizedGroups.pending.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Pending Join Requests
+                  </h3>
+                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                    {categorizedGroups.pending.map((community) => {
+                      const communityId = getCommunityId(community);
+                      const isPinned = isGroupPinned(communityId);
+                      const userRole = getUserRoleForGroup(community);
+                      const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
+                      const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+
+                      return (
+                        <GroupCard
+                          key={`pending-${community.id}-${communityId}`}
+                          community={community}
+                          isPinned={isPinned}
+                          pinGroup={pinGroup}
+                          unpinGroup={unpinGroup}
+                          isUpdating={isUpdating}
+                          stats={stats}
+                          isLoadingStats={isLoadingStats && community.type === 'nip72'}
+                          hasPendingRequest={hasPendingRequest}
+                          userRole={userRole}
+                          isMember={userRole !== null}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Groups */}
+              {categorizedGroups.other.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    {(categorizedGroups.pinned.length > 0 || categorizedGroups.owned.length > 0 || categorizedGroups.moderated.length > 0 || categorizedGroups.member.length > 0 || categorizedGroups.pending.length > 0) ? 'Other Groups' : 'All Groups'}
+                  </h3>
+                  <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                    {categorizedGroups.other.map((community) => {
                 if (!community) return null;
                 try {
                   const communityId = getCommunityId(community);
@@ -404,6 +573,9 @@ export default function Groups() {
                   return null;
                 }
               })}
+                  </div>
+                </div>
+              )}
             </div>
           ) : searchQuery ? (
             <div className="col-span-full text-center py-10">

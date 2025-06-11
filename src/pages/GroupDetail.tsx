@@ -56,6 +56,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, AlertCircle } from "lucide-react";
 import { GroupAvatar } from "@/components/ui/GroupAvatar";
 import { useNip29GroupCreator } from "@/hooks/useNip29GroupCreator";
+import { useGroupDiscovery } from "@/hooks/useGroupDiscovery";
 
 export default function GroupDetail() {
   const { groupId, relay } = useParams<{ groupId: string; relay?: string }>();
@@ -87,6 +88,12 @@ export default function GroupDetail() {
   const reportId = searchParams.get('reportId');
   const hash = location.hash.replace('#', '');
 
+  // Try to discover group from partial ID if parsing fails
+  const shouldDiscoverGroup = groupId && !relay && !parsedRouteId;
+  const { data: discoveredGroup, isLoading: isDiscovering } = useGroupDiscovery(
+    shouldDiscoverGroup ? decodeURIComponent(groupId!) : undefined
+  );
+
   useEffect(() => {
     if (groupId) {
       // Handle NIP-29 routes directly
@@ -117,6 +124,27 @@ export default function GroupDetail() {
       }
     }
   }, [groupId, relay]);
+
+  // If we discovered a group, redirect to its proper URL
+  useEffect(() => {
+    if (discoveredGroup) {
+      console.log(`[GroupDetail] Discovered group, redirecting...`, discoveredGroup);
+      
+      let newPath = '';
+      if (discoveredGroup.type === 'nip72') {
+        newPath = `/group/${encodeURIComponent(`nip72:${discoveredGroup.pubkey}:${discoveredGroup.identifier}`)}`;
+      } else if (discoveredGroup.type === 'nip29') {
+        // Use the new route format for NIP-29
+        const encodedRelay = encodeURIComponent(discoveredGroup.relay);
+        const encodedGroupId = encodeURIComponent(discoveredGroup.groupId);
+        newPath = `/group/nip29/${encodedRelay}/${encodedGroupId}`;
+      }
+      
+      if (newPath) {
+        navigate(newPath, { replace: true });
+      }
+    }
+  }, [discoveredGroup, navigate]);
 
   const { data: groupData, isLoading: isLoadingCommunity } = useQuery({
     queryKey: ["group", parsedRouteId],
@@ -715,14 +743,28 @@ export default function GroupDetail() {
         <p className="mb-4">The group you're looking for doesn't exist or has been deleted.</p>
         {!parsedRouteId && groupId && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4">
-            <p className="text-sm mb-2">
-              <strong>Invalid group ID format:</strong> "{groupId}"
-            </p>
-            <p className="text-sm">
-              Expected format: 
-              <br />• For NIP-72 groups: <code className="bg-muted px-1 rounded">nip72:pubkey:identifier</code>
-              <br />• For NIP-29 groups: <code className="bg-muted px-1 rounded">nip29:relay:groupId</code>
-            </p>
+            {isDiscovering ? (
+              <>
+                <p className="text-sm mb-2">
+                  <strong>Searching for group:</strong> "{groupId}"
+                </p>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <span>Checking NIP-29 relays and searching posts for group references...</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm mb-2">
+                  <strong>Invalid group ID format:</strong> "{groupId}"
+                </p>
+                <p className="text-sm">
+                  Expected format: 
+                  <br />• For NIP-72 groups: <code className="bg-muted px-1 rounded">nip72:pubkey:identifier</code>
+                  <br />• For NIP-29 groups: <code className="bg-muted px-1 rounded">nip29:relay:groupId</code>
+                </p>
+              </>
+            )}
           </div>
         )}
         <Button asChild className="mt-2">
