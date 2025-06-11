@@ -336,6 +336,24 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
       );
       if (protestPosts.length > 0) {
         console.log("[PostList] Found posts mentioning protest:", protestPosts);
+        
+        // Specifically check for protest.net in 'a' tags
+        const protestNetPosts = posts.filter(p => {
+          const aTags = p.tags.filter(t => t[0] === 'a');
+          return aTags.some(t => t[1] && t[1].includes('protest.net'));
+        });
+        
+        if (protestNetPosts.length > 0) {
+          console.log("[PostList] Found posts with protest.net in 'a' tags:", protestNetPosts.map(p => ({
+            id: p.id,
+            aTags: p.tags.filter(t => t[0] === 'a'),
+            content: p.content.slice(0, 100)
+          })));
+          
+          // Extract the group identifier from the 'a' tag
+          const protestGroupId = protestNetPosts[0].tags.find(t => t[0] === 'a' && t[1].includes('protest.net'))?.[1];
+          console.log("[PostList] protest.net group identifier from 'a' tag:", protestGroupId);
+        }
       }
 
       // Filter out replies (kind 1111) and any posts with a parent reference

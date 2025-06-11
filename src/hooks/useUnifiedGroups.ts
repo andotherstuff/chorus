@@ -72,6 +72,31 @@ export function useUnifiedGroups() {
           const firstCommunity = nip72Communities[0];
           const nameTag = firstCommunity.tags.find(t => t[0] === 'name');
           console.log(`[NIP-72] First community: ${nameTag?.[1] || 'Unnamed'}`);
+          
+          // Check specifically for protest.net
+          const protestNetCommunity = nip72Communities.find(c => {
+            const dTag = c.tags.find(t => t[0] === 'd');
+            return dTag && dTag[1] === 'protest.net';
+          });
+          
+          if (protestNetCommunity) {
+            console.log('[NIP-72] Found protest.net community:', {
+              id: protestNetCommunity.id,
+              pubkey: protestNetCommunity.pubkey,
+              tags: protestNetCommunity.tags,
+              content: JSON.parse(protestNetCommunity.content || '{}')
+            });
+          } else {
+            console.log('[NIP-72] protest.net community NOT found in results');
+            
+            // Log all community identifiers
+            const allIdentifiers = nip72Communities.map(c => {
+              const dTag = c.tags.find(t => t[0] === 'd');
+              const nameTag = c.tags.find(t => t[0] === 'name');
+              return { identifier: dTag?.[1], name: nameTag?.[1] };
+            });
+            console.log('[NIP-72] All community identifiers:', allIdentifiers);
+          }
         }
       } catch (error) {
         console.error('[NIP-72] Query error:', error);

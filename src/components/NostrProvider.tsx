@@ -40,6 +40,13 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
       reqRouter(filters) {
         console.log(`[NostrProvider] Routing query to relays:`, relays);
         console.log(`[NostrProvider] Query filters:`, JSON.stringify(filters, null, 2));
+        
+        // Check if we're querying for NIP-72 groups
+        const isGroupQuery = filters.some(f => f.kinds?.includes(34550));
+        if (isGroupQuery) {
+          console.log('[NostrProvider] This is a NIP-72 group query');
+        }
+        
         return new Map(relays.map((url) => [url, filters]));
       },
       eventRouter(_event: NostrEvent) {

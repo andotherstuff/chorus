@@ -18,6 +18,9 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 // Separate relay configurations for different protocols
 const nip72Relays = [
   'wss://relay.chorus.community/', // Primary relay for NIP-72 public communities
+  'wss://relay.damus.io/', // Popular relay that may have NIP-72 groups
+  'wss://relay.nostr.band/', // Another relay that indexes content
+  'wss://nos.lol/', // NOS relay
 ];
 
 const nip29Relays = [
