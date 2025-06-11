@@ -18,7 +18,10 @@ import type { UserRole } from "@/hooks/useUserRole";
 import type { Group } from "@/types/groups";
 import { getCommunityId } from "@/lib/group-utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/Icon";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
+import { useSearchParams } from "react-router-dom";
 
 export default function Groups() {
   const { user } = useCurrentUser();
@@ -26,6 +29,8 @@ export default function Groups() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
   const { wallet, isLoading: isWalletLoading } = useCashuWallet();
+  const [searchParams] = useSearchParams();
+  const filterMyGroups = searchParams.get("filter") === "my-groups";
 
   // Log wallet data when it loads
   useEffect(() => {
@@ -145,12 +150,39 @@ export default function Groups() {
       const deletionRequest = deletionRequestsMap.get(groupId);
       return deletionRequest?.isValid || false;
     };
+    
+    // Function to check if user is part of a group
+    const isUserGroup = (group: Group) => {
+      if (!user || !filterMyGroups) return true;
+      
+      // Check if user is owner
+      if (group.pubkey === user.pubkey) return true;
+      
+      // Check if user is moderator/admin
+      if (group.type === "nip72" && group.moderators.includes(user.pubkey)) return true;
+      if (group.type === "nip29" && group.admins.includes(user.pubkey)) return true;
+      
+      // Check if user is member
+      if (group.type === "nip29" && group.members?.includes(user.pubkey)) return true;
+      
+      // Check if user has pending request
+      const groupId = getCommunityId(group);
+      if (pendingJoinRequestsSet.has(groupId)) return true;
+      
+      // For NIP-72 groups, check approved members
+      if (group.type === "nip72") {
+        const userRole = getUserRoleForGroup(group);
+        if (userRole === "member") return true;
+      }
+      
+      return false;
+    };
 
     // Create a stable copy of the array to avoid mutation issues
     const stableGroups = [...allGroups];
 
     return stableGroups
-      .filter(group => matchesSearch(group) && !isGroupDeleted(group))
+      .filter(group => matchesSearch(group) && !isGroupDeleted(group) && isUserGroup(group))
       .sort((a, b) => {
       // Ensure both a and b are valid objects
       if (!a || !b) return 0;
@@ -229,6 +261,8 @@ export default function Groups() {
     pendingJoinRequestsSet,
     deletionRequestsMap,
     groupStats,
+    filterMyGroups,
+    user,
   ]);
 
   // Auto-refresh could be added here if needed
@@ -304,9 +338,23 @@ export default function Groups() {
 
         <div className="space-y-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Groups</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold">
+                {filterMyGroups ? "My Groups" : "Groups"}
+              </h1>
+              {filterMyGroups && (
+                <a 
+                  href="/groups" 
+                  className="text-sm text-primary hover:underline"
+                >
+                  Show All Groups
+                </a>
+              )}
+            </div>
             <p className="text-muted-foreground mt-2">
-              Discover and join communities.
+              {filterMyGroups 
+                ? "Groups you own, moderate, or are a member of."
+                : "Discover and join communities."}
             </p>
           </div>
 
@@ -365,6 +413,19 @@ export default function Groups() {
               <p className="text-muted-foreground">
                 Try a different search term or browse all groups
               </p>
+            </div>
+          ) : filterMyGroups ? (
+            <div className="col-span-full text-center py-10">
+              <h2 className="text-xl font-semibold mb-2">You haven't joined any groups yet</h2>
+              <p className="text-muted-foreground mb-4">
+                Explore communities and join groups that interest you.
+              </p>
+              <Button asChild>
+                <a href="/groups">
+                  <Icon name="Home" size={16} className="mr-2" />
+                  Browse All Groups
+                </a>
+              </Button>
             </div>
           ) : (
             <div className="col-span-full text-center py-10">

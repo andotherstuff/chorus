@@ -685,7 +685,7 @@ interface PostItemProps {
   isPinned?: boolean;
 }
 
-function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false, isPinned = false }: PostItemProps) {
+export function PostItem({ post, communityId, isApproved, isModerator, isLastItem = false, isPinned = false }: PostItemProps) {
   const author = useAuthor(post.pubkey);
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish({

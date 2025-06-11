@@ -132,6 +132,12 @@ export function SimpleMembersList({ communityId, groupData }: SimpleMembersListP
     pTagsWithModerator: community?.tags?.filter(tag => tag[0] === "p" && tag.length > 3),
     isCurrentUserInModeratorTags: moderators.includes(user?.pubkey || ''),
     isCurrentUserOwner: community?.pubkey === user?.pubkey,
+    rawModeratorTags: community?.tags?.filter(tag => tag[0] === "p" && tag[3] === "moderator"),
+    tagStructure: community?.tags?.filter(tag => tag[0] === "p").map(tag => ({ 
+      tag, 
+      length: tag.length, 
+      hasModeratorRole: tag[3] === "moderator" 
+    })),
   });
   
   // Check if we need to manually add the current user to moderator display
