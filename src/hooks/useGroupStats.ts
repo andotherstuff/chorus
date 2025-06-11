@@ -148,8 +148,15 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
         }
       }
 
-      // 7. Add moderators from community definitions (Kind 34550)
-      for (const community of communities) {
+      // 7. Fetch community metadata to get creators and moderators
+      const communityEvents = await nostr.query([{
+        kinds: [KINDS.GROUP],
+        "#d": communityRefs.map(ref => ref.split(':')[2]).filter(Boolean),
+        limit: 100
+      }], { signal });
+
+      // Process community metadata
+      for (const community of communityEvents) {
         const dTag = community.tags.find(tag => tag[0] === "d");
         const communityId = `${KINDS.GROUP}:${community.pubkey}:${dTag ? dTag[1] : ""}`;
         
@@ -168,7 +175,7 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
 
       // 8. Get approved members lists (Kind 34551) for NIP-72 communities
       const moderatorPubkeys = new Set<string>();
-      for (const community of communities) {
+      for (const community of communityEvents) {
         moderatorPubkeys.add(community.pubkey);
         for (const tag of community.tags) {
           if (tag[0] === "p" && tag[3] === "moderator") {
@@ -181,10 +188,7 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
         const approvedMembersEvents = await nostr.query([{
           kinds: [KINDS.GROUP_APPROVED_MEMBERS_LIST],
           authors: Array.from(moderatorPubkeys),
-          "#d": communities.map(c => {
-            const dTag = c.tags.find(tag => tag[0] === "d");
-            return dTag ? dTag[1] : "";
-          }).filter(d => d !== ""),
+          "#d": communityRefs.map(ref => ref.split(':')[2]).filter(Boolean),
           limit: 500
         }], { signal });
 
@@ -193,23 +197,20 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
           const dTag = event.tags.find(tag => tag[0] === "d");
           if (!dTag) continue;
 
-          // Find the matching community
-          const matchingCommunity = communities.find(c => {
-            const communityDTag = c.tags.find(tag => tag[0] === "d");
-            return communityDTag && communityDTag[1] === dTag[1];
+          // Find the matching community from our refs
+          const matchingRef = communityRefs.find(ref => {
+            const parts = ref.split(':');
+            return parts[2] === dTag[1];
           });
 
-          if (!matchingCommunity) continue;
+          if (!matchingRef) continue;
 
-          const communityDTag = matchingCommunity.tags.find(tag => tag[0] === "d");
-          const communityId = `${KINDS.GROUP}:${matchingCommunity.pubkey}:${communityDTag ? communityDTag[1] : ""}`;
-
-          if (!stats[communityId]) continue;
+          if (!stats[matchingRef]) continue;
 
           // Add all approved members to participants
           for (const tag of event.tags) {
             if (tag[0] === "p") {
-              stats[communityId].participants.add(tag[1]);
+              stats[matchingRef].participants.add(tag[1]);
             }
           }
         }
@@ -217,6 +218,6 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
 
       return stats;
     },
-    enabled: !!nostr && !!communities && communities.length > 0 && enabled,
+    enabled: !!nostr && !!communityRefs && communityRefs.length > 0 && enabled,
   });
 }
