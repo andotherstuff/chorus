@@ -7,7 +7,7 @@ import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { useReplyApprovals } from "@/hooks/useReplyApprovals";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NoteContent } from "../NoteContent";
@@ -321,10 +321,11 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
       <div className="py-3">
         <div className="flex items-start gap-2.5">
           <Link to={`/profile/${reply.pubkey}`} className="flex-shrink-0">
-            <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
-              <AvatarImage src={profileImage} />
-              <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <SafeAvatar
+              src={profileImage}
+              fallback={displayName.slice(0, 1).toUpperCase()}
+              className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md"
+            />
           </Link>
           
           <div className="flex-1">

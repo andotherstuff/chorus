@@ -7,7 +7,7 @@ import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { toast } from "sonner";
 import { Image, Loader2, Send, XCircle, Mic, Square } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
@@ -283,10 +283,11 @@ ${mediaUrl}`;
       <CardContent className="p-3">
         <div className="flex gap-2">
           <Link to={`/profile/${user.pubkey}`}>
-            <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
-              <AvatarImage src={profileImage} />
-              <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <SafeAvatar
+              src={profileImage}
+              fallback={displayName.slice(0, 2).toUpperCase()}
+              className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity rounded-md"
+            />
           </Link>
 
           <div className="flex-1">

@@ -31,6 +31,7 @@ import { GroupNutzapList } from "@/components/groups/GroupNutzapList";
 import { Users, Settings, MessageSquare, CheckCircle, DollarSign, QrCode, FileText, Shield, UserPlus, Save, Trash2, FileWarning, MessageCircle, Server } from "lucide-react";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
+import { SafeImage } from "@/components/ui/SafeImage";
 import type { Group } from "@/types/groups";
 import { parseGroupRouteId, parseGroup, parseNip29Group } from "@/lib/group-utils";
 import { MemberManagement } from "@/components/groups/MemberManagement";
@@ -753,15 +754,13 @@ export default function GroupDetail() {
                   }}
                 />
               ) : (
-                <img
+                <SafeImage
                   src={image}
                   alt={name}
                   className="w-full h-full object-cover object-center"
-                  onLoad={() => setImageLoading(false)}
-                  onError={(e) => {
-                    setImageLoading(false);
-                    e.currentTarget.src = "/placeholder-community.svg";
-                  }}
+                  fallbackSrc="/placeholder-community.svg"
+                  onLoadSuccess={() => setImageLoading(false)}
+                  onLoadError={() => setImageLoading(false)}
                 />
               )}
             </div>
@@ -917,35 +916,37 @@ export default function GroupDetail() {
             </div>
           )}
 
-          <div className="flex items-center justify-between mb-4 gap-2 max-w-3xl mx-auto">
-            {isModerator && pendingPostsCount > 0 && showOnlyApproved && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowOnlyApproved(false)}
-                className="flex items-center gap-2"
-              >
-                <AlertCircle className="h-4 w-4 text-orange-500" />
-                Review {pendingPostsCount} Pending {pendingPostsCount === 1 ? 'Post' : 'Posts'}
-              </Button>
-            )}
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="approved-only"
-                checked={showOnlyApproved}
-                onCheckedChange={setShowOnlyApproved}
-              />
-              <Label htmlFor="approved-only" className="flex items-center cursor-pointer text-sm">
-                <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-500" />
-                Show only approved posts
-              </Label>
+          {parsedRouteId?.type === "nip72" && (
+            <div className="flex items-center justify-between mb-4 gap-2 max-w-3xl mx-auto">
+              {isModerator && pendingPostsCount > 0 && showOnlyApproved && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowOnlyApproved(false)}
+                  className="flex items-center gap-2"
+                >
+                  <AlertCircle className="h-4 w-4 text-orange-500" />
+                  Review {pendingPostsCount} Pending {pendingPostsCount === 1 ? 'Post' : 'Posts'}
+                </Button>
+              )}
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="approved-only"
+                  checked={showOnlyApproved}
+                  onCheckedChange={setShowOnlyApproved}
+                />
+                <Label htmlFor="approved-only" className="flex items-center cursor-pointer text-sm">
+                  <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-500" />
+                  Show only approved posts
+                </Label>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="max-w-3xl mx-auto">
             <PostList
               communityId={groupId || ''}
-              showOnlyApproved={showOnlyApproved}
+              showOnlyApproved={parsedRouteId?.type === "nip72" ? showOnlyApproved : false}
               onPostCountChange={setCurrentPostCount}
             />
           </div>
@@ -1077,13 +1078,11 @@ export default function GroupDetail() {
 
                           {formImageUrl && (
                             <div className="mt-2 rounded-md overflow-hidden border w-full">
-                              <img
+                              <SafeImage
                                 src={formImageUrl}
                                 alt="Group preview"
                                 className="w-full h-auto"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = "none";
-                                }}
+                                fallbackSrc="/placeholder-community.svg"
                               />
                             </div>
                           )}
@@ -1319,7 +1318,7 @@ function ModeratorItem({ pubkey, isCreator = false, onRemove }: ModeratorItemPro
       <div className="flex items-center gap-3">
         <Link to={`/profile/${pubkey}`}>
           <Avatar className="rounded-md">
-            <AvatarImage src={profileImage} />
+            {profileImage && <AvatarImage src={profileImage} />}
             <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
         </Link>
@@ -1383,7 +1382,7 @@ function MemberItem({ pubkey, onPromote, isOwner }: MemberItemProps) {
       <div className="flex items-center gap-3">
         <Link to={`/profile/${pubkey}`}>
           <Avatar className="rounded-md">
-            <AvatarImage src={profileImage} />
+            {profileImage && <AvatarImage src={profileImage} />}
             <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
         </Link>

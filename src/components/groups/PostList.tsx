@@ -898,7 +898,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
       <div className="flex flex-row items-start px-3">
         <Link to={`/profile/${post.pubkey}`} className="flex-shrink-0 mr-2.5">
           <Avatar className="h-9 w-9 cursor-pointer hover:opacity-80 transition-opacity rounded-md">
-            <AvatarImage src={profileImage} alt={displayName} />
+            {profileImage && <AvatarImage src={profileImage} alt={displayName} />}
             <AvatarFallback>{displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
           </Avatar>
         </Link>

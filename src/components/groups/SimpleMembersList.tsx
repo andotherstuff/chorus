@@ -2,7 +2,7 @@ import { useNostr } from "@/hooks/useNostr";
 import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthor } from "@/hooks/useAuthor";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
@@ -242,10 +242,11 @@ function ModeratorItem({ pubkey, isCreator = false }: { pubkey: string; isCreato
   return (
     <div className="flex items-center justify-between p-1.5 rounded-md hover:bg-muted transition-colors">
       <Link to={`/profile/${pubkey}`} className="flex items-center gap-3">
-        <Avatar className="rounded-md h-9 w-9">
-          <AvatarImage src={profileImage} />
-          <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <SafeAvatar
+          src={profileImage}
+          fallback={displayName.slice(0, 2).toUpperCase()}
+          className="rounded-md h-9 w-9"
+        />
         <div>
           <p className="font-medium leading-tight">{displayName}</p>
           {isCreator ? (
@@ -297,10 +298,11 @@ function MemberItem({ pubkey }: MemberItemProps) {
   return (
     <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors">
       <Link to={`/profile/${pubkey}`} className="flex items-center gap-3">
-        <Avatar className="rounded-md h-9 w-9">
-          <AvatarImage src={profileImage} />
-          <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
+        <SafeAvatar
+          src={profileImage}
+          fallback={displayName.slice(0, 2).toUpperCase()}
+          className="rounded-md h-9 w-9"
+        />
         <span className="font-medium">{displayName}</span>
       </Link>
       

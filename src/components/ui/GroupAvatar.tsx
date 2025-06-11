@@ -1,7 +1,7 @@
 // ABOUTME: This component provides a consistent way to display group avatars with proper error handling
 // ABOUTME: It includes fallback behavior for failed image loads and different displays for NIP-29 vs NIP-72 groups
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,7 @@ export function GroupAvatar({
   className,
   showTypeIcon = true 
 }: GroupAvatarProps) {
-  const [imageError, setImageError] = useState(false);
+  const [imageState, setImageState] = useState<"loading" | "success" | "error">("loading");
   
   const sizeClasses = {
     sm: "h-8 w-8",
@@ -46,11 +46,32 @@ export function GroupAvatar({
       .slice(0, 2);
   };
 
-  const handleImageError = () => {
-    setImageError(true);
-  };
+  useEffect(() => {
+    if (!group.image) {
+      setImageState("error");
+      return;
+    }
 
-  const showFallback = !group.image || imageError;
+    // Pre-load the image to check if it loads successfully
+    const img = new Image();
+    
+    img.onload = () => {
+      setImageState("success");
+    };
+
+    img.onerror = () => {
+      setImageState("error");
+    };
+
+    img.src = group.image;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [group.image]);
+
+  const showFallback = imageState !== "success";
 
   return (
     <Avatar className={cn(sizeClasses[size], "rounded-md", className)}>
@@ -58,7 +79,6 @@ export function GroupAvatar({
         <AvatarImage 
           src={group.image} 
           alt={group.name || "Group"} 
-          onError={handleImageError}
         />
       )}
       <AvatarFallback className="bg-primary/10 text-primary font-medium rounded-md">

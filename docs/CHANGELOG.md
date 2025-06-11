@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **NIP-29 Group Images**: Fixed flashing broken images issue
+  - Created new `GroupAvatar` component with proper fallback behavior
+  - Added `SafeImage` component that pre-loads images to prevent broken image flash
+  - Updated GroupDetail page to use SafeImage for the main group banner
+  - Shows Lock icon for NIP-29 groups and Users icon for NIP-72 groups when image fails
+  - Images are now tested before display, eliminating the broken image flash
+- **NIP-29 Relay Display**: Added relay server information to group UI
+  - Shows relay hostname in group cards for better identification
+  - Added relay display in group detail page header
+  - Helps users understand which relay hosts their NIP-29 groups
+- **NIP-29 Post Approval**: Removed "Show only approved posts" toggle for NIP-29 groups
+  - NIP-29 groups use relay-enforced access control, not post approval
+  - The toggle now only appears for NIP-72 groups where it's relevant
+  - All posts in NIP-29 groups are shown if you have access to the group
+
 ### Changed
 - **Project Structure Reorganization**: Cleaned up repository for better maintainability
   - Moved all documentation files to `/docs` directory
