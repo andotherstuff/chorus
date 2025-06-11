@@ -119,9 +119,17 @@ export function GroupCard({
     }
     
     e.preventDefault();
-    const groupUrl = community.type === "nip29"
-      ? `/group/nip29/${encodeURIComponent(community.relay)}/${encodeURIComponent(community.groupId)}`
-      : `/group/${encodeURIComponent(communityId)}`;
+    let groupUrl: string;
+    
+    if (community.type === "nip29") {
+      // NIP-29 uses special routing: /group/nip29/:relay/:groupId
+      groupUrl = `/group/nip29/${encodeURIComponent(community.relay)}/${encodeURIComponent(community.groupId)}`;
+    } else {
+      // NIP-72 uses createGroupRouteId which creates "nip72:pubkey:identifier"
+      const groupRouteId = createGroupRouteId(community);
+      groupUrl = `/group/${encodeURIComponent(groupRouteId)}`;
+    }
+    
     navigate(groupUrl);
   };
 

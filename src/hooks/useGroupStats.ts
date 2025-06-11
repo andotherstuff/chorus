@@ -24,7 +24,6 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
         return {};
       }
 
-      console.log("useGroupStats: Fetching stats for", communityRefs.length, "communities");
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
       const stats: Record<string, GroupStats> = {};
@@ -35,14 +34,11 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
       }
 
       // 1. Get all posts (Kind 1, 11, 1111) that reference any community
-      console.log("useGroupStats: Querying for posts with tags:", communityRefs);
       const posts = await nostr.query([{
         kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_POST, KINDS.GROUP_POST_REPLY],
         "#a": communityRefs,
         limit: 500
       }], { signal });
-      
-      console.log(`useGroupStats: Found ${posts.length} posts`);
 
       // Process posts to count them and track participants
       for (const post of posts) {
@@ -222,12 +218,6 @@ export function useGroupStats(communityRefs: string[] | undefined, enabled = tru
             }
           }
         }
-      }
-
-      // Log final stats
-      console.log("useGroupStats: Final stats summary:");
-      for (const [communityId, stat] of Object.entries(stats)) {
-        console.log(`  ${communityId}: ${stat.posts} posts, ${stat.participants.size} participants`);
       }
 
       return stats;
