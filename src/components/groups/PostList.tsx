@@ -111,8 +111,8 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           const kindTag = approval.tags.find(tag => tag[0] === "k");
           const kind = kindTag ? Number.parseInt(kindTag[1]) : null;
 
-          // Skip this approval if it's for a reply (kind 1111)
-          if (kind === KINDS.GROUP_POST_REPLY) {
+          // Skip this approval if unsupported type
+          if (kind !== KINDS.GROUP_POST) {
             return null;
           }
 
