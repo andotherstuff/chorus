@@ -7,20 +7,14 @@ import { Link } from 'react-router-dom';
 import { nip19 } from 'nostr-tools';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useExtractUrls } from '@/hooks/useExtractUrls';
+import { 
+  IMAGE_HOST_REGEX, 
+  MEDIA_EXTENSIONS, 
+  SKIP_LINK_PREVIEW_PATTERNS 
+} from '@/lib/constants';
 
-// Constants for media detection
-const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|bmp|tiff|avif|heic)(\?\S*)?$/i;
-const VIDEO_EXTENSIONS = /\.(mp4|webm|ogg|mov|avi|mkv|m4v|3gp)(\?\S*)?$/i;
-const AUDIO_EXTENSIONS = /\.(mp3|wav|flac|m4a|aac|opus|oga|wma)(\?\S*)?$/i;
-
-// Image hosting service patterns
-const IMAGE_HOST_REGEX = /https?:\/\/(i\.imgur\.com|imgur\.com\/[a-zA-Z0-9]+|pbs\.twimg\.com|i\.ibb\.co|nostr\.build|void\.cat\/d\/|imgproxy\.snort\.social|image\.nostr\.build|media\.tenor\.com|cloudflare-ipfs\.com\/ipfs\/|ipfs\.io\/ipfs\/|files\.zaps\.lol|img\.zaps\.lol|primal\.b-cdn\.net|cdn\.nostr\.build|nitter\.net\/pic|postimages\.org|ibb\.co|cdn\.discordapp\.com\/attachments)\S+/gi;
-
-// Patterns to skip for link previews
-const SKIP_LINK_PREVIEW_PATTERNS = [
-  'api.', 'data:', '.json', '.csv', '.pdf', '.xml', 
-  'localhost', '127.0.0.1', 'blockstream.info'
-];
+// Re-export constants for backwards compatibility and easier access
+const { IMAGE: IMAGE_EXTENSIONS, VIDEO: VIDEO_EXTENSIONS, AUDIO: AUDIO_EXTENSIONS } = MEDIA_EXTENSIONS;
 
 interface ProcessedContent {
   textParts: React.ReactNode[];
