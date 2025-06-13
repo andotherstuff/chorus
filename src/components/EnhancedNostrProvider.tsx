@@ -90,7 +90,19 @@ export function EnhancedNostrProvider({
     relayConnections.current.set(url, relay);
     
     // Log connection status by monitoring the internal WebSocket
-    // We need to wait a bit for the socket to be created
+    // 
+    // FIXME: This is a brittle hack that relies on NRelay1's internal implementation.
+    // The NRelay1 constructor creates a WebSocket asynchronously, but doesn't expose
+    // any event or promise to know when it's ready. We use setTimeout to wait for
+    // the socket property to be populated on the relay instance.
+    // 
+    // This should be replaced if @nostrify/nostrify ever exposes:
+    // - A connection status property/event
+    // - A promise that resolves when the connection is established
+    // - A proper public API to access connection state
+    //
+    // Risk: This could break on any minor version update of @nostrify/nostrify
+    // if they change their internal socket property name or creation timing.
     setTimeout(() => {
       const ws = (relay as unknown as { socket?: WebSocket }).socket;
       if (ws) {
