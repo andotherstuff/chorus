@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -38,14 +38,12 @@ function LegacyNip29Redirect() {
     const relay = decodeURIComponent(encodedRelay);
     const newPath = `/group/nip29/${encodeURIComponent(relay)}/${encodeURIComponent(groupId)}${location.search}${location.hash}`;
     
-    // Redirect to the new format
-    window.location.replace(newPath);
-    return <div>Redirecting...</div>;
+    // Redirect to the new format using React Router's Navigate
+    return <Navigate to={newPath} replace />;
   }
   
   // If we can't parse the old format, redirect to groups page
-  window.location.replace('/groups');
-  return <div>Redirecting...</div>;
+  return <Navigate to="/groups" replace />;
 }
 
 // Loading component
