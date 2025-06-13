@@ -10,6 +10,7 @@ import {
   NSet
 } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
+import { log, error as logError, warn } from '@/lib/debug';
 
 interface PublishOptions {
   relays?: string[];
@@ -78,11 +79,11 @@ export function EnhancedNostrProvider({
 
   // Create relay opener with NIP-42 authentication support
   const open = useCallback((url: string): NRelay1 => {
-    console.log(`[EnhancedNostrProvider] Opening connection to ${url}`);
+    log(`[EnhancedNostrProvider] Opening connection to ${url}`);
     
     // Check if we already have a connection
     if (relayConnections.current.has(url)) {
-      console.log(`[EnhancedNostrProvider] Reusing existing connection to ${url}`);
+      log(`[EnhancedNostrProvider] Reusing existing connection to ${url}`);
       return relayConnections.current.get(url)!;
     }
 
@@ -106,21 +107,21 @@ export function EnhancedNostrProvider({
     setTimeout(() => {
       const ws = (relay as unknown as { socket?: WebSocket }).socket;
       if (ws) {
-        console.log(`[EnhancedNostrProvider] WebSocket state for ${url}: ${ws.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`);
+        log(`[EnhancedNostrProvider] WebSocket state for ${url}: ${ws.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`);
         
         // Add connection event listeners
         ws.addEventListener('open', () => {
-          console.log(`[EnhancedNostrProvider] WebSocket connected to ${url}`);
+          log(`[EnhancedNostrProvider] WebSocket connected to ${url}`);
         });
         
         ws.addEventListener('close', () => {
-          console.log(`[EnhancedNostrProvider] WebSocket disconnected from ${url}`);
+          log(`[EnhancedNostrProvider] WebSocket disconnected from ${url}`);
           relayConnections.current.delete(url);
           authenticatedRelays.current.delete(url);
         });
         
         ws.addEventListener('error', (error) => {
-          console.error(`[EnhancedNostrProvider] WebSocket error for ${url}:`, error);
+          logError(`[EnhancedNostrProvider] WebSocket error for ${url}:`, error);
         });
 
         // Set up message listener for NIP-42 auth
@@ -128,11 +129,11 @@ export function EnhancedNostrProvider({
         ws.onmessage = async (event: MessageEvent) => {
           try {
             const message = JSON.parse(event.data);
-            console.log(`[EnhancedNostrProvider] Received from ${url}:`, message);
+            log(`[EnhancedNostrProvider] Received from ${url}:`, message);
             
             // Check for AUTH challenge
             if (Array.isArray(message) && message[0] === 'AUTH' && message[1]) {
-              console.log(`[NIP-42] Received AUTH challenge from ${url}:`, message[1]);
+              log(`[NIP-42] Received AUTH challenge from ${url}:`, message[1]);
               pendingAuth.current.set(url, message[1]);
               
               // Automatically respond to AUTH challenge if we have a signer
@@ -150,7 +151,7 @@ export function EnhancedNostrProvider({
           }
         };
       } else {
-        console.warn(`[EnhancedNostrProvider] No WebSocket found for ${url}`);
+        warn(`[EnhancedNostrProvider] No WebSocket found for ${url}`);
       }
     }, 100);
 
@@ -160,12 +161,12 @@ export function EnhancedNostrProvider({
   // Handle NIP-42 authentication
   const handleAuthChallenge = useCallback(async (relayUrl: string, challenge: string) => {
     if (!signer) {
-      console.warn(`[NIP-42] Cannot authenticate with ${relayUrl}: No signer available`);
+      warn(`[NIP-42] Cannot authenticate with ${relayUrl}: No signer available`);
       return;
     }
 
     try {
-      console.log(`[NIP-42] Authenticating with ${relayUrl}`);
+      log(`[NIP-42] Authenticating with ${relayUrl}`);
       
       // Create NIP-42 auth event
       const authEvent = await signer.signEvent({
@@ -185,11 +186,11 @@ export function EnhancedNostrProvider({
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(['AUTH', authEvent]));
           authenticatedRelays.current.add(relayUrl);
-          console.log(`[NIP-42] Successfully authenticated with ${relayUrl}`);
+          log(`[NIP-42] Successfully authenticated with ${relayUrl}`);
         }
       }
     } catch (error) {
-      console.error(`[NIP-42] Failed to authenticate with ${relayUrl}:`, error);
+      logError(`[NIP-42] Failed to authenticate with ${relayUrl}:`, error);
     }
   }, [signer]);
 
@@ -197,7 +198,7 @@ export function EnhancedNostrProvider({
   const ensureRelayAuth = useCallback(async (relayUrl: string) => {
     // First ensure connection
     if (!relayConnections.current.has(relayUrl)) {
-      console.log(`[NIP-42] Connecting to ${relayUrl}...`);
+      log(`[NIP-42] Connecting to ${relayUrl}...`);
       const relay = open(relayUrl);
       relayConnections.current.set(relayUrl, relay);
     }
@@ -218,7 +219,7 @@ export function EnhancedNostrProvider({
 
   const addGroupRelay = useCallback((groupId: string, relay: string) => {
     groupRelays.current.set(groupId, relay);
-    console.log(`[Groups] Registered relay ${relay} for group ${groupId}`);
+    log(`[Groups] Registered relay ${relay} for group ${groupId}`);
   }, []);
 
   const getGroupRelay = useCallback((groupId: string): string | undefined => {
@@ -236,12 +237,12 @@ export function EnhancedNostrProvider({
       reqRouter: async (filters: NostrFilter[]) => {
         const relayMap = new Map<string, NostrFilter[]>();
         
-        console.log('[EnhancedNostrProvider] Routing query filters:', filters);
+        log('[EnhancedNostrProvider] Routing query filters:', filters);
         
         for (const filter of filters) {
           // Check if this is a NIP-29 query (relay-generated kinds 39000-39003)
           if (filter.kinds?.some(k => k >= 39000 && k <= 39003)) {
-            console.log('[NIP-29] Detected NIP-29 query, routing to NIP-29 relays');
+            log('[NIP-29] Detected NIP-29 query, routing to NIP-29 relays');
             
             // Check if we have a group ID in the filter
             // For kind 39002 (member lists), the group ID is in #d tag
@@ -249,7 +250,7 @@ export function EnhancedNostrProvider({
             const groupId = filter['#d']?.[0] || filter['#h']?.[0];
             const groupRelay = groupId ? getGroupRelay(groupId) : undefined;
             
-            console.log('[NIP-29] Filter analysis:', {
+            log('[NIP-29] Filter analysis:', {
               kinds: filter.kinds,
               dTag: filter['#d'],
               hTag: filter['#h'],
@@ -263,18 +264,18 @@ export function EnhancedNostrProvider({
                 relayMap.set(groupRelay, []);
               }
               relayMap.get(groupRelay)!.push(filter);
-              console.log(`[NIP-29] Routing query to group-specific relay ${groupRelay}`);
+              log(`[NIP-29] Routing query to group-specific relay ${groupRelay}`);
             } else {
               // Use the default NIP-29 relay
               if (!relayMap.has(defaultNip29Relay)) {
                 relayMap.set(defaultNip29Relay, []);
               }
               relayMap.get(defaultNip29Relay)!.push(filter);
-              console.log(`[NIP-29] Routing query to default NIP-29 relay ${defaultNip29Relay}`);
+              log(`[NIP-29] Routing query to default NIP-29 relay ${defaultNip29Relay}`);
             }
           } else {
             // Regular query - use NIP-72 relays
-            console.log('[NIP-72] Routing query to default NIP-72 relays');
+            log('[NIP-72] Routing query to default NIP-72 relays');
             for (const relay of defaultRelays) {
               if (!relayMap.has(relay)) {
                 relayMap.set(relay, []);
@@ -284,18 +285,18 @@ export function EnhancedNostrProvider({
           }
         }
         
-        console.log('[EnhancedNostrProvider] Final relay routing:', Array.from(relayMap.keys()));
+        log('[EnhancedNostrProvider] Final relay routing:', Array.from(relayMap.keys()));
         return relayMap;
       },
       eventRouter: async (event: NostrEvent) => {
         const relayUrls: string[] = [];
         
-        console.log(`[EnhancedNostrProvider] Routing event kind ${event.kind}`);
+        log(`[EnhancedNostrProvider] Routing event kind ${event.kind}`);
         
         // Check if this is a NIP-29 event (user-generated for groups: 9000-9030, or relay-generated: 39000+)
         const hTag = event.tags.find(tag => tag[0] === 'h');
         if (hTag || (((event.kind >= 9000 && event.kind <= 9030) || event.kind === 11)) || (event.kind >= 39000)) {
-          console.log('[NIP-29] Detected NIP-29 event, routing to NIP-29 relays');
+          log('[NIP-29] Detected NIP-29 event, routing to NIP-29 relays');
           
           // This is a NIP-29 event, find the appropriate relay
           const groupId = hTag?.[1];
@@ -303,19 +304,19 @@ export function EnhancedNostrProvider({
           
           if (groupRelay) {
             relayUrls.push(groupRelay);
-            console.log(`[NIP-29] Routing event to group-specific relay ${groupRelay}`);
+            log(`[NIP-29] Routing event to group-specific relay ${groupRelay}`);
           } else {
             // Use default NIP-29 relay
             relayUrls.push(defaultNip29Relay);
-            console.log(`[NIP-29] Routing event to default NIP-29 relay ${defaultNip29Relay}`);
+            log(`[NIP-29] Routing event to default NIP-29 relay ${defaultNip29Relay}`);
           }
         } else {
           // Regular event - use NIP-72 relays
-          console.log('[NIP-72] Routing event to default NIP-72 relays');
+          log('[NIP-72] Routing event to default NIP-72 relays');
           relayUrls.push(...defaultRelays);
         }
         
-        console.log('[EnhancedNostrProvider] Final event routing:', relayUrls);
+        log('[EnhancedNostrProvider] Final event routing:', relayUrls);
         return relayUrls;
       }
     });
@@ -328,12 +329,12 @@ export function EnhancedNostrProvider({
     filters: NostrFilter[],
     opts?: { signal?: AbortSignal; relays?: string[] }
   ): Promise<NostrEvent[]> => {
-    console.log('[Query] Starting query with filters:', JSON.stringify(filters, null, 2));
-    console.log('[Query] Query options:', { relays: opts?.relays, hasSignal: !!opts?.signal });
+    log('[Query] Starting query with filters:', JSON.stringify(filters, null, 2));
+    log('[Query] Query options:', { relays: opts?.relays, hasSignal: !!opts?.signal });
     
     // If specific relays are provided, ensure they're authenticated
     if (opts?.relays) {
-      console.log('[Query] Ensuring authentication for relays:', opts.relays);
+      log('[Query] Ensuring authentication for relays:', opts.relays);
       for (const relay of opts.relays) {
         await ensureRelayAuth(relay);
       }
@@ -341,7 +342,7 @@ export function EnhancedNostrProvider({
 
     // If specific relays are provided, create a temporary pool for this query
     if (opts?.relays && opts.relays.length > 0) {
-      console.log(`[Query] Creating temporary pool for relays:`, opts.relays);
+      log(`[Query] Creating temporary pool for relays:`, opts.relays);
       const tempPool = new NPool({
         open,
         reqRouter: async (filters: NostrFilter[]) => {
@@ -356,12 +357,12 @@ export function EnhancedNostrProvider({
           return opts.relays || [];
         }
       });
-      console.log('[Query] Executing query on temporary pool...');
+      log('[Query] Executing query on temporary pool...');
       const events = await tempPool.query(filters, opts);
       const eventsArray = Array.from(events);
-      console.log(`[Query] Temporary pool returned ${eventsArray.length} events`);
+      log(`[Query] Temporary pool returned ${eventsArray.length} events`);
       eventsArray.forEach((event, index) => {
-        console.log(`[Query] Event ${index + 1}:`, {
+        log(`[Query] Event ${index + 1}:`, {
           id: event.id,
           kind: event.kind,
           pubkey: event.pubkey,
@@ -376,16 +377,16 @@ export function EnhancedNostrProvider({
     // Use the enhanced pool for NIP-29 queries
     const isNip29Query = filters.some(f => f.kinds?.some(k => k >= 39000 && k <= 39003));
     if (isNip29Query) {
-      console.log(`[Query] Using enhanced pool for NIP-29 query`);
+      log(`[Query] Using enhanced pool for NIP-29 query`);
       const events = await pool.query(filters, opts);
       const eventsArray = Array.from(events);
-      console.log(`[Query] Enhanced pool returned ${eventsArray.length} events`);
+      log(`[Query] Enhanced pool returned ${eventsArray.length} events`);
       return eventsArray;
     } else {
       // Use the base nostr for NIP-72 queries
-      console.log('[Query] Using base nostr for NIP-72 query');
+      log('[Query] Using base nostr for NIP-72 query');
       const events = await baseNostr.nostr.query(filters, opts ? { signal: opts.signal } : undefined);
-      console.log(`[Query] Base nostr returned ${events.length} events`);
+      log(`[Query] Base nostr returned ${events.length} events`);
       return events;
     }
   }, [pool, ensureRelayAuth, baseNostr, open]);
@@ -404,22 +405,22 @@ export function EnhancedNostrProvider({
       const groupRelay = getGroupRelay(opts.groupId);
       if (groupRelay) {
         targetRelays = [groupRelay];
-        console.log(`[Publish] Publishing NIP-29 event to group relay: ${groupRelay}`);
+        log(`[Publish] Publishing NIP-29 event to group relay: ${groupRelay}`);
       } else if (opts.relays && opts.relays.length > 0) {
         // Use the specified relay and register it for future use
         targetRelays = opts.relays;
         addGroupRelay(opts.groupId, opts.relays[0]);
-        console.log(`[Publish] Publishing NIP-29 event to new relay: ${opts.relays[0]}`);
+        log(`[Publish] Publishing NIP-29 event to new relay: ${opts.relays[0]}`);
       } else {
         // Use default NIP-29 relay
         targetRelays = [defaultNip29Relay];
         addGroupRelay(opts.groupId, defaultNip29Relay);
-        console.log(`[Publish] Publishing NIP-29 event to default relay: ${defaultNip29Relay}`);
+        log(`[Publish] Publishing NIP-29 event to default relay: ${defaultNip29Relay}`);
       }
     } else if (opts?.groupType === "nip72") {
       // For NIP-72, explicitly use the NIP-72 relays
       targetRelays = defaultRelays;
-      console.log(`[Publish] Publishing NIP-72 event to NIP-72 relays: ${defaultRelays.join(', ')}`);
+      log(`[Publish] Publishing NIP-72 event to NIP-72 relays: ${defaultRelays.join(', ')}`);
     }
 
     // Ensure target relays are authenticated for NIP-29 events
@@ -437,11 +438,11 @@ export function EnhancedNostrProvider({
     // Use the enhanced pool for NIP-29 events or when targeting specific relays
     const isNip29Event = ((event.kind >= 9000 && event.kind <= 9030) || event.kind === 11) || event.kind >= 39000;
     if (isNip29Event || opts?.groupType === "nip29") {
-      console.log(`[Publish] Publishing NIP-29 event via enhanced pool to: ${targetRelays.join(', ')}`);
+      log(`[Publish] Publishing NIP-29 event via enhanced pool to: ${targetRelays.join(', ')}`);
       await pool.event(event, { ...opts, relays: targetRelays, signal: AbortSignal.timeout(10000) });
     } else {
       // Use the base nostr for NIP-72 events
-      console.log(`[Publish] Publishing NIP-72 event via base nostr`);
+      log(`[Publish] Publishing NIP-72 event via base nostr`);
       await baseNostr.nostr.event(event, opts ? { signal: opts.signal } : undefined);
     }
   }, [pool, defaultRelays, defaultNip29Relay, getGroupRelay, addGroupRelay, handleAuthChallenge, baseNostr]);
@@ -457,13 +458,13 @@ export function EnhancedNostrProvider({
   
   // Preconnect to NIP-29 relays on mount
   useEffect(() => {
-    console.log('[EnhancedNostrProvider] Preconnecting to NIP-29 relays...');
+    log('[EnhancedNostrProvider] Preconnecting to NIP-29 relays...');
     for (const relay of nip29Relays) {
       try {
         open(relay);
-        console.log(`[EnhancedNostrProvider] Initiated connection to ${relay}`);
+        log(`[EnhancedNostrProvider] Initiated connection to ${relay}`);
       } catch (error) {
-        console.error(`[EnhancedNostrProvider] Failed to connect to ${relay}:`, error);
+        logError(`[EnhancedNostrProvider] Failed to connect to ${relay}:`, error);
       }
     }
   }, [nip29Relays, open]);
