@@ -111,15 +111,15 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
           const kindTag = approval.tags.find(tag => tag[0] === "k");
           const kind = kindTag ? Number.parseInt(kindTag[1]) : null;
 
-          // Skip this approval if unsupported type
-          if (kind !== KINDS.GROUP_POST) {
+          // Skip this approval if it's for a reply (kind 1111)
+          if (kind === KINDS.GROUP_POST_REPLY) {
             return null;
           }
 
           const approvedPost = JSON.parse(approval.content) as NostrEvent;
 
-          // Skip if the post itself is a reply
-          if (approvedPost.kind === KINDS.GROUP_POST_REPLY) {
+          // Skip if the post itself is of an unsupported kind
+          if (approvedPost.kind !== KINDS.GROUP_POST) {
             return null;
           }
 
