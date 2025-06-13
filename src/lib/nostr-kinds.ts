@@ -3,6 +3,7 @@ export const KINDS = {
   TEXT_NOTE: 1,
   FOLLOW_LIST: 3,
   DELETION: 5,
+  REPOST: 6,
   REACTION: 7,
   ZAP: 9735,
   REPORT: 1984,
