@@ -1,0 +1,5 @@
+name = "chorus-nip29"
+compatibility_date = "2024-01-15"
+
+# Cloudflare Pages configuration
+pages_build_output_dir = "dist"

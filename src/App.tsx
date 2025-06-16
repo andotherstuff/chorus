@@ -24,7 +24,7 @@ const nip72Relays = [
 ];
 
 const nip29Relays = [
-  'wss://relay.damus.io', // Default relay for NIP-29 groups
+  'wss://groups.nip29.com/', // Default relay for NIP-29 groups
 ];
 
 // Combined relay list for the base NostrProvider (primarily for NIP-72)
@@ -47,7 +47,7 @@ function AppWithEnhancedNostr({ children }: { children: ReactNode }) {
   return (
     <EnhancedNostrProvider 
       relays={defaultRelays} 
-      nip29DefaultRelay="wss://communities.nos.social/"
+      nip29DefaultRelay="wss://groups.nip29.com/"
       signer={user?.signer}
     >
       {children}

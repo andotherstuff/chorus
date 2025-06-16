@@ -11,6 +11,8 @@ import {
 } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { log, error as logError, warn } from '@/lib/debug';
+import { normalizeRelayUrl } from '@/lib/nip29Utils';
+import type { GroupInstance, GroupMetadata } from '@/features/groups/types';
 
 interface PublishOptions {
   relays?: string[];
@@ -23,7 +25,18 @@ interface EnhancedNostr {
   pool: NPool;
   query: (filters: NostrFilter[], opts?: { signal?: AbortSignal; relays?: string[] }) => Promise<NostrEvent[]>;
   event: (event: NostrEvent, opts?: PublishOptions) => Promise<void>;
+  
+  // New group instance management
+  addGroupInstance: (instance: GroupInstance) => void;
+  resolveGroupInstance: (compositeId: string) => GroupInstance | undefined;
+  getGroupInstances: (groupId: string) => GroupInstance[];
+  removeGroupInstance: (compositeId: string) => void;
+  createCompositeId: (groupId: string, relayUrl: string) => string;
+  
+  // Legacy methods (deprecated but maintained for compatibility)
+  /** @deprecated Use addGroupInstance instead */
   addGroupRelay: (groupId: string, relay: string) => void;
+  /** @deprecated Use getGroupInstances(groupId) or resolveGroupInstance(compositeId) */
   getGroupRelay: (groupId: string) => string | undefined;
   getNip29DefaultRelay: () => string;
 }
@@ -54,17 +67,15 @@ interface EnhancedNostrProviderProps {
 export function EnhancedNostrProvider({ 
   children, 
   relays = [], 
-  nip29DefaultRelay = 'wss://communities.nos.social/',
+  nip29DefaultRelay = 'wss://groups.nip29.com/',
   signer 
 }: EnhancedNostrProviderProps) {
   // Get the base nostr instance from the regular provider
   const baseNostr = useNostr();
   
-  // Preconnect to known NIP-29 relays
+  // NIP-29 groups should be relay-specific - only use default relay unless specific group relay is registered
   const nip29Relays = useMemo(() => [
-    nip29DefaultRelay,
-    // 'wss://relays.groups.nip29.com', // Temporarily disabled - causing crashes
-    'wss://groups.fiatjaf.com'
+    nip29DefaultRelay
   ], [nip29DefaultRelay]);
   
   // Track authenticated relays
@@ -214,17 +225,122 @@ export function EnhancedNostrProvider({
     return authenticatedRelays.current.has(relayUrl);
   }, [open, handleAuthChallenge]);
 
-  // Group relay management with hard-coded default
-  const groupRelays = useRef<Map<string, string>>(new Map());
+  // Group instance management with hybrid model (flat map + secondary index)
+  const groupInstances = useRef<Map<string, GroupInstance>>(new Map());
+  const groupIndex = useRef<Map<string, Set<string>>>(new Map());
+  // Legacy compatibility
+  const legacyGroupRelays = useRef<Map<string, string>>(new Map());
 
+  // Create composite ID for group instances
+  const createCompositeId = useCallback((groupId: string, relayUrl: string): string => {
+    const normalized = normalizeRelayUrl(relayUrl);
+    if (!normalized) {
+      throw new Error(`Invalid relay URL: ${relayUrl}`);
+    }
+    return `${groupId}@${normalized}`;
+  }, []);
+
+  // Add a group instance to tracking
+  const addGroupInstance = useCallback((instance: GroupInstance) => {
+    const metadata = instance.metadata;
+    let groupId: string;
+    let relayUrl: string;
+
+    if (metadata.protocol === 'nip29') {
+      groupId = metadata.groupId;
+      relayUrl = metadata.relayUrl;
+    } else {
+      // NIP-72 doesn't have a specific relay, skip instance tracking
+      warn('[Groups] Cannot add NIP-72 community as group instance');
+      return;
+    }
+
+    const compositeId = createCompositeId(groupId, relayUrl);
+    
+    if (groupInstances.current.has(compositeId)) {
+      log(`[Groups] Updating existing group instance: ${compositeId}`);
+    } else {
+      log(`[Groups] Adding new group instance: ${compositeId}`);
+    }
+
+    groupInstances.current.set(compositeId, instance);
+
+    // Update secondary index
+    if (!groupIndex.current.has(groupId)) {
+      groupIndex.current.set(groupId, new Set());
+    }
+    groupIndex.current.get(groupId)!.add(compositeId);
+
+    // Update legacy map for compatibility
+    legacyGroupRelays.current.set(groupId, relayUrl);
+  }, [createCompositeId]);
+
+  // Resolve specific group instance by composite ID
+  const resolveGroupInstance = useCallback((compositeId: string): GroupInstance | undefined => {
+    return groupInstances.current.get(compositeId);
+  }, []);
+
+  // Get all instances for a group ID
+  const getGroupInstances = useCallback((groupId: string): GroupInstance[] => {
+    const compositeIds = groupIndex.current.get(groupId);
+    if (!compositeIds || compositeIds.size === 0) {
+      return [];
+    }
+
+    return Array.from(compositeIds)
+      .map(id => groupInstances.current.get(id))
+      .filter((instance): instance is GroupInstance => !!instance);
+  }, []);
+
+  // Remove group instance
+  const removeGroupInstance = useCallback((compositeId: string) => {
+    const instance = groupInstances.current.get(compositeId);
+    if (!instance) {
+      warn(`[Groups] Cannot remove unknown group instance: ${compositeId}`);
+      return;
+    }
+
+    const metadata = instance.metadata;
+    if (metadata.protocol === 'nip29') {
+      const groupId = metadata.groupId;
+      
+      groupInstances.current.delete(compositeId);
+
+      // Update secondary index
+      const indexedSet = groupIndex.current.get(groupId);
+      if (indexedSet) {
+        indexedSet.delete(compositeId);
+        if (indexedSet.size === 0) {
+          groupIndex.current.delete(groupId);
+          // Also clear legacy map if no instances remain
+          legacyGroupRelays.current.delete(groupId);
+        }
+      }
+      
+      log(`[Groups] Removed group instance: ${compositeId}`);
+    }
+  }, []);
+
+  // Legacy compatibility methods
   const addGroupRelay = useCallback((groupId: string, relay: string) => {
-    groupRelays.current.set(groupId, relay);
-    log(`[Groups] Registered relay ${relay} for group ${groupId}`);
+    legacyGroupRelays.current.set(groupId, relay);
+    log(`[Groups] Legacy: Registered relay ${relay} for group ${groupId}`);
   }, []);
 
   const getGroupRelay = useCallback((groupId: string): string | undefined => {
-    return groupRelays.current.get(groupId);
-  }, []);
+    // First check if we have tracked instances for this group
+    const instances = getGroupInstances(groupId);
+    if (instances.length > 0) {
+      // Return the first instance's relay (or implement preferred logic later)
+      const firstInstance = instances[0];
+      if (firstInstance.metadata.protocol === 'nip29') {
+        return firstInstance.metadata.relayUrl;
+      }
+    }
+    
+    // Fallback to legacy map
+    return legacyGroupRelays.current.get(groupId);
+  }, [getGroupInstances]);
 
   const getNip29DefaultRelay = useCallback((): string => {
     return defaultNip29Relay;
@@ -242,36 +358,66 @@ export function EnhancedNostrProvider({
         for (const filter of filters) {
           // Check if this is a NIP-29 query (relay-generated kinds 39000-39003)
           if (filter.kinds?.some(k => k >= 39000 && k <= 39003)) {
-            log('[NIP-29] Detected NIP-29 query, routing to NIP-29 relays');
+            log('[NIP-29] Detected NIP-29 query, analyzing for group instances');
             
-            // Check if we have a group ID in the filter
-            // For kind 39002 (member lists), the group ID is in #d tag
-            // For other kinds, it might be in #h tag
+            // Extract group ID from filter (typically in #d tag for addressable events)
             const groupId = filter['#d']?.[0] || filter['#h']?.[0];
-            const groupRelay = groupId ? getGroupRelay(groupId) : undefined;
             
             log('[NIP-29] Filter analysis:', {
               kinds: filter.kinds,
               dTag: filter['#d'],
               hTag: filter['#h'],
               groupId,
-              groupRelay
             });
             
-            // If we have a specific relay for this group, use it
-            if (groupRelay) {
-              if (!relayMap.has(groupRelay)) {
-                relayMap.set(groupRelay, []);
+            if (groupId) {
+              // Check if we have tracked instances for this specific group
+              const instances = getGroupInstances(groupId);
+              
+              if (instances.length > 0) {
+                log(`[NIP-29] Found ${instances.length} tracked instances for group ${groupId}`);
+                
+                // Route to ALL known relays for this group to ensure completeness
+                for (const instance of instances) {
+                  if (instance.metadata.protocol === 'nip29') {
+                    const relayUrl = instance.metadata.relayUrl;
+                    if (!relayMap.has(relayUrl)) {
+                      relayMap.set(relayUrl, []);
+                    }
+                    relayMap.get(relayUrl)!.push(filter);
+                    log(`[NIP-29] Routing query to tracked instance relay: ${relayUrl}`);
+                  }
+                }
+              } else {
+                // No tracked instances - this might be discovery mode
+                // Check legacy map as fallback
+                const legacyRelay = legacyGroupRelays.current.get(groupId);
+                if (legacyRelay) {
+                  const normalizedRelay = normalizeRelayUrl(legacyRelay);
+                  if (normalizedRelay) {
+                    if (!relayMap.has(normalizedRelay)) {
+                      relayMap.set(normalizedRelay, []);
+                    }
+                    relayMap.get(normalizedRelay)!.push(filter);
+                    log(`[NIP-29] Routing query to legacy relay: ${normalizedRelay}`);
+                  }
+                } else {
+                  // True discovery mode - use default NIP-29 relay
+                  if (!relayMap.has(defaultNip29Relay)) {
+                    relayMap.set(defaultNip29Relay, []);
+                  }
+                  relayMap.get(defaultNip29Relay)!.push(filter);
+                  log(`[NIP-29] Discovery mode: routing to default NIP-29 relay ${defaultNip29Relay}`);
+                }
               }
-              relayMap.get(groupRelay)!.push(filter);
-              log(`[NIP-29] Routing query to group-specific relay ${groupRelay}`);
             } else {
-              // Use the default NIP-29 relay
+              // No specific group ID - general NIP-29 query (e.g., browsing all groups)
+              // Use default NIP-29 relay for discovery
               if (!relayMap.has(defaultNip29Relay)) {
                 relayMap.set(defaultNip29Relay, []);
               }
               relayMap.get(defaultNip29Relay)!.push(filter);
-              log(`[NIP-29] Routing query to default NIP-29 relay ${defaultNip29Relay}`);
+              log(`[NIP-29] General query: routing to default NIP-29 relay ${defaultNip29Relay}`);
             }
           } else {
             // Regular query - use NIP-72 relays
@@ -296,19 +442,44 @@ export function EnhancedNostrProvider({
         // Check if this is a NIP-29 event (user-generated for groups: 9000-9030, or relay-generated: 39000+)
         const hTag = event.tags.find(tag => tag[0] === 'h');
         if (hTag || (((event.kind >= 9000 && event.kind <= 9030) || event.kind === 11)) || (event.kind >= 39000)) {
-          log('[NIP-29] Detected NIP-29 event, routing to NIP-29 relays');
+          log('[NIP-29] Detected NIP-29 event, analyzing for group instances');
           
-          // This is a NIP-29 event, find the appropriate relay
+          // Extract group ID from the event
           const groupId = hTag?.[1];
-          const groupRelay = groupId ? getGroupRelay(groupId) : undefined;
           
-          if (groupRelay) {
-            relayUrls.push(groupRelay);
-            log(`[NIP-29] Routing event to group-specific relay ${groupRelay}`);
+          if (groupId) {
+            // Check if we have tracked instances for this specific group
+            const instances = getGroupInstances(groupId);
+            
+            if (instances.length > 0) {
+              log(`[NIP-29] Found ${instances.length} tracked instances for group ${groupId}`);
+              
+              // For publishing, we typically want to target the specific relay where the user is active
+              // For now, use the first instance's relay (could be enhanced with user preference later)
+              const firstInstance = instances[0];
+              if (firstInstance.metadata.protocol === 'nip29') {
+                relayUrls.push(firstInstance.metadata.relayUrl);
+                log(`[NIP-29] Routing event to tracked instance relay: ${firstInstance.metadata.relayUrl}`);
+              }
+            } else {
+              // No tracked instances - check legacy map as fallback
+              const legacyRelay = legacyGroupRelays.current.get(groupId);
+              if (legacyRelay) {
+                const normalizedRelay = normalizeRelayUrl(legacyRelay);
+                if (normalizedRelay) {
+                  relayUrls.push(normalizedRelay);
+                  log(`[NIP-29] Routing event to legacy relay: ${normalizedRelay}`);
+                }
+              } else {
+                // Use default NIP-29 relay
+                relayUrls.push(defaultNip29Relay);
+                log(`[NIP-29] No group instance found, routing to default NIP-29 relay ${defaultNip29Relay}`);
+              }
+            }
           } else {
-            // Use default NIP-29 relay
+            // No group ID - general NIP-29 event
             relayUrls.push(defaultNip29Relay);
-            log(`[NIP-29] Routing event to default NIP-29 relay ${defaultNip29Relay}`);
+            log(`[NIP-29] General event: routing to default NIP-29 relay ${defaultNip29Relay}`);
           }
         } else {
           // Regular event - use NIP-72 relays
@@ -320,7 +491,7 @@ export function EnhancedNostrProvider({
         return relayUrls;
       }
     });
-  }, [defaultRelays, defaultNip29Relay, open, getGroupRelay]);
+  }, [defaultRelays, defaultNip29Relay, open, getGroupInstances]);
 
   /**
    * Enhanced query with authentication support
@@ -451,10 +622,29 @@ export function EnhancedNostrProvider({
     pool,
     query,
     event,
+    // New group instance management
+    addGroupInstance,
+    resolveGroupInstance,
+    getGroupInstances,
+    removeGroupInstance,
+    createCompositeId,
+    // Legacy methods
     addGroupRelay,
     getGroupRelay,
     getNip29DefaultRelay
-  }), [pool, query, event, addGroupRelay, getGroupRelay, getNip29DefaultRelay]);
+  }), [
+    pool, 
+    query, 
+    event, 
+    addGroupInstance,
+    resolveGroupInstance,
+    getGroupInstances,
+    removeGroupInstance,
+    createCompositeId,
+    addGroupRelay, 
+    getGroupRelay, 
+    getNip29DefaultRelay
+  ]);
   
   // Preconnect to NIP-29 relays on mount
   useEffect(() => {
