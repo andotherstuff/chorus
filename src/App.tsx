@@ -12,8 +12,9 @@ import AppRouter from './AppRouter';
 import { useSystemTheme } from '@/hooks/useSystemTheme';
 import { JoinDialogProvider } from '@/components/groups/JoinDialogProvider';
 import { WalletLoader } from '@/components/WalletLoader';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { migrateLegacyGroupData, isMigrationCompleted } from '@/lib/groupMigration';
 
 // Separate relay configurations for different protocols
 const nip72Relays = [
@@ -58,6 +59,20 @@ function AppWithEnhancedNostr({ children }: { children: ReactNode }) {
 export function App() {
   // Use the enhanced theme hook
   useSystemTheme();
+
+  // Run data migration on app startup
+  useEffect(() => {
+    if (!isMigrationCompleted()) {
+      console.log('[App] Running NIP-29 data migration...');
+      const result = migrateLegacyGroupData();
+      
+      if (result.errors.length > 0) {
+        console.warn('[App] Migration completed with errors:', result.errors);
+      } else {
+        console.log(`[App] Migration completed successfully: ${result.migratedCount} migrated, ${result.skippedCount} skipped`);
+      }
+    }
+  }, []);
 
   return (
     <NostrLoginProvider storageKey='nostr:login'>
