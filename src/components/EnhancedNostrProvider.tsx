@@ -6,13 +6,12 @@ import {
   NRelay1,
   NostrEvent,
   NostrSigner,
-  NostrFilter,
-  NSet
+  NostrFilter
 } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { log, error as logError, warn } from '@/lib/debug';
 import { normalizeRelayUrl } from '@/lib/nip29Utils';
-import type { GroupInstance, GroupMetadata } from '@/features/groups/types';
+import type { GroupInstance } from '@/features/groups/types';
 
 interface PublishOptions {
   relays?: string[];
@@ -152,7 +151,7 @@ export function EnhancedNostrProvider({
                 await handleAuthChallenge(url, message[1]);
               }
             }
-          } catch (error) {
+          } catch (_error) {
             // Not JSON or parsing error, ignore
           }
           
@@ -523,7 +522,7 @@ export function EnhancedNostrProvider({
           }
           return relayMap;
         },
-        eventRouter: async (event: NostrEvent) => {
+        eventRouter: async (_event: NostrEvent) => {
           // Route events to all specified relays
           return opts.relays || [];
         }

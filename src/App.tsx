@@ -23,9 +23,9 @@ const nip72Relays = [
   'wss://nos.lol/', // NOS relay
 ];
 
-const nip29Relays = [
-  'wss://groups.nip29.com/', // Default relay for NIP-29 groups
-];
+// const nip29Relays = [
+//   'wss://groups.nip29.com/', // Default relay for NIP-29 groups
+// ];
 
 // Combined relay list for the base NostrProvider (primarily for NIP-72)
 const defaultRelays = [...nip72Relays];

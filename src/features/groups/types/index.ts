@@ -36,6 +36,14 @@ export {
 // Re-export normalized types for compatibility with existing imports
 export type { GroupType } from "@/types/groups";
 
+// Import types for utility functions
+import type { 
+  GroupMetadata, 
+  Nip29GroupMetadata, 
+  Nip72CommunityMetadata,
+  GroupRouteId 
+} from "./shared";
+
 // Utility functions for migration and compatibility
 export function isNip29Group(group: GroupMetadata | any): group is Nip29GroupMetadata {
   return group.protocol === "nip29" || group.type === "nip29";
@@ -50,7 +58,7 @@ export function isNip72Group(group: GroupMetadata | any): group is Nip72Communit
  */
 export function getGroupRelayUrl(group: GroupMetadata | any, defaultRelays: string[]): string {
   if (isNip29Group(group)) {
-    return group.relayUrl || group.relay;
+    return group.relayUrl || (group as any).relay;
   }
   // NIP-72 groups use default relay (typically first in list)
   return defaultRelays[0];
@@ -63,7 +71,7 @@ export function createGroupRouteId(group: GroupMetadata | any): string {
   if (isNip72Group(group)) {
     return `nip72:${group.pubkey}:${group.identifier}`;
   } else if (isNip29Group(group)) {
-    const relayUrl = group.relayUrl || group.relay;
+    const relayUrl = group.relayUrl || (group as any).relay;
     const groupId = group.groupId;
     return `nip29:${encodeURIComponent(relayUrl)}:${groupId}`;
   }
