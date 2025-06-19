@@ -6,6 +6,7 @@ import { GroupSearch } from "@/components/groups/GroupSearch";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { TrendingUp, Pin, Users, Clock, Activity } from "lucide-react";
 import { useGroupStats } from "@/hooks/useGroupStats";
+import { useNip29GroupStats } from "@/hooks/useNip29GroupStats";
 import { usePinnedGroups } from "@/hooks/usePinnedGroups";
 import { useUnifiedGroupsWithCache } from "@/hooks/useUnifiedGroupsWithCache";
 import { useGroupDeletionRequests } from "@/hooks/useGroupDeletionRequests";
@@ -71,6 +72,11 @@ export default function Groups() {
     return allGroups.filter(g => g.type === 'nip72');
   }, [allGroups]);
 
+  // Extract NIP-29 groups for stats
+  const nip29Groups = useMemo(() => {
+    return allGroups.filter(g => g.type === 'nip29');
+  }, [allGroups]);
+
   // Get community references for stats fetching
   const communityRefs = useMemo(() => {
     return nip72Groups.map(group => {
@@ -85,6 +91,12 @@ export default function Groups() {
   const { data: groupStats, isLoading: isLoadingStats } = useGroupStats(
     communityRefs,
     !isLoadingGroups && communityRefs.length > 0
+  );
+
+  // Fetch stats for NIP-29 groups
+  const { data: nip29GroupStats, isLoading: isLoadingNip29Stats } = useNip29GroupStats(
+    nip29Groups,
+    !isLoadingGroups && nip29Groups.length > 0
   );
 
 
@@ -262,7 +274,7 @@ export default function Groups() {
     // Sort function that prioritizes activity
     const sortByActivity = (a: Group, b: Group) => {
       try {
-        // First try activity-based sorting for NIP-72 groups
+        // Activity-based sorting for NIP-72 groups
         if (groupStats && a.type === 'nip72' && b.type === 'nip72') {
           const aId = getCommunityId(a);
           const bId = getCommunityId(b);
@@ -277,6 +289,37 @@ export default function Groups() {
               return bActivity - aActivity; // Higher activity first
             }
           }
+        }
+
+        // Activity-based sorting for NIP-29 groups
+        if (nip29GroupStats && a.type === 'nip29' && b.type === 'nip29') {
+          const aStats = nip29GroupStats[a.groupId];
+          const bStats = nip29GroupStats[b.groupId];
+          
+          if (aStats && bStats) {
+            const aActivity = aStats.posts + aStats.participants.size;
+            const bActivity = bStats.posts + bStats.participants.size;
+            
+            if (aActivity !== bActivity) {
+              return bActivity - aActivity; // Higher activity first
+            }
+          }
+        }
+
+        // Mixed type sorting: prefer groups with any activity over groups with no activity
+        if (a.type !== b.type) {
+          const aHasActivity = a.type === 'nip72' 
+            ? (groupStats?.[getCommunityId(a)]?.posts || 0) > 0
+            : (nip29GroupStats?.[a.groupId]?.posts || 0) > 0;
+          const bHasActivity = b.type === 'nip72' 
+            ? (groupStats?.[getCommunityId(b)]?.posts || 0) > 0
+            : (nip29GroupStats?.[b.groupId]?.posts || 0) > 0;
+          
+          if (aHasActivity && !bHasActivity) return -1;
+          if (!aHasActivity && bHasActivity) return 1;
+          
+          // If both have activity or both don't, prefer NIP-72 groups
+          return a.type === 'nip72' ? -1 : 1;
         }
 
         // Fall back to alphabetical sorting
@@ -316,14 +359,37 @@ export default function Groups() {
     pendingJoinRequestsSet,
     deletionRequestsMap,
     groupStats,
+    nip29GroupStats,
     filterMyGroups,
     user,
     userGroupIds,
   ]);
 
+  // Helper function to get stats for any group type
+  const getGroupStats = (community: Group) => {
+    if (community.type === 'nip72') {
+      const communityId = getCommunityId(community);
+      return groupStats?.[communityId];
+    } else if (community.type === 'nip29') {
+      return nip29GroupStats?.[community.groupId];
+    }
+    return undefined;
+  };
+
+  // Helper function to check if stats are loading for a group
+  const isLoadingStatsForGroup = (community: Group) => {
+    if (community.type === 'nip72') {
+      return isLoadingStats;
+    } else if (community.type === 'nip29') {
+      return isLoadingNip29Stats;
+    }
+    return false;
+  };
+
   // Auto-refresh could be added here if needed
 
   const isLoading = isLoadingGroups || isPendingRequestsLoading;
+  const isLoadingAnyStats = isLoadingStats || isLoadingNip29Stats;
   const error = groupsError;
 
   if (error) {
@@ -441,7 +507,7 @@ export default function Groups() {
                       const isPinned = isGroupPinned(communityId);
                       const userRole = getUserRoleForGroup(community);
                       const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
-                      const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+                      const stats = getGroupStats(community);
 
                       return (
                         <GroupCard
@@ -452,7 +518,7 @@ export default function Groups() {
                           unpinGroup={unpinGroup}
                           isUpdating={isUpdating}
                           stats={stats}
-                          isLoadingStats={isLoadingStats && community.type === 'nip72'}
+                          isLoadingStats={isLoadingStatsForGroup(community)}
                           hasPendingRequest={hasPendingRequest}
                           userRole={userRole}
                           isMember={userRole !== null}
@@ -476,7 +542,7 @@ export default function Groups() {
                       const isPinned = isGroupPinned(communityId);
                       const userRole = getUserRoleForGroup(community);
                       const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
-                      const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+                      const stats = getGroupStats(community);
 
                       return (
                         <GroupCard
@@ -487,7 +553,7 @@ export default function Groups() {
                           unpinGroup={unpinGroup}
                           isUpdating={isUpdating}
                           stats={stats}
-                          isLoadingStats={isLoadingStats && community.type === 'nip72'}
+                          isLoadingStats={isLoadingStatsForGroup(community)}
                           hasPendingRequest={hasPendingRequest}
                           userRole={userRole}
                           isMember={userRole !== null}
@@ -511,7 +577,7 @@ export default function Groups() {
                       const isPinned = isGroupPinned(communityId);
                       const userRole = getUserRoleForGroup(community);
                       const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
-                      const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+                      const stats = getGroupStats(community);
 
                       return (
                         <GroupCard
@@ -522,7 +588,7 @@ export default function Groups() {
                           unpinGroup={unpinGroup}
                           isUpdating={isUpdating}
                           stats={stats}
-                          isLoadingStats={isLoadingStats && community.type === 'nip72'}
+                          isLoadingStats={isLoadingStatsForGroup(community)}
                           hasPendingRequest={hasPendingRequest}
                           userRole={userRole}
                           isMember={userRole !== null}
@@ -550,8 +616,8 @@ export default function Groups() {
                   const hasPendingRequest = pendingJoinRequestsSet.has(communityId);
                   const hasActiveDeletionRequest = deletionRequestsMap?.has(communityId) || false;
                   
-                  // Get stats for this group (only for NIP-72 groups)
-                  const stats = community.type === 'nip72' && groupStats ? groupStats[communityId] : undefined;
+                  // Get stats for this group (both NIP-72 and NIP-29)
+                  const stats = getGroupStats(community);
 
                   return (
                     <GroupCard
@@ -562,7 +628,7 @@ export default function Groups() {
                       unpinGroup={unpinGroup}
                       isUpdating={isUpdating}
                       stats={stats}
-                      isLoadingStats={isLoadingStats && community.type === 'nip72'}
+                      isLoadingStats={isLoadingStatsForGroup(community)}
                       hasPendingRequest={hasPendingRequest}
                       userRole={userRole}
                       isMember={userRole !== null}

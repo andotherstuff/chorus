@@ -241,10 +241,13 @@ export function GroupCard({
             )}
             {community.type === "nip29" && (
               <>
-                <div className="inline-flex items-center py-0.5 px-1.5 bg-secondary rounded text-[10px]">
-                  <Lock className="h-2.5 w-2.5 mr-0.5" />
-                  Private
-                </div>
+                {/* Show privacy status based on actual group properties */}
+                {community.isPublic === false && (
+                  <div className="inline-flex items-center py-0.5 px-1.5 bg-secondary rounded text-[10px]">
+                    <Lock className="h-2.5 w-2.5 mr-0.5" />
+                    Private
+                  </div>
+                )}
                 <div className="inline-flex items-center py-0.5 px-1.5 bg-primary/10 rounded text-[10px] max-w-[150px]">
                   <Server className="h-2.5 w-2.5 mr-0.5 flex-shrink-0" />
                   <span className="truncate">{getRelayDisplayName(community.relay)}</span>
