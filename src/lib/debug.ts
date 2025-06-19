@@ -1,8 +1,10 @@
 // ABOUTME: Debug utility to replace console.log statements throughout the codebase
 // ABOUTME: Provides conditional logging that only runs in development mode
 
-// Debug flags
+// Debug flags - set to true to enable specific debugging
 export const DEBUG_IMAGES = false; // Set to true to enable image debugging
+export const DEBUG_NIP29_VALIDATION = false; // Set to true to see NIP-29 validation details
+export const DEBUG_GROUP_CACHE = false; // Set to true to see cache operations
 
 // Environment detection
 export const isDevelopment = import.meta.env.MODE === 'development';

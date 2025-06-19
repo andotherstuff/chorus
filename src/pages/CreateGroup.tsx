@@ -229,7 +229,7 @@ export default function CreateGroup() {
       }
 
       await enhancedNostr.event(event, { relays: [values.relay] });
-      console.log('NIP-29 group creation event sent:', event);
+      // Note: Debug logging removed
     } finally {
       setIsCreatingNip29(false);
     }

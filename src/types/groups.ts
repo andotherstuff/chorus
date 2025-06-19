@@ -24,8 +24,9 @@ export interface Nip72Group extends GroupBase {
 
 export interface Nip29Group extends GroupBase {
   type: "nip29";
-  groupId: string;
+  groupId: string; // The part after the apostrophe in the identifier
   relay: string;
+  groupIdentifier?: string; // Full identifier in format host'group-id
   admins: string[];
   moderators: string[];
   members?: string[];

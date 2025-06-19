@@ -171,13 +171,11 @@ export default function GroupSettings() {
 
   // Check if this is a NIP-29 group (new route format) - return early AFTER all hooks
   if (relay && groupId) {
-    console.log(`[GroupSettings] NIP-29 group detected: ${groupId} @ ${relay}`);
+    // Note: Debug logging removed
     return <Nip29GroupSettings groupId={decodeURIComponent(groupId)} relay={decodeURIComponent(relay)} />;
   }
 
-  console.log("Current user pubkey:", user?.pubkey);
-  console.log("Community creator pubkey:", community?.pubkey);
-  console.log("Is owner:", isOwner);
+  // Note: Debug logging removed
 
   // Handle media upload
   const handleMediaUpload = async (file: File) => {

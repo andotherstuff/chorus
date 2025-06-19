@@ -65,6 +65,8 @@ export function GroupCard({
   // Check if user is owner or moderator
   const isOwnerOrModerator = userRole === "owner" || userRole === "moderator";
 
+  // Note: Debug logging removed to reduce console noise
+
   // Get pending reports and join requests counts for owners/moderators (only for NIP-72)
   const { data: openReportsCount = 0 } = useOpenReportsCount(
     isOwnerOrModerator && community.type === "nip72" ? communityId : ""
@@ -189,6 +191,14 @@ export function GroupCard({
           <div className="flex items-start justify-between">
             <CardTitle className="text-sm font-medium leading-tight truncate max-w-[50%]"> {/* Reduced max-width */}
               {name}
+              {/* DEBUG: Show relay info for NIP-29 groups in development */}
+              {community.type === "nip29" && process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-yellow-700 bg-yellow-100 p-1 rounded mt-1 border border-yellow-300">
+                  <div>📡 {community.relay?.replace('wss://', '').replace('/', '')}</div>
+                  <div>🆔 {community.groupId?.substring(0, 8)}...</div>
+                  <div>👤 {userRole || 'none'}</div>
+                </div>
+              )}
             </CardTitle>
             {userRole && (
               <div className="flex-shrink-0">

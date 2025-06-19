@@ -1,6 +1,7 @@
 import { Nip29Group } from '@/types/groups';
 import { NostrEvent } from '@nostrify/nostrify';
 import { groupCache, CACHE_KEYS, CACHE_TTLS } from './groupCache';
+import { log, warn, DEBUG_GROUP_CACHE } from '@/lib/debug';
 
 export interface AuthStatusEntry {
   authenticated: boolean;
@@ -146,20 +147,22 @@ export class Nip29Cache {
   }
 
   /**
-   * Store all NIP-29 groups across all relays
+   * Store all NIP-29 groups across all relays (ACCUMULATIVE - preserves existing relay data)
    */
   setAllGroups(groupsByRelay: Map<string, Nip29Group[]>): void {
+    // Only update the relays that are in the current query
+    // This preserves cached data from relays that weren't queried this time
     groupsByRelay.forEach((groups, relay) => {
       this.setRelayGroups(relay, groups);
     });
 
-    // Also store a summary for quick access
-    const allGroups: Nip29Group[] = [];
-    groupsByRelay.forEach(groups => allGroups.push(...groups));
+    // Get ALL cached relays for the summary (not just the ones we just updated)
+    const allRelays = this.getAllCachedRelays();
+    const allGroups = this.getAllGroups();
     
     const summary = {
       totalGroups: allGroups.length,
-      relays: Array.from(groupsByRelay.keys()),
+      relays: allRelays,
       lastFetch: Date.now(),
     };
 
@@ -184,6 +187,81 @@ export class Nip29Cache {
     }
 
     return allGroups;
+  }
+
+  /**
+   * Get all cached relay URLs
+   */
+  getAllCachedRelays(): string[] {
+    const relays: string[] = [];
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(`${CACHE_KEYS.NIP29_CACHE}_relay_`)) {
+        const cached = this.getCache<SerializedNip29CacheData>(key);
+        if (cached?.relay) {
+          relays.push(cached.relay);
+        }
+      }
+    }
+
+    return relays;
+  }
+
+  /**
+   * Remove groups from a specific relay (for cleanup or when user leaves)
+   */
+  removeRelayGroups(relay: string): void {
+    const key = `${CACHE_KEYS.NIP29_CACHE}_relay_${this.encodeRelay(relay)}`;
+    localStorage.removeItem(key);
+  }
+
+  /**
+   * Clear all NIP-29 group cache data
+   */
+  clearAll(): void {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(`${CACHE_KEYS.NIP29_CACHE}_`)) {
+        localStorage.removeItem(key);
+      }
+    }
+  }
+
+  /**
+   * Clear old cache entries that don't have validation
+   * This removes pre-validation cached groups
+   */
+  clearInvalidatedCache(): void {
+    if (DEBUG_GROUP_CACHE) {
+      log('[NIP-29] Clearing invalidated cache entries (pre-validation)...');
+    }
+    let clearedCount = 0;
+    
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(`${CACHE_KEYS.NIP29_CACHE}_relay_`)) {
+        try {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const entry = JSON.parse(stored);
+            // Remove entries that don't have the validation version marker
+            if (!entry.validationVersion || entry.validationVersion < 2) {
+              localStorage.removeItem(key);
+              clearedCount++;
+            }
+          }
+        } catch (error) {
+          // Remove corrupted entries
+          localStorage.removeItem(key);
+          clearedCount++;
+        }
+      }
+    }
+    
+    if (clearedCount > 0 && DEBUG_GROUP_CACHE) {
+      log(`[NIP-29] Cleared ${clearedCount} invalidated cache entries`);
+    }
   }
 
   /**
@@ -219,11 +297,12 @@ export class Nip29Cache {
         timestamp: Date.now(),
         ttl,
         version: 'v1',
+        validationVersion: 2, // Mark entries with strict NIP-29 validation
       };
       localStorage.setItem(key, JSON.stringify(entry));
       return true;
     } catch (error) {
-      console.error(`[Nip29Cache] Error setting cache for ${key}:`, error);
+      warn(`[Nip29Cache] Error setting cache for ${key}:`, error);
       return false;
     }
   }
@@ -243,27 +322,11 @@ export class Nip29Cache {
 
       return entry.data;
     } catch (error) {
-      console.error(`[Nip29Cache] Error getting cache for ${key}:`, error);
+      warn(`[Nip29Cache] Error getting cache for ${key}:`, error);
       return null;
     }
   }
 
-  /**
-   * Clear all NIP-29 caches
-   */
-  clearAll(): void {
-    const keysToRemove: string[] = [];
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(CACHE_KEYS.NIP29_CACHE)) {
-        keysToRemove.push(key);
-      }
-    }
-    
-    keysToRemove.forEach(key => localStorage.removeItem(key));
-    console.log(`[Nip29Cache] Cleared ${keysToRemove.length} cache entries`);
-  }
 
   /**
    * Get cache statistics for NIP-29

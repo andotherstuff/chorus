@@ -40,37 +40,23 @@ export function useUnifiedGroupsWithCache() {
   } = useQuery<Group[], Error>({
     queryKey: ["unified-groups-cached", user?.pubkey, pinnedGroups],
     queryFn: async (c) => {
-      console.log('[useUnifiedGroupsWithCache] Starting query...');
-      
       // Check cache first
       const cachedGroups = groupCache.getGroups();
       const cachedNip29 = nip29Cache.getAllGroups();
-      
-      if (cachedGroups || cachedNip29.length > 0) {
-        console.log('[useUnifiedGroupsWithCache] Found cached data:', {
-          nip72Count: cachedGroups?.length || 0,
-          nip29Count: cachedNip29.length
-        });
-      }
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(10000)]);
       
       try {
         // Fetch NIP-72 communities
-        console.log('[useUnifiedGroupsWithCache] Fetching NIP-72 communities...');
         const events = await nostr.query([{
           kinds: [34550], // NIP-72 communities
           limit: 100,
         }], { signal });
 
-        console.log(`[useUnifiedGroupsWithCache] Found ${events.length} NIP-72 events`);
-
         // Parse all groups
         const parsedGroups = events
           .map((event: NostrEvent) => parseGroup(event))
           .filter((group): group is Group => group !== null);
-
-        console.log(`[useUnifiedGroupsWithCache] Parsed ${parsedGroups.length} NIP-72 groups`);
 
         // Update cache with fresh data
         if (parsedGroups.length > 0) {
@@ -106,15 +92,22 @@ export function useUnifiedGroupsWithCache() {
       }
     },
     enabled: !!nostr,
-    staleTime: 60 * 1000, // Consider data stale after 1 minute
-    gcTime: groupCache.getSettings().groupMetadataTTL, // Keep in memory as long as cache TTL
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
+    refetchInterval: false, // Don't auto-refetch, let user pull to refresh
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    refetchOnReconnect: true, // Refetch when connection restored
     // Return cached data immediately while fetching
     placeholderData: () => {
-      const cached = groupCache.getGroups();
-      return cached || undefined;
+      const cachedNip72 = groupCache.getGroups();
+      const cachedNip29 = nip29Cache.getAllGroups();
+      
+      const allCachedGroups: Group[] = [
+        ...(cachedNip72 || []),
+        ...cachedNip29
+      ];
+      
+      return allCachedGroups.length > 0 ? allCachedGroups : undefined;
     },
   });
 
@@ -135,19 +128,18 @@ export function useUnifiedGroupsWithCache() {
       if (nip29Groups.length > 0) {
         // Merge fresh data with cached data to avoid losing groups from other relays
         const mergedGroups = [...cachedNip29];
-        const cachedIds = new Set(cachedNip29.map(g => g.type === 'nip29' ? g.groupId : g.id));
+        // FIXED: Use group.id for all deduplication (it includes relay info for NIP-29)
+        const cachedIds = new Set(cachedNip29.map(g => g.id));
         
         // Add fresh groups that aren't already cached
         nip29Groups.forEach(group => {
-          const dedupeKey = group.type === 'nip29' ? group.groupId : group.id;
+          // FIXED: Use group.id consistently for global uniqueness
+          const dedupeKey = group.id;
           if (!cachedIds.has(dedupeKey)) {
             mergedGroups.push(group);
           } else {
             // Update existing group with fresh data (find by proper dedupe key)
-            const index = mergedGroups.findIndex(g => {
-              const gDedupeKey = g.type === 'nip29' ? g.groupId : g.id;
-              return gDedupeKey === dedupeKey;
-            });
+            const index = mergedGroups.findIndex(g => g.id === dedupeKey);
             if (index !== -1) {
               mergedGroups[index] = group;
             }
@@ -169,45 +161,15 @@ export function useUnifiedGroupsWithCache() {
       });
     }
 
-    // Add NIP-29 groups (use groupId for deduplication to prevent relay duplicates)
+    // Add NIP-29 groups (use group.id for deduplication - includes relay info)
     finalNip29Groups.forEach(group => {
-      const dedupeKey = group.type === 'nip29' ? group.groupId : group.id;
-      if (!seenIds.has(dedupeKey)) {
-        seenIds.add(dedupeKey);
+      // FIXED: Use group.id for global uniqueness across relays
+      if (!seenIds.has(group.id)) {
+        seenIds.add(group.id);
         combinedGroups.push(group);
       }
     });
 
-    console.log(`[useUnifiedGroupsWithCache] Combined groups:`, {
-      total: combinedGroups.length,
-      nip72: nip72Groups.length,
-      nip29: finalNip29Groups.length,
-      fromCache: !unifiedGroups && !nip29Groups.length
-    });
-
-    // Debug: Log all groups to help identify duplicates
-    console.log('[useUnifiedGroupsWithCache] All groups breakdown:');
-    const groupsByName = new Map<string, Group[]>();
-    combinedGroups.forEach(group => {
-      const name = group.name.toLowerCase();
-      if (!groupsByName.has(name)) {
-        groupsByName.set(name, []);
-      }
-      groupsByName.get(name)!.push(group);
-    });
-    
-    // Find potential duplicates
-    groupsByName.forEach((groups, name) => {
-      if (groups.length > 1) {
-        console.log(`[POTENTIAL DUPLICATE] "${name}":`, groups.map(g => ({
-          id: g.id,
-          type: g.type,
-          relay: g.type === 'nip29' ? g.relay : 'N/A',
-          groupId: g.type === 'nip29' ? g.groupId : 'N/A',
-          pubkey: g.pubkey.slice(0, 8)
-        })));
-      }
-    });
 
     return combinedGroups;
   }, [unifiedGroups, nip29Groups]);

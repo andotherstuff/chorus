@@ -1,3 +1,4 @@
+import React from "react";
 import { useEnhancedNostr } from "@/components/EnhancedNostrProvider";
 import { useCurrentUser } from "./useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import type { Nip29Group } from "@/types/groups";
 import { parseNip29Group } from "@/lib/group-utils";
 import { nip29Cache } from "@/lib/cache/nip29Cache";
 import { groupCache } from "@/lib/cache/groupCache";
+import { log, warn, DEBUG_GROUP_CACHE } from "@/lib/debug";
 
 /**
  * Hook to fetch NIP-29 groups from known relays with caching support
@@ -14,6 +16,11 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
   const { nostr } = useEnhancedNostr();
   const { user } = useCurrentUser();
 
+  // Clear invalidated cache entries on first load
+  React.useEffect(() => {
+    nip29Cache.clearInvalidatedCache();
+  }, []);
+
   return useQuery<Nip29Group[], Error>({
     queryKey: ["nip29-groups-cached", user?.pubkey], // Remove groupRelays from queryKey to prevent cache invalidation
     queryFn: async (c) => {
@@ -21,14 +28,9 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
         return [];
       }
 
-      console.log('[NIP-29-Cached] Querying groups from relays:', groupRelays);
-      console.log('[NIP-29-Cached] User authenticated:', !!user);
       
       // Check cache first
       const cachedGroups = nip29Cache.getAllGroups();
-      if (cachedGroups.length > 0 && groupCache.isEnabled()) {
-        console.log(`[NIP-29-Cached] Found ${cachedGroups.length} groups in cache`);
-      }
 
       const allGroups: Nip29Group[] = [];
       const groupsByRelay = new Map<string, Nip29Group[]>();
@@ -39,16 +41,13 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
           // Check relay-specific cache first
           const cachedRelayGroups = nip29Cache.getRelayGroups(relayUrl);
           if (cachedRelayGroups && cachedRelayGroups.length > 0) {
-            console.log(`[NIP-29-Cached] Found ${cachedRelayGroups.length} cached groups for ${relayUrl}`);
             groupsByRelay.set(relayUrl, cachedRelayGroups);
             allGroups.push(...cachedRelayGroups);
           }
 
-          console.log(`[NIP-29-Cached] Querying fresh data from ${relayUrl}`);
           
           // If user is logged in, give time for authentication to complete
           if (user) {
-            console.log(`[NIP-29-Cached] User logged in, checking auth status...`);
             
             // Check cached auth status
             const authStatus = nip29Cache.getAuthStatus(relayUrl);
@@ -81,23 +80,32 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
             relays: [relayUrl]
           });
           
-          console.log(`[NIP-29-Cached] Got ${events.length} events from ${relayUrl}`);
           
-          // Parse groups
+          // Parse groups with strict NIP-29 validation
           const relayGroups: Nip29Group[] = [];
+          let rejectedCount = 0;
+          
           for (const event of events) {
             const group = parseNip29Group(event, relayUrl);
             if (group) {
               relayGroups.push(group);
+            } else {
+              rejectedCount++;
             }
           }
           
-          console.log(`[NIP-29-Cached] Parsed ${relayGroups.length} groups from ${relayUrl}`);
+          // Log validation results for this relay
+          if (rejectedCount > 0 && DEBUG_GROUP_CACHE) {
+            warn(`[NIP-29] Rejected ${rejectedCount} invalid groups from ${relayUrl}`);
+          }
+          if (relayGroups.length > 0 && DEBUG_GROUP_CACHE) {
+            log(`[NIP-29] Accepted ${relayGroups.length} valid groups from ${relayUrl}`);
+          }
+          
           
           // Debug: Log group names from this relay
           if (relayGroups.length > 0) {
             const groupNames = relayGroups.map(g => g.name).join(', ');
-            console.log(`[NIP-29-Cached] Groups from ${relayUrl}: ${groupNames}`);
           }
           
           // Update cache for this relay
@@ -111,7 +119,9 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
           
           return relayGroups;
         } catch (error) {
-          console.error(`[NIP-29-Cached] Error querying ${relayUrl}:`, error);
+          if (DEBUG_GROUP_CACHE) {
+            warn(`[NIP-29-Cached] Error querying ${relayUrl}:`, error);
+          }
           
           // Update auth status cache with error
           nip29Cache.updateAuthStatus(relayUrl, false, error.message);
@@ -119,7 +129,6 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
           // Return cached data for this relay if available
           const cached = nip29Cache.getRelayGroups(relayUrl);
           if (cached && cached.length > 0) {
-            console.log(`[NIP-29-Cached] Using ${cached.length} cached groups for failed relay ${relayUrl}`);
             groupsByRelay.set(relayUrl, cached);
             return cached;
           }
@@ -162,12 +171,9 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
         })).values()
       );
 
-      console.log(`[NIP-29-Cached] Total unique groups: ${uniqueGroups.length}`);
-      console.log(`[NIP-29-Cached] Before deduplication: ${allGroups.length}, After: ${uniqueGroups.length}`);
       
       // Debug: Check if we had duplicates
       if (allGroups.length !== uniqueGroups.length) {
-        console.log(`[NIP-29-Cached] Removed ${allGroups.length - uniqueGroups.length} duplicate groups`);
         
         // Find which groups were duplicated
         const groupCounts = new Map<string, number>();
@@ -178,7 +184,6 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
         
         groupCounts.forEach((count, key) => {
           if (count > 1) {
-            console.log(`[NIP-29-Cached] Duplicate found: "${key}" appeared ${count} times`);
           }
         });
       }
@@ -213,11 +218,12 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
       return uniqueGroups;
     },
     enabled: !!nostr && groupRelays.length > 0,
-    staleTime: 60 * 1000, // Consider data stale after 1 minute
-    gcTime: groupCache.getSettings().groupMetadataTTL, // Keep in memory as long as cache TTL
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep in memory for 30 minutes
+    refetchInterval: false, // Don't auto-refetch, let user pull to refresh
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    refetchOnReconnect: true, // Refetch when connection restored
+    refetchOnMount: false, // Don't refetch on every mount, use cache first
     // Return cached data immediately while fetching
     placeholderData: () => {
       const cached = nip29Cache.getAllGroups();

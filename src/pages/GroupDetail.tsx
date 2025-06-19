@@ -190,6 +190,17 @@ export default function GroupDetail() {
           })
         ]);
 
+        // Store raw events for debugging
+        if (process.env.NODE_ENV === 'development') {
+          (window as any).debugGroupEvents = {
+            groupEvents,
+            memberEvents,
+            relay: relayUrl,
+            groupId,
+            timestamp: new Date().toISOString()
+          };
+        }
+
         if (groupEvents.length === 0) throw new Error("Group not found");
         
         const group = parseNip29Group(groupEvents[0], relayUrl);
@@ -245,6 +256,8 @@ export default function GroupDetail() {
       ? (creatorInfo?.creatorPubkey === user.pubkey)
       : (user.pubkey === groupData.pubkey)
   );
+
+  // Note: Debug logging removed to reduce console noise
   
   // Get the actual owner pubkey for eCash
   const ownerPubkey = parsedRouteId?.type === "nip29"
@@ -993,6 +1006,14 @@ export default function GroupDetail() {
                 )}
               </TabsTrigger>
             )}
+
+            {/* DEBUG: Add debug tab in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <TabsTrigger value="debug" className="flex items-center justify-center text-yellow-600">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                Debug
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -1391,6 +1412,117 @@ export default function GroupDetail() {
                   </Card>
                 </TabsContent>
               </Tabs>
+            </div>
+          </TabsContent>
+        )}
+
+        {/* DEBUG: Debug tab in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <TabsContent value="debug" className="space-y-4">
+            <div className="max-w-5xl mx-auto">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600" />
+                    Raw Group Events Debug
+                  </CardTitle>
+                  <CardDescription>
+                    Raw Nostr events for debugging group relay assignments and ownership
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Group Analysis */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-yellow-800 mb-2">Group Analysis</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <strong>Group ID:</strong> {groupData?.type === 'nip29' ? groupData.groupId : (groupData?.id || 'N/A')}
+                      </div>
+                      <div>
+                        <strong>Type:</strong> {parsedRouteId?.type || 'N/A'}
+                      </div>
+                      <div>
+                        <strong>Relay:</strong> {parsedRouteId?.relay || 'N/A'}
+                      </div>
+                      {groupData?.type === 'nip29' && groupData.groupIdentifier && (
+                        <div className="col-span-2">
+                          <strong>Full Identifier:</strong> {groupData.groupIdentifier}
+                        </div>
+                      )}
+                      <div>
+                        <strong>Group Pubkey:</strong> {groupData?.pubkey?.substring(0, 16) || 'N/A'}...
+                      </div>
+                      <div>
+                        <strong>Creator (NIP-29):</strong> {creatorInfo?.creatorPubkey?.substring(0, 16) || 'N/A'}...
+                      </div>
+                      <div>
+                        <strong>User Pubkey:</strong> {user?.pubkey?.substring(0, 16) || 'N/A'}...
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ownership Analysis */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-blue-800 mb-2">Ownership Detection</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <strong>Is Owner (Final):</strong> {isOwner ? '✅ Yes' : '❌ No'}
+                      </div>
+                      <div>
+                        <strong>User = Group Pubkey:</strong> {user?.pubkey === groupData?.pubkey ? '✅ Yes' : '❌ No'}
+                      </div>
+                      <div>
+                        <strong>User = Creator:</strong> {creatorInfo?.creatorPubkey === user?.pubkey ? '✅ Yes' : '❌ No'}
+                      </div>
+                      <div>
+                        <strong>User in Admins:</strong> {groupData?.type === 'nip29' && groupData.admins?.includes(user?.pubkey || '') ? '✅ Yes' : '❌ No'}
+                      </div>
+                      <div>
+                        <strong>Admins Count:</strong> {groupData?.type === 'nip29' ? (groupData.admins?.length || 0) : 'N/A (NIP-72)'}
+                      </div>
+                      <div>
+                        <strong>Members Count:</strong> {groupData?.type === 'nip29' ? (groupData.members?.length || 0) : 'N/A (NIP-72)'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Raw Events */}
+                  {(window as any).debugGroupEvents && (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold mb-2">Group Metadata Events (Kind 39000)</h4>
+                        <div className="bg-gray-100 rounded-lg p-4 max-h-96 overflow-auto">
+                          <pre className="text-xs text-gray-800 whitespace-pre-wrap">
+                            {JSON.stringify((window as any).debugGroupEvents.groupEvents, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold mb-2">Member List Events (Kind 39002)</h4>
+                        <div className="bg-gray-100 rounded-lg p-4 max-h-96 overflow-auto">
+                          <pre className="text-xs text-gray-800 whitespace-pre-wrap">
+                            {JSON.stringify((window as any).debugGroupEvents.memberEvents, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        Debug session: {(window as any).debugGroupEvents.timestamp}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* If no debug data available */}
+                  {!(window as any).debugGroupEvents && (
+                    <div className="text-center py-8 text-gray-500">
+                      <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p>No debug events available</p>
+                      <p className="text-xs mt-2">Debug events are stored when the group is loaded</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         )}

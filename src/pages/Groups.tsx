@@ -37,12 +37,7 @@ export default function Groups() {
   // Get the user's groups for membership checking
   const { data: userGroups } = useUserGroups();
 
-  // Log wallet data when it loads
-  useEffect(() => {
-    if (wallet) {
-      console.log("Wallet loaded in Groups page:", wallet);
-    }
-  }, [wallet]);
+  // Note: Wallet logging removed to reduce console noise
 
   // Listen for PWA instructions event from banner
   useEffect(() => {
@@ -266,7 +261,7 @@ export default function Groups() {
           categories.other.push(group);
         }
       } catch (error) {
-        console.error("Error categorizing group:", error);
+        // Silently handle categorization errors
         categories.other.push(group);
       }
     }
@@ -327,7 +322,7 @@ export default function Groups() {
         const bName = b.name?.toLowerCase() || "";
         return aName.localeCompare(bName);
       } catch (error) {
-        console.error("Error sorting groups:", error);
+        // Silently handle sorting errors
         return 0;
       }
     };
@@ -388,13 +383,12 @@ export default function Groups() {
 
   // Auto-refresh could be added here if needed
 
-  const isLoading = isLoadingGroups || isPendingRequestsLoading;
+  // Only show loading when we have no data at all (not even cached data)
+  const isLoading = (isLoadingGroups && (!allGroups || allGroups.length === 0)) || isPendingRequestsLoading;
   const isLoadingAnyStats = isLoadingStats || isLoadingNip29Stats;
   const error = groupsError;
 
-  if (error) {
-    console.error("Error fetching groups:", error);
-  }
+  // Note: Error logging removed to reduce console noise
 
   // Loading state skeleton with stable keys
   const skeletonKeys = useMemo(
@@ -511,7 +505,7 @@ export default function Groups() {
 
                       return (
                         <GroupCard
-                          key={`pinned-${community.id}-${communityId}`}
+                          key={community.id}
                           community={community}
                           isPinned={isPinned}
                           pinGroup={pinGroup}
@@ -546,7 +540,7 @@ export default function Groups() {
 
                       return (
                         <GroupCard
-                          key={`your-${community.id}-${communityId}`}
+                          key={community.id}
                           community={community}
                           isPinned={isPinned}
                           pinGroup={pinGroup}
@@ -581,7 +575,7 @@ export default function Groups() {
 
                       return (
                         <GroupCard
-                          key={`pending-${community.id}-${communityId}`}
+                          key={community.id}
                           community={community}
                           isPinned={isPinned}
                           pinGroup={pinGroup}
@@ -621,7 +615,7 @@ export default function Groups() {
 
                   return (
                     <GroupCard
-                      key={`${community.id}-${communityId}`}
+                      key={community.id}
                       community={community}
                       isPinned={isPinned}
                       pinGroup={pinGroup}
@@ -635,7 +629,7 @@ export default function Groups() {
                     />
                   );
                 } catch (error) {
-                  console.error("Error rendering group card:", error);
+                  // Silently handle render errors
                   return null;
                 }
               })}

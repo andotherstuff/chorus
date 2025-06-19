@@ -1,5 +1,6 @@
 import type { NostrEvent } from "@nostrify/nostrify";
 import type { Group, GroupType, Nip72Group, Nip29Group } from "@/types/groups";
+import { warn, log, DEBUG_NIP29_VALIDATION } from "@/lib/debug";
 
 /**
  * Detect what type of group an event represents
@@ -60,36 +61,186 @@ export function parseNip29Group(event: NostrEvent, relay: string): Nip29Group | 
   
   // For kind 39000 (group metadata), parse the group information
   if (event.kind === 39000) {
-    const dTag = event.tags.find(tag => tag[0] === "d"); // group id for addressable events
-    const nameTag = event.tags.find(tag => tag[0] === "name");
+    // STRICT NIP-29 VALIDATION: Check required tags according to spec
+    const dTag = event.tags.find(tag => tag[0] === "d" && tag[1]); // group id - REQUIRED
+    const nameTag = event.tags.find(tag => tag[0] === "name" && tag[1]); // group name - REQUIRED
+    
+    // Check for REQUIRED visibility tag (must be either public or private)
+    const publicTag = event.tags.find(tag => tag[0] === "public" && tag.length === 1);
+    const privateTag = event.tags.find(tag => tag[0] === "private" && tag.length === 1);
+    const hasValidVisibility = publicTag || privateTag;
+    
+    // Check for REQUIRED access tag (must be either open or closed)
+    const openTag = event.tags.find(tag => tag[0] === "open" && tag.length === 1);
+    const closedTag = event.tags.find(tag => tag[0] === "closed" && tag.length === 1);
+    const hasValidAccess = openTag || closedTag;
+    
+    // REJECT if any required tags are missing
+    if (!dTag) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: missing required 'd' tag`, { 
+          eventId: event.id?.substring(0, 8),
+          pubkey: event.pubkey?.substring(0, 8),
+          relay 
+        });
+      }
+      return null;
+    }
+    
+    if (!nameTag) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: missing required 'name' tag`, { 
+          eventId: event.id?.substring(0, 8),
+          groupId: dTag[1],
+          relay 
+        });
+      }
+      return null;
+    }
+    
+    if (!hasValidVisibility) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: missing required visibility tag (public or private)`, { 
+          eventId: event.id?.substring(0, 8),
+          groupId: dTag[1],
+          relay 
+        });
+      }
+      return null;
+    }
+    
+    if (!hasValidAccess) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: missing required access tag (open or closed)`, { 
+          eventId: event.id?.substring(0, 8),
+          groupId: dTag[1],
+          relay 
+        });
+      }
+      return null;
+    }
+    
+    // Additional validation: ensure no conflicting tags
+    if (publicTag && privateTag) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: conflicting visibility tags (both public and private)`, { 
+          eventId: event.id?.substring(0, 8),
+          groupId: dTag[1],
+          relay 
+        });
+      }
+      return null;
+    }
+    
+    if (openTag && closedTag) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: conflicting access tags (both open and closed)`, { 
+          eventId: event.id?.substring(0, 8),
+          groupId: dTag[1],
+          relay 
+        });
+      }
+      return null;
+    }
+
+    // CRITICAL NIP-29 VALIDATION: Group identifier must match relay host
+    const groupIdentifier = dTag[1];
+    
+    // Parse the group identifier format: <host>'<group-id>
+    const identifierParts = groupIdentifier.split("'");
+    if (identifierParts.length !== 2) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: invalid group identifier format (must be host'group-id)`, { 
+          eventId: event.id?.substring(0, 8),
+          groupIdentifier,
+          expectedFormat: "host'group-id",
+          relay 
+        });
+      }
+      return null;
+    }
+    
+    const [hostFromIdentifier, groupId] = identifierParts;
+    
+    // Validate group-id characters: must be a-z0-9-_ only
+    if (!/^[a-z0-9\-_]+$/.test(groupId)) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: invalid group-id characters (must be a-z0-9-_)`, { 
+          eventId: event.id?.substring(0, 8),
+          groupId,
+          relay 
+        });
+      }
+      return null;
+    }
+    
+    // Extract hostname from relay URL for comparison
+    let relayHost: string;
+    try {
+      const relayUrl = new URL(relay);
+      relayHost = relayUrl.hostname;
+    } catch (error) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: invalid relay URL`, { 
+          eventId: event.id?.substring(0, 8),
+          relay,
+          error: error.message
+        });
+      }
+      return null;
+    }
+    
+    // Validate that the host in the group identifier matches the relay host
+    if (hostFromIdentifier !== relayHost) {
+      if (DEBUG_NIP29_VALIDATION) {
+        warn(`[NIP-29] Rejecting group event: group identifier host mismatch`, { 
+          eventId: event.id?.substring(0, 8),
+          groupIdentifier,
+          hostFromIdentifier,
+          relayHost,
+          relay,
+          reason: `Group identifier host '${hostFromIdentifier}' does not match relay host '${relayHost}'`
+        });
+      }
+      return null;
+    }
+    
+    // Optional tags
     const aboutTag = event.tags.find(tag => tag[0] === "about");
     const pictureTag = event.tags.find(tag => tag[0] === "picture");
-    const closedTag = event.tags.find(tag => tag[0] === "closed");
-    const privateTag = event.tags.find(tag => tag[0] === "private");
     
-    if (!dTag || !dTag[1]) return null;
-    
-    const groupId = dTag[1];
-    const name = nameTag?.[1] || groupId;
+    const name = nameTag[1];
     const description = aboutTag?.[1];
     const image = pictureTag?.[1];
     
+    // Event passed validation - create group object
+    if (DEBUG_NIP29_VALIDATION) {
+      log(`[NIP-29] Valid group event accepted: ${name}`, { 
+        groupIdentifier,
+        groupId,
+        relayHost,
+        relay,
+        isPublic: !!publicTag,
+        isOpen: !!openTag
+      });
+    }
+    
     return {
-      id: `nip29:${encodeURIComponent(relay)}:${groupId}`,
+      id: `nip29:${encodeURIComponent(relay)}:${groupId}`, // Use the actual group ID (part after apostrophe)
       type: "nip29",
       name,
       description,
       image,
       pubkey: event.pubkey, // This is the relay's pubkey for relay-generated events
       created_at: event.created_at,
-      // creatorPubkey is same as pubkey for NIP-29
-      groupId,
+      groupId, // Store the actual group ID (part after apostrophe)
       relay,
+      groupIdentifier, // Store the full identifier for reference
       admins: [], // Will be populated from kind 39002 events
       members: [], // Will be populated from kind 39002 events
       moderators: [], // NIP-29 uses admins instead of moderators
-      isOpen: !closedTag, // If no "closed" tag, group is open
-      isPublic: !privateTag, // If no "private" tag, group is public
+      isOpen: !!openTag, // true if "open" tag exists
+      isPublic: !!publicTag, // true if "public" tag exists
       tags: event.tags
     };
   }
