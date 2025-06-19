@@ -15,13 +15,14 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
   const { user } = useCurrentUser();
 
   return useQuery<Nip29Group[], Error>({
-    queryKey: ["nip29-groups-cached", groupRelays, user?.pubkey],
+    queryKey: ["nip29-groups-cached", user?.pubkey], // Remove groupRelays from queryKey to prevent cache invalidation
     queryFn: async (c) => {
       if (!nostr || groupRelays.length === 0) {
         return [];
       }
 
       console.log('[NIP-29-Cached] Querying groups from relays:', groupRelays);
+      console.log('[NIP-29-Cached] User authenticated:', !!user);
       
       // Check cache first
       const cachedGroups = nip29Cache.getAllGroups();
@@ -93,6 +94,12 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
           
           console.log(`[NIP-29-Cached] Parsed ${relayGroups.length} groups from ${relayUrl}`);
           
+          // Debug: Log group names from this relay
+          if (relayGroups.length > 0) {
+            const groupNames = relayGroups.map(g => g.name).join(', ');
+            console.log(`[NIP-29-Cached] Groups from ${relayUrl}: ${groupNames}`);
+          }
+          
           // Update cache for this relay
           if (relayGroups.length > 0) {
             nip29Cache.setRelayGroups(relayUrl, relayGroups);
@@ -142,11 +149,39 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
       nip29Cache.setAllGroups(groupsByRelay);
 
       // Deduplicate groups (same group might exist on multiple relays)
+      // Use different deduplication keys for different group types
       const uniqueGroups = Array.from(
-        new Map(allGroups.map(group => [group.groupId, group])).values()
+        new Map(allGroups.map(group => {
+          if (group.type === 'nip29') {
+            // For NIP-29, deduplicate by groupId (same group can exist on multiple relays)
+            return [group.groupId, group];
+          } else {
+            // For NIP-72, use the full id (they should be unique already)
+            return [group.id, group];
+          }
+        })).values()
       );
 
       console.log(`[NIP-29-Cached] Total unique groups: ${uniqueGroups.length}`);
+      console.log(`[NIP-29-Cached] Before deduplication: ${allGroups.length}, After: ${uniqueGroups.length}`);
+      
+      // Debug: Check if we had duplicates
+      if (allGroups.length !== uniqueGroups.length) {
+        console.log(`[NIP-29-Cached] Removed ${allGroups.length - uniqueGroups.length} duplicate groups`);
+        
+        // Find which groups were duplicated
+        const groupCounts = new Map<string, number>();
+        allGroups.forEach(group => {
+          const key = group.type === 'nip29' ? group.groupId : group.id;
+          groupCounts.set(key, (groupCounts.get(key) || 0) + 1);
+        });
+        
+        groupCounts.forEach((count, key) => {
+          if (count > 1) {
+            console.log(`[NIP-29-Cached] Duplicate found: "${key}" appeared ${count} times`);
+          }
+        });
+      }
       
       // If user is logged in, update their group relationships
       if (user?.pubkey) {
@@ -195,12 +230,12 @@ export function useNip29GroupsWithCache(groupRelays: string[] = []) {
  * Default NIP-29 group relays to check
  */
 export const DEFAULT_NIP29_RELAYS = [
-  'wss://communities.nos.social',
+  'wss://communities.nos.social', // Primary NIP-29 relay
   'wss://groups.fiatjaf.com',
   // Additional NIP-29 relays that are currently active
   'wss://pyramid.fiatjaf.com',
   'wss://nostrelites.org',
-  'wss://protest.net', // Add protest.net relay
+  'wss://relay.protest.net', // Protest.net NIP-29 relay
   // Note: The following relays are currently offline or have issues:
   // 'wss://relay.0xchat.com' - certificate expired
   // 'wss://communities.nip29.com' - DNS not found

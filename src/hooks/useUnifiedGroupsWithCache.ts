@@ -27,6 +27,7 @@ export function useUnifiedGroupsWithCache() {
   const nip29Groups = useMemo(() => nip29Result.data || [], [nip29Result.data]);
   const isLoadingNip29 = nip29Result.isLoading;
   const nip29Error = nip29Result.error;
+  const refetchNip29 = nip29Result.refetch;
 
   // Query for NIP-72 groups with caching
   const { 
@@ -34,7 +35,8 @@ export function useUnifiedGroupsWithCache() {
     isLoading: isLoadingUnified, 
     error: unifiedError,
     isFetching,
-    dataUpdatedAt
+    dataUpdatedAt,
+    refetch: refetchNip72
   } = useQuery<Group[], Error>({
     queryKey: ["unified-groups-cached", user?.pubkey, pinnedGroups],
     queryFn: async (c) => {
@@ -127,9 +129,37 @@ export function useUnifiedGroupsWithCache() {
 
     // Use fresh data if available, otherwise use cached
     const nip72Groups = unifiedGroups || cachedNip72;
-    const finalNip29Groups = nip29Groups.length > 0 ? nip29Groups : cachedNip29;
+    
+    // Merge fresh NIP-29 data with cached data (additive, not replacement)
+    const finalNip29Groups = (() => {
+      if (nip29Groups.length > 0) {
+        // Merge fresh data with cached data to avoid losing groups from other relays
+        const mergedGroups = [...cachedNip29];
+        const cachedIds = new Set(cachedNip29.map(g => g.type === 'nip29' ? g.groupId : g.id));
+        
+        // Add fresh groups that aren't already cached
+        nip29Groups.forEach(group => {
+          const dedupeKey = group.type === 'nip29' ? group.groupId : group.id;
+          if (!cachedIds.has(dedupeKey)) {
+            mergedGroups.push(group);
+          } else {
+            // Update existing group with fresh data (find by proper dedupe key)
+            const index = mergedGroups.findIndex(g => {
+              const gDedupeKey = g.type === 'nip29' ? g.groupId : g.id;
+              return gDedupeKey === dedupeKey;
+            });
+            if (index !== -1) {
+              mergedGroups[index] = group;
+            }
+          }
+        });
+        
+        return mergedGroups;
+      }
+      return cachedNip29;
+    })();
 
-    // Add NIP-72 groups
+    // Add NIP-72 groups (use full ID for deduplication)
     if (Array.isArray(nip72Groups)) {
       nip72Groups.forEach(group => {
         if (!seenIds.has(group.id)) {
@@ -139,10 +169,11 @@ export function useUnifiedGroupsWithCache() {
       });
     }
 
-    // Add NIP-29 groups
+    // Add NIP-29 groups (use groupId for deduplication to prevent relay duplicates)
     finalNip29Groups.forEach(group => {
-      if (!seenIds.has(group.id)) {
-        seenIds.add(group.id);
+      const dedupeKey = group.type === 'nip29' ? group.groupId : group.id;
+      if (!seenIds.has(dedupeKey)) {
+        seenIds.add(dedupeKey);
         combinedGroups.push(group);
       }
     });
@@ -152,6 +183,30 @@ export function useUnifiedGroupsWithCache() {
       nip72: nip72Groups.length,
       nip29: finalNip29Groups.length,
       fromCache: !unifiedGroups && !nip29Groups.length
+    });
+
+    // Debug: Log all groups to help identify duplicates
+    console.log('[useUnifiedGroupsWithCache] All groups breakdown:');
+    const groupsByName = new Map<string, Group[]>();
+    combinedGroups.forEach(group => {
+      const name = group.name.toLowerCase();
+      if (!groupsByName.has(name)) {
+        groupsByName.set(name, []);
+      }
+      groupsByName.get(name)!.push(group);
+    });
+    
+    // Find potential duplicates
+    groupsByName.forEach((groups, name) => {
+      if (groups.length > 1) {
+        console.log(`[POTENTIAL DUPLICATE] "${name}":`, groups.map(g => ({
+          id: g.id,
+          type: g.type,
+          relay: g.type === 'nip29' ? g.relay : 'N/A',
+          groupId: g.type === 'nip29' ? g.groupId : 'N/A',
+          pubkey: g.pubkey.slice(0, 8)
+        })));
+      }
     });
 
     return combinedGroups;
@@ -199,11 +254,14 @@ export function useUnifiedGroupsWithCache() {
     isFetching,
     error: unifiedError || nip29Error,
     cacheStatus,
-    refetch: () => {
-      // Clear cache and refetch
+    refetch: async () => {
+      // Clear cache and refetch both hooks
       groupCache.clearAll();
       nip29Cache.clearAll();
-      return Promise.resolve();
+      await Promise.all([
+        refetchNip72(),
+        refetchNip29()
+      ]);
     }
   };
 }
