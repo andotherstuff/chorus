@@ -14,6 +14,7 @@ import { CheckCircle, AlertCircle, MessageSquare, ArrowUpRight } from "lucide-re
 import { toast } from "sonner";
 import { NostrEvent } from "@nostrify/nostrify";
 import { KINDS } from "@/lib/nostr-kinds";
+import { filterSpamPosts } from "@/lib/spam-filter";
 
 interface PendingRepliesListProps {
   communityId: string;
@@ -39,7 +40,10 @@ export function PendingRepliesList({ communityId }: PendingRepliesListProps) {
     );
   }
   
-  if (!pendingReplies || pendingReplies.length === 0) {
+  // Filter out spam replies
+  const filteredPendingReplies = pendingReplies ? filterSpamPosts(pendingReplies) : [];
+  
+  if (!filteredPendingReplies || filteredPendingReplies.length === 0) {
     return (
       <Alert className="bg-green-50 border-green-200 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-200">
         <CheckCircle className="h-4 w-4" />
@@ -56,7 +60,7 @@ export function PendingRepliesList({ communityId }: PendingRepliesListProps) {
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-bold">Pending Replies</h3>
         <div className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-3 py-1 rounded-full text-sm font-medium">
-          {pendingReplies.length} pending
+          {filteredPendingReplies.length} pending
         </div>
       </div>
       
@@ -70,7 +74,7 @@ export function PendingRepliesList({ communityId }: PendingRepliesListProps) {
       </Alert>
       
       <div className="space-y-4">
-        {pendingReplies.map((reply) => (
+        {filteredPendingReplies.map((reply) => (
           <PendingReplyItem 
             key={reply.id} 
             reply={reply} 

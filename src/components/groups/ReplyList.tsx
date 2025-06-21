@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { KINDS } from "@/lib/nostr-kinds";
+import { filterSpamPosts } from "@/lib/spam-filter";
 import {
   Tooltip,
   TooltipContent,
@@ -88,8 +89,11 @@ export function ReplyList({ postId, communityId, postAuthorPubkey }: ReplyListPr
     );
   }
   
+  // Filter out spam replies first
+  const nonSpamReplies = filterSpamPosts(replies);
+  
   // Process replies to mark which ones are approved
-  const processedReplies = replies.map(reply => {
+  const processedReplies = nonSpamReplies.map(reply => {
     // Check if reply is explicitly approved by a moderator
     const isExplicitlyApproved = isReplyApproved(reply.id);
     
@@ -265,8 +269,11 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
     onReplySubmitted();
   };
   
+  // Filter out spam nested replies first
+  const nonSpamNestedReplies = nestedReplies ? filterSpamPosts(nestedReplies) : [];
+  
   // Process nested replies to mark which ones are approved
-  const processedNestedReplies = nestedReplies?.map(nestedReply => {
+  const processedNestedReplies = nonSpamNestedReplies.map(nestedReply => {
     // Check if reply is explicitly approved by a moderator
     const isExplicitlyApproved = isReplyApproved(nestedReply.id);
     
@@ -282,7 +289,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
       isAutoApproved: isAuthorApproved && !isExplicitlyApproved,
       isPendingApproval: !isApproved
     };
-  }) || [];
+  });
   
   // Filter nested replies based on approval status if not a moderator
   const filteredNestedReplies = !isUserModerator

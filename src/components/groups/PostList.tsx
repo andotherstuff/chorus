@@ -26,6 +26,7 @@ import { ReplyList } from "./ReplyList";
 import { ReportDialog } from "./ReportDialog";
 import { shareContent } from "@/lib/share";
 import { KINDS } from "@/lib/nostr-kinds";
+import { filterSpamPosts } from "@/lib/spam-filter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,12 +142,17 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         approval: { id: string; pubkey: string; created_at: number; kind: number }
       } => post !== null);
 
+      // Filter out spam posts
+      const filteredApprovedPosts = filterSpamPosts(approvedPosts);
+
       // Debug logging
       console.log("Filtered approved posts:", {
-        totalApprovedPosts: approvedPosts.length
+        totalApprovedPosts: approvedPosts.length,
+        afterSpamFilter: filteredApprovedPosts.length,
+        spamPostsRemoved: approvedPosts.length - filteredApprovedPosts.length
       });
 
-      return approvedPosts;
+      return filteredApprovedPosts;
     },
     enabled: !!nostr && !!communityId,
   });
@@ -198,14 +204,19 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         return replyTags.length === 0;
       });
 
+      // Filter out spam posts
+      const spamFilteredPosts = filterSpamPosts(filteredPosts);
+
       // Debug logging
       console.log("Filtered posts:", {
         totalPosts: posts.length,
         filteredPosts: filteredPosts.length,
-        removedReplies: posts.length - filteredPosts.length
+        removedReplies: posts.length - filteredPosts.length,
+        afterSpamFilter: spamFilteredPosts.length,
+        spamPostsRemoved: filteredPosts.length - spamFilteredPosts.length
       });
 
-      return filteredPosts;
+      return spamFilteredPosts;
     },
     enabled: !!nostr && !!communityId,
   });
@@ -246,7 +257,8 @@ export function PostList({ communityId, showOnlyApproved = false, pendingOnly = 
         ids: pinnedPostIds,
       }], { signal });
 
-      return posts;
+      // Filter out spam posts from pinned posts
+      return filterSpamPosts(posts);
     },
     enabled: !!nostr && !!communityId,
     // Ensure the query refetches when pinnedPostIds changes
