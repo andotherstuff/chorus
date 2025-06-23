@@ -119,8 +119,8 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
 
           const approvedPost = JSON.parse(approval.content) as NostrEvent;
 
-          // Skip if the post itself is a reply
-          if (approvedPost.kind === KINDS.GROUP_POST_REPLY) {
+          // Skip if the post itself is of an unsupported kind
+          if (approvedPost.kind !== KINDS.GROUP_POST) {
             return null;
           }
 
