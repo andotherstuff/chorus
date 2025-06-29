@@ -12,7 +12,7 @@ import { useBannedUsers } from "@/hooks/useBannedUsers";
 import { usePinnedPosts } from "@/hooks/usePinnedPosts";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { toast } from "sonner";
-import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer, Pin } from "lucide-react";
+import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer, Pin, Repeat } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { NutzapInterface } from "@/components/groups/NutzapInterface";
@@ -24,6 +24,7 @@ import { parseNostrAddress } from "@/lib/nostr-utils";
 import { formatRelativeTime } from "@/lib/utils";
 import { ReplyList } from "./ReplyList";
 import { ReportDialog } from "./ReportDialog";
+import { RepostDialog } from "./RepostDialog";
 import { shareContent } from "@/lib/share";
 import { KINDS } from "@/lib/nostr-kinds";
 import { filterSpamPosts } from "@/lib/spam-filter";
@@ -78,6 +79,35 @@ function ReplyCount({ postId }: { postId: string }) {
   }
 
   return <span className="text-xs ml-0.5">{replyCount}</span>;
+}
+
+// Repost Count Component
+function RepostCount({ postId }: { postId: string }) {
+  const { nostr } = useNostr();
+
+  const { data: repostCount } = useQuery({
+    queryKey: ["repost-count", postId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+
+      // Get all group posts that reference this post with a "k" tag
+      const events = await nostr.query([{
+        kinds: [KINDS.GROUP_POST],
+        "#e": [postId],
+        "#k": [String(KINDS.REPOST)],
+        limit: 100,
+      }], { signal });
+
+      return events?.length || 0;
+    },
+    enabled: !!nostr && !!postId,
+  });
+
+  if (!repostCount || repostCount === 0) {
+    return null;
+  }
+
+  return <span className="text-xs ml-0.5">{repostCount}</span>;
 }
 
 interface PostListProps {
@@ -522,6 +552,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
   const [showReplies, setShowReplies] = useState(false);
   const [showZaps, setShowZaps] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isRepostDialogOpen, setIsRepostDialogOpen] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
   // Handle toggle between replies and zaps
@@ -743,6 +774,21 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                     </Tooltip>
                   </TooltipProvider>
                 )}
+                {post.tags.find(tag => tag[0] === "k" && tag[1] === String(KINDS.REPOST)) && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          <Repeat className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                          <span className="text-xs text-muted-foreground ml-1">Repost</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Reposted from another group</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
               <div className="flex items-center text-xs text-muted-foreground mt-0 flex-row">
                 <span
@@ -819,6 +865,11 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                     <DropdownMenuItem onClick={handleSharePost} className="text-xs">
                       <Share2 className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Share Post
                     </DropdownMenuItem>
+                    {user && (
+                      <DropdownMenuItem onClick={() => setIsRepostDialogOpen(true)} className="text-xs">
+                        <Repeat className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Repost to Another Group
+                      </DropdownMenuItem>
+                    )}
                     {user && user.pubkey !== post.pubkey && (
                       <DropdownMenuItem onClick={() => setIsReportDialogOpen(true)} className="text-xs">
                         <Flag className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Report Post
@@ -907,6 +958,11 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
                     <DropdownMenuItem onClick={handleSharePost} className="text-xs">
                       <Share2 className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Share Post
                     </DropdownMenuItem>
+                    {user && (
+                      <DropdownMenuItem onClick={() => setIsRepostDialogOpen(true)} className="text-xs">
+                        <Repeat className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Repost to Another Group
+                      </DropdownMenuItem>
+                    )}
                     {user && user.pubkey !== post.pubkey && (
                       <DropdownMenuItem onClick={() => setIsReportDialogOpen(true)} className="text-xs">
                         <Flag className="h-3.5 w-3.5 mr-1.5 md:h-3.5 md:w-3.5 h-4 w-4" /> Report Post
@@ -941,6 +997,23 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
               <ReplyCount postId={post.id} />
             </Button>
             <EmojiReactionButton postId={post.id} showText={false} />
+            {user ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground flex items-center h-7 px-1.5"
+                onClick={() => setIsRepostDialogOpen(true)}
+                title="Repost to Another Group"
+              >
+                <Repeat className={`h-3.5 w-3.5`} />
+                <RepostCount postId={post.id} />
+              </Button>
+            ) : (
+              <div className="text-muted-foreground flex items-center h-7 px-1.5">
+                <Repeat className={`h-3.5 w-3.5`} />
+                <RepostCount postId={post.id} />
+              </div>
+            )}
             <NutzapButton 
               postId={post.id} 
               authorPubkey={post.pubkey} 
@@ -1000,6 +1073,14 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
         eventId={post.id}
         communityId={communityId}
         contentPreview={post.content}
+      />
+
+      {/* Repost Dialog */}
+      <RepostDialog
+        isOpen={isRepostDialogOpen}
+        onClose={() => setIsRepostDialogOpen(false)}
+        post={post}
+        sourceCommunityId={communityId}
       />
     </div>
   );
