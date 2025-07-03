@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Zap, DollarSign, Bitcoin } from "lucide-react";
+import { DollarSign, Bitcoin } from "lucide-react";
 import { CASHU_EVENT_KINDS } from "@/lib/cashu";
 import { formatBalance } from "@/lib/cashu";
 import { Proof } from "@cashu/cashu-ts";

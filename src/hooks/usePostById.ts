@@ -1,6 +1,6 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
-import { NostrEvent } from "@nostrify/nostrify";
+
 
 /**
  * Hook to fetch a post by its ID

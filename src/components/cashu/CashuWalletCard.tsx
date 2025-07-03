@@ -3,7 +3,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useCashuWallet } from "@/hooks/useCashuWallet";
-import { calculateBalance, defaultMints, formatBalance } from "@/lib/cashu";
+import { calculateBalance, formatBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
@@ -23,12 +22,9 @@ import {
   Plus,
   Trash,
   Eraser,
-  Bitcoin,
-  DollarSign,
-  ArrowLeftRight,
 } from "lucide-react";
 import { useCashuStore } from "@/stores/cashuStore";
-import { cn } from "@/lib/utils";
+
 import { Badge } from "@/components/ui/badge";
 import { useCashuToken } from "@/hooks/useCashuToken";
 import { useCreateCashuWallet } from "@/hooks/useCreateCashuWallet";
@@ -41,7 +37,7 @@ export function CashuWalletCard() {
   const cashuStore = useCashuStore();
   const { cleanSpentProofs } = useCashuToken();
   const { data: btcPrice } = useBitcoinPrice();
-  const { showSats, toggleCurrency } = useCurrencyDisplayStore();
+  const { showSats } = useCurrencyDisplayStore();
   const walletUiStore = useWalletUiStore();
   const isExpanded = walletUiStore.expandedCards.mints;
   const [newMint, setNewMint] = useState("");
@@ -53,10 +49,6 @@ export function CashuWalletCard() {
 
   // Calculate total balance across all mints
   const balances = calculateBalance(cashuStore.proofs);
-  const totalBalance = Object.values(balances).reduce(
-    (sum, balance) => sum + balance,
-    0
-  );
   const prevBalances = useRef<Record<string, string>>({});
 
   // Track balance changes for flash effect
@@ -122,7 +114,7 @@ export function CashuWalletCard() {
       // Clear input
       setNewMint("");
       setError(null);
-    } catch (e) {
+    } catch {
       setError("Invalid mint URL");
     }
   };
@@ -145,7 +137,7 @@ export function CashuWalletCard() {
         ...wallet,
         mints: wallet.mints.filter((m) => m !== mintUrl),
       });
-    } catch (e) {
+    } catch {
       setError("Failed to remove mint");
     }
 

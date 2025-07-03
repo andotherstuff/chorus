@@ -98,8 +98,7 @@ export const useTransactionHistoryStore = create<TransactionHistoryStore>()(
         return [...history, ...pending].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       },
 
-      clearHistory(pubkey) {
-        // If pubkey provided, we could filter by it in the future
+      clearHistory() {
         // Currently just clear all history
         set({ history: [], pendingTransactions: [] });
       },

@@ -1,6 +1,6 @@
 import { useNostr } from "@nostrify/react";
 import { useQuery } from "@tanstack/react-query";
-import { NostrEvent } from "@nostrify/nostrify";
+
 import { KINDS } from "@/lib/nostr-kinds";
 
 /**
@@ -8,7 +8,7 @@ import { KINDS } from "@/lib/nostr-kinds";
  * @param postId The ID of the post to fetch replies for
  * @param communityId The community ID for context
  */
-export function useReplies(postId: string, communityId: string) {
+export function useReplies(postId: string) {
   const { nostr } = useNostr();
 
   return useQuery({

@@ -10,13 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertCircle,
@@ -36,13 +30,11 @@ import {
   createLightningInvoice,
   mintTokensFromPaidInvoice,
   payMeltQuote,
-  parseInvoiceAmount,
   createMeltQuote,
 } from "@/lib/cashuLightning";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { MeltQuoteResponse, MintQuoteResponse, Proof } from "@cashu/cashu-ts";
-import { CashuToken, formatBalance } from "@/lib/cashu";
-import { NostrEvent } from "nostr-tools";
+import { formatBalance } from "@/lib/cashu";
+
 import QRCode from "react-qr-code";
 import {
   useTransactionHistoryStore,
@@ -52,15 +44,9 @@ import { v4 as uuidv4 } from "uuid";
 import { useWalletUiStore } from "@/stores/walletUiStore";
 import { QRScanner } from "@/components/QRScanner";
 
-interface TokenEvent {
-  id: string;
-  token: CashuToken;
-  createdAt: number;
-}
-
 export function CashuWalletLightningCard() {
   const { user } = useCurrentUser();
-  const { wallet, isLoading, updateProofs, tokens = [] } = useCashuWallet();
+  const { wallet, isLoading, updateProofs } = useCashuWallet();
   const { createHistory } = useCashuHistory();
   const cashuStore = useCashuStore();
   const transactionHistoryStore = useTransactionHistoryStore();
@@ -71,21 +57,19 @@ export function CashuWalletLightningCard() {
   const [receiveAmount, setReceiveAmount] = useState("");
   const [invoice, setInvoice] = useState("");
   const [currentMeltQuoteId, setcurrentMeltQuoteId] = useState("");
-  const [paymentRequest, setPaymentRequest] = useState("");
+
   const [sendInvoice, setSendInvoice] = useState("");
   const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null);
   const [invoiceFeeReserve, setInvoiceFeeReserve] = useState<number | null>(
     null
   );
-  const [mintQuote, setMintQuote] = useState<MintQuoteResponse | null>(null);
-  const [meltQuote, setMeltQuote] = useState<MeltQuoteResponse | null>(null);
+
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
-  const [pendingTransactionId, setPendingTransactionId] = useState<
-    string | null
-  >(null);
+
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const processingInvoiceRef = useRef<string | null>(null);
 
@@ -115,7 +99,6 @@ export function CashuWalletLightningCard() {
 
       setInvoice(invoiceData.paymentRequest);
       setcurrentMeltQuoteId(invoiceData.quoteId);
-      setPaymentRequest(invoiceData.paymentRequest);
 
       // Create pending transaction
       const pendingTxId = uuidv4();
@@ -132,7 +115,6 @@ export function CashuWalletLightningCard() {
 
       // Store the pending transaction
       transactionHistoryStore.addPendingTransaction(pendingTransaction);
-      setPendingTransactionId(pendingTxId);
 
       // Start polling for payment status
       checkPaymentStatus(
@@ -190,7 +172,6 @@ export function CashuWalletLightningCard() {
 
         // Remove the pending transaction
         transactionHistoryStore.removePendingTransaction(pendingTxId);
-        setPendingTransactionId(null);
 
         setSuccess(`Received ${formatBalance(amount)}!`);
         setInvoice("");
@@ -364,10 +345,7 @@ export function CashuWalletLightningCard() {
       );
 
       if (result.success) {
-        // Store the ids of proofs that were spent
-        const spentProofIds = selectedProofs
-          .map((p) => p.id || "")
-          .filter((id) => !!id);
+
 
         // Remove spent proofs from the store
         await updateProofs({

@@ -216,11 +216,6 @@ export function useNotifications() {
           const reportType = pTag && pTag[2] ? pTag[2] : 
                             (eTag && eTag[2] ? eTag[2] : 'other');
 
-          // Find the group name
-          const group = moderatedGroups.find(g => getCommunityId(g) === groupId);
-          const nameTag = group?.tags.find(tag => tag[0] === "name");
-          const groupName = nameTag ? nameTag[1] : 'Unknown group';
-
           notifications.push({
             id: event.id,
             type: 'report',
@@ -245,11 +240,6 @@ export function useNotifications() {
           const reportId = event.tags.find(tag => tag[0] === 'e')?.[1];
           const actionType = event.tags.find(tag => tag[0] === 't')?.[1] || 'unknown action';
 
-          // Find the group name
-          const group = moderatedGroups.find(g => getCommunityId(g) === groupId);
-          const nameTag = group?.tags.find(tag => tag[0] === "name");
-          const groupName = nameTag ? nameTag[1] : 'Unknown group';
-
           notifications.push({
             id: event.id,
             type: 'report_action',
@@ -271,11 +261,6 @@ export function useNotifications() {
           const groupId = event.tags.find(tag => tag[0] === 'a')?.[1];
           if (!groupId) continue;
 
-          // Find the group name
-          const group = moderatedGroups.find(g => getCommunityId(g) === groupId);
-          const nameTag = group?.tags.find(tag => tag[0] === "name");
-          const groupName = nameTag ? nameTag[1] : 'Unknown group';
-
           notifications.push({
             id: event.id,
             type: 'join_request',
@@ -295,11 +280,6 @@ export function useNotifications() {
           
           const groupId = event.tags.find(tag => tag[0] === 'a')?.[1];
           if (!groupId) continue;
-
-          // Find the group name
-          const group = moderatedGroups.find(g => getCommunityId(g) === groupId);
-          const nameTag = group?.tags.find(tag => tag[0] === "name");
-          const groupName = nameTag ? nameTag[1] : 'Unknown group';
 
           notifications.push({
             id: event.id,

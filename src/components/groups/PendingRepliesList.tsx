@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { useAuthor } from "@/hooks/useAuthor";
 import { useCurrentUser } from "@/hooks/useCurrentUser";

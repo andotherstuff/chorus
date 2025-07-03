@@ -1,7 +1,8 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,7 +40,6 @@ export default function Hashtag() {
   const { hashtag } = useParams<{ hashtag: string }>();
   const navigate = useNavigate();
   const { nostr } = useNostr();
-  const { user } = useCurrentUser();
 
   // Query for posts containing this hashtag
   const { data: posts, isLoading: isLoadingPosts, error } = useQuery({
@@ -221,7 +221,7 @@ interface HashtagPostItemProps {
   hashtag: string;
 }
 
-function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
+function HashtagPostItem({ post }: HashtagPostItemProps) {
   const author = useAuthor(post.pubkey);
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
@@ -239,7 +239,7 @@ function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
       try {
         const npub = nip19.npubEncode(post.pubkey);
         return `${npub.slice(0, 10)}...${npub.slice(-4)}`;
-      } catch (e) {
+      } catch {
         return `${post.pubkey.slice(0, 8)}...${post.pubkey.slice(-4)}`;
       }
     }
@@ -309,7 +309,7 @@ function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
   }, [community, isCommunityDeleted]);
 
   // Handle sharing the post
-  const handleSharePost = async (postId: string) => {
+  const handleSharePost = async () => {
     try {
       // Create nevent identifier for the post with relay hint
       const nevent = nip19.neventEncode({
@@ -392,7 +392,7 @@ function HashtagPostItem({ post, hashtag }: HashtagPostItemProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleSharePost(post.id)} className="text-xs">
+                <DropdownMenuItem onClick={() => handleSharePost()} className="text-xs">
                   <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share Post
                 </DropdownMenuItem>
                 {user && user.pubkey !== post.pubkey && (

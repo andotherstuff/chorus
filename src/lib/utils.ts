@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatDistanceToNow } from "date-fns"
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -78,11 +78,10 @@ export function getPostExpirationTimestamp(): number | null {
  * @param includeAbbreviation Whether to add 'ago' suffix for timestamps > 1 day
  * @returns Formatted relative time string
  */
-export function formatRelativeTime(timestamp: number, includeAbbreviation = false): string {
+export function formatRelativeTime(timestamp: number): string {
   const now = new Date();
   const date = new Date(timestamp * 1000);
   const differenceInSeconds = Math.floor((date.getTime() - now.getTime()) / 1000);
-  const isPast = differenceInSeconds < 0;
   
   // Work with absolute difference for calculations
   const absDifferenceInSeconds = Math.abs(differenceInSeconds);

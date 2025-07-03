@@ -1,6 +1,6 @@
 import { useNostr } from '@nostrify/react';
 import { useCallback } from 'react';
-import { NostrEvent, NRelay1 } from '@nostrify/nostrify';
+import { NRelay1 } from '@nostrify/nostrify';
 
 const PRIMARY_RELAY = 'wss://relay.chorus.community/';
 const FALLBACK_RELAYS = [

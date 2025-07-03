@@ -162,7 +162,7 @@ const Index = () => {
         }
       }, 100);
       setNewUser(true); // Mark as new user
-    } catch (e) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create account. Please try again.",

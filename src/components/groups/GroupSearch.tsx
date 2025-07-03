@@ -11,7 +11,6 @@ interface GroupSearchProps {
 
 export function GroupSearch({ onSearch, className }: GroupSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -40,8 +39,7 @@ export function GroupSearch({ onSearch, className }: GroupSearchProps) {
         value={searchQuery}
         onChange={handleSearch}
         className="pl-9 pr-10 h-10 md:h-9 w-full focus-visible:ring-0 rounded-md shadow-sm"
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+
         autoComplete="off"
         enterKeyHint="search"
       />

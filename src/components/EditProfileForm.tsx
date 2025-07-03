@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FC } from "react";
+import { useEffect, type FC } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -11,11 +11,9 @@ import {
   FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, Upload } from "lucide-react";
 import { NSchema as n, type NostrMetadata } from "@nostrify/nostrify";
 import { useQueryClient } from "@tanstack/react-query";

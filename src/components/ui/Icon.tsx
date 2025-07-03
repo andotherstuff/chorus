@@ -37,12 +37,10 @@ export const Icon = ({ name, size = 24, ...rest }: IconProps) => {
   }
   
   // Use type assertion to silence TypeScript errors - this is how lucide-react components are used
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const LucideIconComponent = (LucideIcons as any)[name];
+  const LucideIconComponent = (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[name];
   
   if (LucideIconComponent) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return <LucideIconComponent size={size} {...rest as any} />;
+    return <LucideIconComponent size={size} {...(rest as Record<string, unknown>)} />;
   }
   
   // Fallback to a simple list icon if icon is not found

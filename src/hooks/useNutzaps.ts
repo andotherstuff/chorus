@@ -1,8 +1,7 @@
 import { useNostr } from '@/hooks/useNostr';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CASHU_EVENT_KINDS, CashuWalletStruct } from '@/lib/cashu';
-import { NostrEvent } from 'nostr-tools';
+import { CASHU_EVENT_KINDS } from '@/lib/cashu';
 import { useNutzapStore, NutzapInformationalEvent } from '@/stores/nutzapStore';
 import { useCashuStore } from '@/stores/cashuStore';
 

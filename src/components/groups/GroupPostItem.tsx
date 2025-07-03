@@ -162,7 +162,7 @@ export function GroupPostItem({ post }: GroupPost) {
       try {
           const npub = nip19.npubEncode(post.pubkey);
           authorIdentifier = `${npub.slice(0,10)}...${npub.slice(-4)}`;
-      } catch (e) {
+      } catch {
           authorIdentifier = `${post.pubkey.slice(0,8)}...${post.pubkey.slice(-4)}`;
       }
   } else if (!authorNip05) {
@@ -358,8 +358,7 @@ export function GroupPostItem({ post }: GroupPost) {
               relayHint={undefined}
               onSuccess={() => {
                 // Call the refetch function if available
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const refetchFn = (window as any)[`zapRefetch_${post.id}`];
+                const refetchFn = (window as unknown as Record<string, unknown>)[`zapRefetch_${post.id}`];
                 if (typeof refetchFn === 'function') refetchFn();
               }}
             />

@@ -10,22 +10,17 @@ import {
   AvatarImage 
 } from "@/components/ui/avatar";
 import { 
-  Card, 
-  CardHeader, 
-  CardContent
+  Card
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { NoteContent } from "@/components/NoteContent";
 import { Link } from "react-router-dom";
 import { 
-  ExternalLink, 
   Users, 
   Pencil,
-  Calendar, 
   MessageCircle,
   MessageSquare,
-  Heart,
   Share2,
   LinkIcon,
   MoreVertical,
@@ -34,19 +29,18 @@ import {
   ArrowRight,
   Crown,
   Shield,
-  User,
   Timer
 } from "lucide-react";
-import { toast } from "sonner";
+
 import type { NostrEvent } from "@nostrify/nostrify";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import Header from "@/components/ui/Header";
 import { VerifiedNip05 } from "@/components/VerifiedNip05";
 import { useNip05Verification } from "@/hooks/useNip05Verification";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/utils";
 import { shareContent } from "@/lib/share";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
@@ -268,59 +262,8 @@ function PostGroupLink({ post }: { post: NostrEvent }) {
   );
 }
 
-// Formatted date component
-function FormattedDate({ timestamp }: { timestamp: number }) {
-  const date = new Date(timestamp * 1000);
-  
-  // Format relative time (e.g., "2 hours ago")
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  let relativeTime = '';
-  
-  if (diffInSeconds < 60) {
-    relativeTime = rtf.format(-Math.floor(diffInSeconds), 'second');
-  } else if (diffInSeconds < 3600) {
-    relativeTime = rtf.format(-Math.floor(diffInSeconds / 60), 'minute');
-  } else if (diffInSeconds < 86400) {
-    relativeTime = rtf.format(-Math.floor(diffInSeconds / 3600), 'hour');
-  } else if (diffInSeconds < 604800) {
-    relativeTime = rtf.format(-Math.floor(diffInSeconds / 86400), 'day');
-  } else if (diffInSeconds < 2592000) {
-    relativeTime = rtf.format(-Math.floor(diffInSeconds / 604800), 'week');
-  } else if (diffInSeconds < 31536000) {
-    relativeTime = rtf.format(-Math.floor(diffInSeconds / 2592000), 'month');
-  } else {
-    relativeTime = rtf.format(-Math.floor(diffInSeconds / 31536000), 'year');
-  }
-  
-  // Format absolute date (shown on hover)
-  const formatOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  };
-  const formattedDate = date.toLocaleString('en-US', formatOptions);
-  
-  return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="flex items-center text-muted-foreground">
-            <Calendar className="h-3.5 w-3.5 mr-1.5 inline-block" />
-            {relativeTime}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          <p className="text-xs">{formattedDate}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
+
+
 
 // Component to display the user's groups
 interface UserGroup {
@@ -721,7 +664,7 @@ function PostCard({ post, profileImage, displayName, displayNameFull, isLastItem
     try {
       const npub = nip19.npubEncode(post.pubkey);
       authorIdentifier = `${npub.slice(0,10)}...${npub.slice(-4)}`;
-    } catch (e) {
+    } catch {
       authorIdentifier = `${post.pubkey.slice(0,8)}...${post.pubkey.slice(-4)}`;
     }
   }
@@ -1068,7 +1011,6 @@ export default function Profile() {
   const about = metadata?.about;
   const website = metadata?.website;
   const nip05 = metadata?.nip05;
-  const banner = metadata?.banner;
 
   // Check NIP05 verification status
   const { data: nip05Verification } = useNip05Verification(nip05, pubkey || "");

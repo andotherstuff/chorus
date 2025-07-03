@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RichText } from "@/components/ui/RichText";
 import { Users, Crown, Shield, User } from "lucide-react";
 import type { NostrEvent } from "@nostrify/nostrify";
-import { parseNostrAddress } from "@/lib/nostr-utils";
+
 import { KINDS } from "@/lib/nostr-kinds";
 
 interface CommonGroup {

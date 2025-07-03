@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserQRCodeReader, BrowserCodeReader } from "@zxing/browser";
-import { DecodeHintType } from "@zxing/library";
 import {
   Dialog,
   DialogContent,
@@ -9,8 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Camera, X, Loader2, SwitchCamera } from "lucide-react";
+import { Camera, X, Loader2, SwitchCamera } from "lucide-react";
 
 interface QRScannerProps {
   isOpen: boolean;

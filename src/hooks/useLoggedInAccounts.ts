@@ -15,7 +15,7 @@ export function useLoggedInAccounts() {
   const { nostr } = useNostr();
   const { logins, setLogin, removeLogin } = useNostrLogin();
 
-  const { data: authors = [], isLoading } = useQuery({
+  const { data: authors = [] } = useQuery({
     queryKey: ['logins', logins.map((l) => l.id).join(';')],
     queryFn: async ({ signal }) => {
       const events = await nostr.query(

@@ -1,7 +1,7 @@
 import { useGroupNutzapTotal } from "@/hooks/useGroupNutzaps";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { formatBalance } from "@/lib/cashu";
-import { Zap, DollarSign, Bitcoin, ArrowLeftRight } from "lucide-react";
+import { DollarSign, Bitcoin, ArrowLeftRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useRef } from "react";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";

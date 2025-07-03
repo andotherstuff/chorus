@@ -18,18 +18,15 @@ import {
   ArrowUpRight,
   ChevronDown,
   ChevronUp,
-  Clock,
   Copy,
-  QrCode,
   Scan,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCashuToken } from "@/hooks/useCashuToken";
 import QRCode from "react-qr-code";
 import { useCashuStore } from "@/stores/cashuStore";
-import { useCashuHistory } from "@/hooks/useCashuHistory";
-import { useTransactionHistoryStore } from "@/stores/transactionHistoryStore";
-import { format } from "date-fns";
+
+
 import { getEncodedTokenV4 } from "@cashu/cashu-ts";
 import { useWalletUiStore } from "@/stores/walletUiStore";
 import { formatBalance } from "@/lib/cashu";
@@ -38,12 +35,8 @@ export function CashuTokenCard() {
   const { user } = useCurrentUser();
   const { wallet } = useCashuWallet();
   const cashuStore = useCashuStore();
-  const {
-    history,
-    isLoading: historyLoading,
-    createHistory,
-  } = useCashuHistory();
-  const transactionHistoryStore = useTransactionHistoryStore();
+
+
   const {
     sendToken,
     receiveToken,
@@ -59,12 +52,7 @@ export function CashuTokenCard() {
   const [generatedToken, setGeneratedToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
 
-  // Get recent transactions (last 3)
-  const recentTransactions = transactionHistoryStore
-    .getHistoryEntries()
-    .slice(0, 3);
 
   const handlesendToken = async () => {
     if (!cashuStore.activeMintUrl) {

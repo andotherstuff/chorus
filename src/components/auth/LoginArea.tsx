@@ -19,7 +19,7 @@ export function LoginArea() {
   return (
     <>
       {currentUser ? (
-        <AccountSwitcher onAddAccountClick={() => setLoginDialogOpen(true)} />
+        <AccountSwitcher />
       ) : (
         <Button
           onClick={() => setLoginDialogOpen(true)}

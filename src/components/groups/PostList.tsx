@@ -1,7 +1,7 @@
 import { useNostr } from "@/hooks/useNostr";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +12,7 @@ import { useBannedUsers } from "@/hooks/useBannedUsers";
 import { usePinnedPosts } from "@/hooks/usePinnedPosts";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { toast } from "sonner";
-import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, ChevronDown, ChevronUp, Flag, Timer, Pin } from "lucide-react";
+import { MessageSquare, Share2, CheckCircle, XCircle, MoreVertical, Ban, Flag, Timer, Pin } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { NutzapInterface } from "@/components/groups/NutzapInterface";
@@ -43,7 +43,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+
 } from "@/components/ui/alert-dialog";
 import {
   Tooltip,
@@ -84,10 +84,10 @@ interface PostListProps {
   communityId: string;
   showOnlyApproved?: boolean;
   pendingOnly?: boolean;
-  onPostCountChange?: (count: number) => void; // New prop for tracking post count
+
 }
 
-export function PostList({ communityId, showOnlyApproved = true, pendingOnly = false, onPostCountChange }: PostListProps) {
+export function PostList({ communityId, showOnlyApproved = true, pendingOnly = false }: PostListProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { bannedUsers } = useBannedUsers(communityId);
@@ -322,7 +322,6 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
 
   // Count approved and pending posts
   const pendingCount = processedPosts.filter(post => !('approval' in post)).length;
-  const approvedCount = processedPosts.length - pendingCount;
 
   // Filter posts based on approval status
   let filteredPosts = processedPosts;
@@ -408,11 +407,7 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
     pinnedPostIds
   ]);
 
-  useEffect(() => {
-    if (onPostCountChange) {
-      onPostCountChange(sortedPosts.length);
-    }
-  }, [sortedPosts, onPostCountChange]);
+
 
   if (isLoadingApproved || isLoadingPending || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
     return (
@@ -579,7 +574,7 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
       try {
           const npub = nip19.npubEncode(post.pubkey);
           authorIdentifier = `${npub.slice(0,10)}...${npub.slice(-4)}`;
-      } catch (e) {
+      } catch {
           authorIdentifier = `${post.pubkey.slice(0,8)}...${post.pubkey.slice(-4)}`;
       }
   } else if (!authorNip05) {

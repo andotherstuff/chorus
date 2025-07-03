@@ -208,7 +208,6 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             );
             
             if (groupATags.length > 0) {
-              const groupIds = groupATags.map(tag => tag[1]);
               // Invalidate deletion request queries
               queryClient.invalidateQueries({ queryKey: ["group-deletion-requests"] });
               // Invalidate communities list to remove deleted groups

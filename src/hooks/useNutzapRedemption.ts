@@ -2,7 +2,7 @@ import { useNostr } from '@/hooks/useNostr';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CASHU_EVENT_KINDS } from '@/lib/cashu';
-import { NostrEvent } from 'nostr-tools';
+
 
 /**
  * Hook to handle NIP-61 Nutzap redemption events

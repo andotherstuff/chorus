@@ -37,7 +37,7 @@ import {
 } from "@/hooks/useSendNutzap";
 import { nip19 } from "nostr-tools";
 import { Proof } from "@cashu/cashu-ts";
-import { useNutzapInfo } from "@/hooks/useNutzaps";
+
 import { useWalletUiStore } from "@/stores/walletUiStore";
 import { formatBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
@@ -49,7 +49,7 @@ export function NutzapCard() {
   const cashuStore = useCashuStore();
   const { sendToken } = useCashuToken();
   const { sendNutzap, isSending, error: sendError } = useSendNutzap();
-  const { fetchNutzapInfo, isFetching } = useFetchNutzapInfo();
+  const { fetchNutzapInfo } = useFetchNutzapInfo();
   const {
     data: fetchedNutzaps,
     isLoading: isLoadingNutzaps,
@@ -57,7 +57,7 @@ export function NutzapCard() {
   } = useReceivedNutzaps();
   const { mutateAsync: redeemNutzap, isPending: isRedeemingNutzap } =
     useRedeemNutzap();
-  const nutzapInfoQuery = useNutzapInfo(user?.pubkey);
+
   const { verifyMintCompatibility } = useVerifyMintCompatibility();
   const walletUiStore = useWalletUiStore();
   const isExpanded = walletUiStore.expandedCards.nutzap;
@@ -102,7 +102,7 @@ export function NutzapCard() {
       setCopying(true);
       setTimeout(() => setCopying(false), 2000);
       setSuccess("Copied to clipboard!");
-    } catch (err) {
+    } catch {
       setError("Failed to copy to clipboard");
     }
   };
@@ -137,7 +137,7 @@ export function NutzapCard() {
           throw new Error("Invalid npub format");
         }
         recipientPubkey = decoded.data;
-      } catch (e) {
+      } catch {
         setError("Invalid npub format. Please enter a valid Nostr ID (npub).");
         return;
       }

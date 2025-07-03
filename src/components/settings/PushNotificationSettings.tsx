@@ -1,15 +1,15 @@
-import { useState } from 'react';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { Bell, BellOff, Smartphone, Monitor, AlertCircle, CheckCircle } from 'lucide-react';
+import { Bell, BellOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { usePushSubscription, useTestPushNotification } from '@/hooks/usePushSubscription';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { formatDistanceToNow } from 'date-fns';
+
 
 export function PushNotificationSettings() {
   const { user } = useCurrentUser();
@@ -21,18 +21,12 @@ export function PushNotificationSettings() {
     unsubscribe,
     isSubscribing,
     isUnsubscribing,
-    serverSubscriptions,
+
     error,
   } = usePushSubscription();
 
   const testNotification = useTestPushNotification();
-  const [notificationPreferences, setNotificationPreferences] = useState({
-    groupUpdates: true,
-    mentions: true,
-    reactions: true,
-    joinRequests: true,
-    reports: true,
-  });
+
 
   if (!user) {
     return (
@@ -84,13 +78,7 @@ export function PushNotificationSettings() {
     }
   };
 
-  const getDeviceIcon = (endpoint: string) => {
-    // Simple heuristic to detect device type based on endpoint
-    if (endpoint.includes('android') || endpoint.includes('fcm')) {
-      return <Smartphone className="h-4 w-4" />;
-    }
-    return <Monitor className="h-4 w-4" />;
-  };
+
 
   return (
     <div className="space-y-6">

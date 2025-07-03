@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, ImageOff } from 'lucide-react';
+import { ImageOff } from 'lucide-react';
 
 interface ImagePreviewProps {
   src: string;
