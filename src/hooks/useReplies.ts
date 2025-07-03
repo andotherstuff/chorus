@@ -18,7 +18,7 @@ export function useReplies(postId: string) {
       
       // Get replies using kind 1111 with the post as the parent
       const replies = await nostr.query([{ 
-        kinds: [KINDS.GROUP_POST_REPLY],
+        kinds: [KINDS.GROUP_COMMENT],
         "#e": [postId],
         limit: 100,
       }], { signal });
@@ -44,7 +44,7 @@ export function useNestedReplies(replyId: string) {
       
       // Get nested replies using kind 1111 with the reply as the parent
       const replies = await nostr.query([{ 
-        kinds: [KINDS.GROUP_POST_REPLY],
+        kinds: [KINDS.GROUP_COMMENT],
         "#e": [replyId],
         limit: 50,
       }], { signal });

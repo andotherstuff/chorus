@@ -20,8 +20,7 @@ interface UseNostrPublishOptions {
 
 const expirationEventKinds: number[] = [
   KINDS.REACTION, // Reactions
-  KINDS.GROUP_POST, // Posts
-  KINDS.GROUP_POST_REPLY, // Comments (replies)
+  KINDS.GROUP_COMMENT, // Comments (posts and replies)
 ] as const;
 
 export function useNostrPublish(options?: UseNostrPublishOptions) {
@@ -165,21 +164,15 @@ export function useNostrPublish(options?: UseNostrPublishOptions) {
             break;
           }
             
-          case KINDS.GROUP_POST: // Post
-            if (communityId) {
-              queryClient.invalidateQueries({ queryKey: ["pending-posts", communityId] });
-              queryClient.invalidateQueries({ queryKey: ["pending-posts-count", communityId] });
-            }
-            // Also invalidate user posts
-            queryClient.invalidateQueries({ queryKey: ["user-posts", event.pubkey] });
-            break;
-            
-          case KINDS.GROUP_POST_REPLY: {
+          case KINDS.GROUP_COMMENT: {
             if (communityId) {
               queryClient.invalidateQueries({ queryKey: ["pending-posts", communityId] });
               queryClient.invalidateQueries({ queryKey: ["pending-posts-count", communityId] });
               queryClient.invalidateQueries({ queryKey: ["pending-replies", communityId] });
             }
+            
+            // Also invalidate user posts
+            queryClient.invalidateQueries({ queryKey: ["user-posts", event.pubkey] });
             
             // Find the post being replied to
             const parentPostId = event.tags.find(tag => tag[0] === "e")?.[1];

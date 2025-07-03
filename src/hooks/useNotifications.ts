@@ -38,9 +38,8 @@ export function useNotifications() {
       const readNotifications = JSON.parse(localStorage.getItem(`notifications:${user.pubkey}`) || '{}');
 
       const kinds = [
-        KINDS.GROUP_POST,
+        KINDS.GROUP_COMMENT,
         KINDS.REACTION,
-        KINDS.GROUP_POST_REPLY,
         KINDS.GROUP_POST_APPROVAL,
         KINDS.GROUP_POST_REMOVAL,
         KINDS.GROUP
@@ -61,11 +60,16 @@ export function useNotifications() {
         const groupId = communityParts && communityParts[0] === String(KINDS.GROUP) ? communityRef : undefined;
         
         switch (event.kind) {
-          case KINDS.GROUP_POST: {
+          case KINDS.GROUP_COMMENT: {
+            // Check if this is a top-level post or a reply
+            const parentKindTag = event.tags.find(tag => tag[0] === "k");
+            const parentKind = parentKindTag ? parentKindTag[1] : null;
+            const isTopLevel = parentKind === "34550"; // Parent is the group
+            
             notifications.push({
               id: event.id,
-              type: 'tag_post',
-              message: `tagged you in a post`,
+              type: isTopLevel ? 'tag_post' : 'tag_reply',
+              message: isTopLevel ? `tagged you in a post` : `tagged you in a reply`,
               createdAt: event.created_at,
               read: !!readNotifications[event.id],
               eventId: event.id,
@@ -89,19 +93,7 @@ export function useNotifications() {
             });
             break;
           }
-          case KINDS.GROUP_POST_REPLY: {
-            notifications.push({
-              id: event.id,
-              type: 'tag_reply',
-              message: `tagged you in a reply`,
-              createdAt: event.created_at,
-              read: !!readNotifications[event.id],
-              eventId: event.id,
-              pubkey: event.pubkey,
-              groupId
-            });
-            break;
-          }
+          // Note: GROUP_POST_REPLY case removed since all comments are now kind 1111
           case KINDS.GROUP_POST_APPROVAL: {
             // For post approval events, we already have the full community reference in the 'a' tag
             const communityRef = event.tags.find(tag => tag[0] === 'a')?.[1];

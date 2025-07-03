@@ -56,7 +56,7 @@ export default function Hashtag() {
         const [taggedPosts, contentPosts] = await Promise.all([
           // Query for posts with hashtag as a 't' tag
           nostr.query([{
-            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_POST], // text notes and community posts
+            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_COMMENT], // text notes and community comments
             "#t": [hashtag.toLowerCase()], 
             limit: 50
           }], { signal }),
@@ -64,7 +64,7 @@ export default function Hashtag() {
           // Query for posts containing hashtag in content
           // Note: This is less efficient but catches posts without proper tagging
           nostr.query([{
-            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_POST],
+            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_COMMENT],
             search: `#${hashtag}`,
             limit: 30
           }], { signal }).catch(() => []) // Some relays may not support search

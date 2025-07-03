@@ -123,7 +123,7 @@ function PendingReplyItem({ reply, communityId, onApproved }: PendingReplyItemPr
           ["a", communityId],
           ["e", reply.id],
           ["p", reply.pubkey],
-          ["k", "1111"], // Reply kind
+          ["k", String(reply.kind)],
         ],
         content: JSON.stringify(reply),
       });

@@ -95,7 +95,7 @@ export function EmojiReactionButton({ postId }: EmojiReactionButtonProps) {
         kind: KINDS.REACTION,
         tags: [
           ["e", postId],
-          ["k", String(KINDS.GROUP_POST)], // Assuming we're reacting to a kind 11 post
+          ["k", String(KINDS.GROUP_COMMENT)], // Reacting to a kind 1111 comment
         ],
         content: emojiData.emoji, // The emoji character
       });

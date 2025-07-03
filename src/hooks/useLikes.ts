@@ -53,7 +53,7 @@ export function useLikes(eventId: string) {
         kind: KINDS.REACTION,
         tags: [
           ["e", eventId],
-          ["k", String(KINDS.GROUP_POST)], // Assuming we're liking a kind 11 post
+          ["k", String(KINDS.GROUP_COMMENT)], // Liking a kind 1111 comment
         ],
         content: "+", // "+" means like
       });

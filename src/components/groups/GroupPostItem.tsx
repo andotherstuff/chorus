@@ -48,7 +48,7 @@ function ReplyCount({ postId }: { postId: string }) {
 
       try {
         const events = await nostr.query([{
-          kinds: [KINDS.GROUP_POST_REPLY],
+          kinds: [KINDS.GROUP_COMMENT],
           "#e": [postId],
           limit: 100,
         }], { signal: AbortSignal.timeout(3000) });

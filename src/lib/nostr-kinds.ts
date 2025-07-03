@@ -6,8 +6,8 @@ export const KINDS = {
   REACTION: 7,
   ZAP: 9735,
   REPORT: 1984,
-  GROUP_POST: 11,
-  GROUP_POST_REPLY: 1111,
+  // NIP-22 Comment system for groups - ALL group discussion uses kind 1111
+  GROUP_COMMENT: 1111,
   GROUP_POST_APPROVAL: 4550,
   GROUP_POST_REMOVAL: 4551,
   GROUP_JOIN_REQUEST: 4552,

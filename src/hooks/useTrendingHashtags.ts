@@ -26,7 +26,7 @@ export function useTrendingHashtags(limit = 10) {
         // Query for recent posts that might contain hashtags
         const events = await nostr.query([
           {
-            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_POST], // text notes and community posts
+            kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_COMMENT], // text notes and community comments
             since,
             limit: 1000, // Get a good sample size
           }

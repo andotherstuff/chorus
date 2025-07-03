@@ -841,12 +841,20 @@ export default function Profile() {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
-      // Get posts by this user
-      const userPosts = await nostr.query([{
-        kinds: [KINDS.GROUP_POST],
+      // Get posts by this user (kind 1111 comments that are top-level)
+      const userComments = await nostr.query([{
+        kinds: [KINDS.GROUP_COMMENT],
         authors: [pubkey],
-        limit: 20,
+        limit: 50,
       }], { signal });
+      
+      // Filter to only top-level comments (parent is the group, not another comment)
+      const userPosts = userComments.filter(post => {
+        const parentKindTag = post.tags.find(tag => tag[0] === "k");
+        const parentKind = parentKindTag ? parentKindTag[1] : null;
+        // Top-level comments have parent kind "34550" (group)
+        return parentKind === "34550";
+      });
 
       return userPosts.sort((a, b) => b.created_at - a.created_at);
     },
