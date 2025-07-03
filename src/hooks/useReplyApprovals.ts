@@ -20,7 +20,7 @@ export function useReplyApprovals(communityId: string) {
       const approvals = await nostr.query([{ 
         kinds: [KINDS.GROUP_POST_APPROVAL],
         "#a": [communityId],
-        "#k": [String(KINDS.GROUP_POST_REPLY)],
+        "#k": ["1111"], // Comments/replies
         limit: 100,
       }], { signal });
       

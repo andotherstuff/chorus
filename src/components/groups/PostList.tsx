@@ -61,9 +61,10 @@ function ReplyCount({ postId }: { postId: string }) {
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
-      // Get all kind 1111 replies that reference this post
+      // Get all kind 1111 comments that reference this post as parent
+      // This covers replies to both new kind 1111 posts and legacy kind 11 posts
       const events = await nostr.query([{
-        kinds: [KINDS.GROUP_POST_REPLY],
+        kinds: [KINDS.GROUP_COMMENT],
         "#e": [postId],
         limit: 100,
       }], { signal });
@@ -93,7 +94,7 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
   const { bannedUsers } = useBannedUsers(communityId);
   const { pinnedPostIds, isLoading: isLoadingPinnedPostIds } = usePinnedPosts(communityId);
 
-  // Query for approved posts
+  // Query for approved posts (kind 1111 comments that are top-level and legacy kind 11 posts)
   const { data: approvedPosts, isLoading: isLoadingApproved } = useQuery({
     queryKey: ["approved-posts", communityId],
     queryFn: async (c) => {
@@ -105,24 +106,38 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
         limit: 50,
       }], { signal });
 
-      // Extract the approved posts from the content field and filter out replies
-      return approvals.map(approval => {
+      // Extract the approved posts from the content field
+      const approvedPosts = approvals.map(approval => {
         try {
-          // Get the kind tag to check if it's a reply
+          // Get the kind tag to check what kind of post was approved
           const kindTag = approval.tags.find(tag => tag[0] === "k");
           const kind = kindTag ? Number.parseInt(kindTag[1]) : null;
 
-          // Skip this approval if it's for a reply (kind 1111)
-          if (kind === KINDS.GROUP_POST_REPLY) {
+          // Process approvals for both kind 1111 comments and legacy kind 11 posts
+          if (kind !== KINDS.GROUP_COMMENT && kind !== KINDS.GROUP_POST_LEGACY) {
             return null;
           }
 
           const approvedPost = JSON.parse(approval.content) as NostrEvent;
 
-          // Skip if the post itself is a reply
-          if (approvedPost.kind === KINDS.GROUP_POST_REPLY) {
+          // Skip if the post itself is not the expected kind
+          if (approvedPost.kind !== kind) {
             return null;
           }
+
+          // For kind 1111 comments, check if this is a top-level comment
+          if (approvedPost.kind === KINDS.GROUP_COMMENT) {
+            const parentKindTag = approvedPost.tags.find(tag => tag[0] === "k");
+            const parentKind = parentKindTag ? parentKindTag[1] : null;
+            
+            // Top-level comments have parent kind "34550" (group)
+            if (parentKind !== "34550") {
+              return null;
+            }
+          }
+
+          // For legacy kind 11 posts, they are always considered top-level
+          // (no additional filtering needed)
 
           // Add the approval information
           return {
@@ -138,11 +153,11 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
           console.error("Error parsing approved post:", error);
           return null;
         }
-      }).filter((post): post is NostrEvent & {
+      }).filter(post => post !== null) as Array<NostrEvent & {
         approval: { id: string; pubkey: string; created_at: number; kind: number }
-      } => post !== null);
+      }>;
 
-      // Filter out spam posts
+      // Filter out spam posts using the centralized spam filter
       const filteredApprovedPosts = filterSpamPosts(approvedPosts);
 
       // Debug logging
@@ -177,34 +192,30 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
     enabled: !!nostr && !!communityId,
   });
 
-  // Query for pending posts
+  // Query for pending posts (kind 1111 comments that are top-level and not approved)
   const { data: pendingPosts, isLoading: isLoadingPending } = useQuery({
     queryKey: ["pending-posts", communityId],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      // Query for all kind 1111 comments in this group
       const posts = await nostr.query([{
-        kinds: [KINDS.GROUP_POST],
-        "#a": [communityId],
+        kinds: [KINDS.GROUP_COMMENT],
+        "#A": [communityId], // Root scope is the group
         limit: 50,
       }], { signal });
 
-      // Filter out replies (kind 1111) and any posts with a parent reference
+      // Filter to only top-level comments (parent is the group, not another comment)
       const filteredPosts = posts.filter(post => {
-        // Exclude posts with kind 1111 (replies)
-        if (post.kind === KINDS.GROUP_POST_REPLY) {
-          return false;
-        }
-
-        // Exclude posts that have an 'e' tag with a 'reply' marker
-        // This checks for posts that are replies to other posts
-        const replyTags = post.tags.filter(tag =>
-          tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
-        );
-
-        return replyTags.length === 0;
+        // Check if this is a top-level comment (parent is the group, not another comment)
+        const parentKindTag = post.tags.find(tag => tag[0] === "k");
+        const parentKind = parentKindTag ? parentKindTag[1] : null;
+        
+        // Top-level comments have parent kind "34550" (group)
+        return parentKind === "34550";
       });
 
-      // Filter out spam posts
+      // Filter out spam posts using the centralized spam filter
       const spamFilteredPosts = filterSpamPosts(filteredPosts);
 
       // Debug logging
@@ -214,6 +225,34 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
         removedReplies: posts.length - filteredPosts.length,
         afterSpamFilter: spamFilteredPosts.length,
         spamPostsRemoved: filteredPosts.length - spamFilteredPosts.length
+      });
+
+      return spamFilteredPosts;
+    },
+    enabled: !!nostr && !!communityId,
+  });
+
+  // Query for legacy kind 11 posts (backwards compatibility)
+  const { data: legacyPosts, isLoading: isLoadingLegacy } = useQuery({
+    queryKey: ["legacy-posts", communityId],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      
+      // Query for legacy kind 11 posts that tag this community
+      const posts = await nostr.query([{
+        kinds: [KINDS.GROUP_POST_LEGACY],
+        "#a": [communityId], // Legacy posts use lowercase "a" tag
+        limit: 50,
+      }], { signal });
+
+      // Filter out spam posts using the centralized spam filter
+      const spamFilteredPosts = filterSpamPosts(posts);
+
+      // Debug logging
+      console.log("Legacy posts:", {
+        totalLegacyPosts: posts.length,
+        afterSpamFilter: spamFilteredPosts.length,
+        spamPostsRemoved: posts.length - spamFilteredPosts.length
       });
 
       return spamFilteredPosts;
@@ -251,9 +290,9 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
       
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       
-      // Fetch the actual pinned posts
+      // Fetch the actual pinned posts (including legacy kind 11 posts)
       const posts = await nostr.query([{
-        kinds: [1, KINDS.GROUP_POST],
+        kinds: [1, KINDS.GROUP_COMMENT, KINDS.GROUP_POST_LEGACY],
         ids: pinnedPostIds,
       }], { signal });
 
@@ -278,30 +317,39 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
 
   const isUserModerator = Boolean(user && moderators.includes(user.pubkey));
 
-  const allPosts = [...(approvedPosts || []), ...(pendingPosts || [])];
+  const allPosts = [
+    ...(approvedPosts || []), 
+    ...(pendingPosts || []),
+    ...(legacyPosts || [])
+  ];
 
   const uniquePosts = allPosts.filter((post, index, self) =>
-    index === self.findIndex(p => p.id === post.id)
+    post && index === self.findIndex(p => p && p.id === post.id)
   );
 
   const removedPostIds = useMemo(() => removedPosts || [], [removedPosts]);
   const postsWithoutRemoved = uniquePosts.filter(post =>
-    !removedPostIds.includes(post.id) &&
+    post && !removedPostIds.includes(post.id) &&
     !bannedUsers.includes(post.pubkey)
   );
 
   const processedPosts = postsWithoutRemoved.map(post => {
+    if (!post) return post;
+    
     // If post already has approval info, return it as is
     if ('approval' in post) return post;
 
-    // Check if this is a reply by looking at the kind or tags
-    const isReply = post.kind === KINDS.GROUP_POST_REPLY || post.tags.some(tag =>
-      tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
-    );
+    // For kind 1111 comments, check if this is a nested reply
+    if (post.kind === KINDS.GROUP_COMMENT) {
+      const parentKindTag = post.tags.find(tag => tag[0] === "k");
+      const parentKind = parentKindTag ? parentKindTag[1] : null;
+      const isNestedReply = parentKind === "1111";
 
-    // If it's a reply, don't auto-approve it as a top-level post
-    if (isReply) return post;
+      // If it's a nested reply, don't auto-approve it as a top-level post
+      if (isNestedReply) return post;
+    }
 
+    // For legacy kind 11 posts, they are always considered top-level
     // Auto-approve for approved members and moderators
     const isApprovedMember = approvedMembers.includes(post.pubkey);
     const isModerator = moderators.includes(post.pubkey);
@@ -318,7 +366,7 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
       };
     }
     return post;
-  });
+  }).filter(Boolean);
 
   // Count approved and pending posts
   const pendingCount = processedPosts.filter(post => !('approval' in post)).length;
@@ -383,14 +431,18 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
 
     // Separate regular posts (excluding pinned ones)
     const regularPosts = filteredPosts.filter(post => 
-      !pinnedPostIds.includes(post.id)
+      post && !pinnedPostIds.includes(post.id)
     );
 
     // Sort regular posts by creation time
-    const sortedRegularPosts = regularPosts.sort((a, b) => b.created_at - a.created_at);
+    const sortedRegularPosts = regularPosts.sort((a, b) => 
+      (b?.created_at || 0) - (a?.created_at || 0)
+    );
     
     // Sort pinned posts by creation time (most recent pins first)
-    const sortedPinnedPosts = filteredPinnedPosts.sort((a, b) => b.created_at - a.created_at);
+    const sortedPinnedPosts = filteredPinnedPosts.sort((a, b) => 
+      (b?.created_at || 0) - (a?.created_at || 0)
+    );
 
     // Combine pinned posts first, then regular posts
     return [...sortedPinnedPosts, ...sortedRegularPosts];
@@ -409,7 +461,7 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
 
 
 
-  if (isLoadingApproved || isLoadingPending || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
+  if (isLoadingApproved || isLoadingPending || isLoadingLegacy || isLoadingPinnedPostIds || isLoadingPinnedPosts) {
     return (
       <div className="space-y-0">
         {[1, 2, 3].map((i) => (
@@ -464,7 +516,7 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
 
   return (
     <div className="space-y-0">
-      {sortedPosts.map((post, index) => (
+      {sortedPosts.map((post, index) => post && (
         <PostItem
           key={post.id}
           post={post}
@@ -472,7 +524,7 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
           isApproved={'approval' in post}
           isModerator={isUserModerator}
           isLastItem={index === sortedPosts.length - 1}
-          isPinned={pinnedPostIds.includes(post.id)}
+          isPinned={pinnedPostIds.includes(post.id || '')}
         />
       ))}
     </div>
@@ -601,9 +653,12 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
       return;
     }
     try {
+      // Determine the correct kind tag based on the post type
+      const kindTag = post.kind === KINDS.GROUP_POST_LEGACY ? "11" : "1111";
+      
       await publishEvent({
         kind: KINDS.GROUP_POST_APPROVAL,
-        tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", String(post.kind)]],
+        tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", kindTag]],
         content: JSON.stringify(post),
       });
       toast.success("Post approved successfully!");
@@ -619,9 +674,12 @@ function PostItem({ post, communityId, isApproved, isModerator, isLastItem = fal
       return;
     }
     try {
+      // Determine the correct kind tag based on the post type
+      const kindTag = post.kind === KINDS.GROUP_POST_LEGACY ? "11" : "1111";
+      
       await publishEvent({
         kind: KINDS.GROUP_POST_REMOVAL,
-        tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", String(post.kind)]],
+        tags: [["a", communityId], ["e", post.id], ["p", post.pubkey], ["k", kindTag]],
         content: "", // Empty content - do not redistribute removed content
       });
       toast.success("Post removed successfully!");

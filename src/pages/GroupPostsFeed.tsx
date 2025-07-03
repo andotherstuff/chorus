@@ -68,10 +68,18 @@ export default function GroupPostsFeed() {
           let postEvents: NostrEvent[] = [];
           if (activeTab === "all") {
             postEvents = await nostr.query([{
-              kinds: [KINDS.GROUP_POST],
-              "#a": [communityId],
+              kinds: [KINDS.GROUP_COMMENT],
+              "#A": [communityId], // Root scope is the group
               limit: 20,
             }], { signal: AbortSignal.timeout(5000) });
+            
+            // Filter to only top-level comments (parent is the group, not another comment)
+            postEvents = postEvents.filter(post => {
+              const parentKindTag = post.tags.find(tag => tag[0] === "k");
+              const parentKind = parentKindTag ? parentKindTag[1] : null;
+              // Top-level comments have parent kind "34550" (group)
+              return parentKind === "34550";
+            });
           }
 
           // Fetch removals for this group
@@ -124,13 +132,18 @@ export default function GroupPostsFeed() {
               // Skip if the post is removed
               if (removedPostIds.has(approvedPost.id)) return null;
               
-              // Skip if this is a reply (kind 1111)
+              // Skip if this is not a comment (kind 1111)
               const kindTag = approval.tags.find(tag => tag[0] === "k");
               const kind = kindTag ? Number.parseInt(kindTag[1]) : null;
-              if (kind === KINDS.GROUP_POST_REPLY) return null;
+              if (kind !== KINDS.GROUP_COMMENT) return null;
 
-              // Skip if the post itself is a reply
-              if (approvedPost.kind === KINDS.GROUP_POST_REPLY) return null;
+              // Skip if the post itself is not a comment
+              if (approvedPost.kind !== KINDS.GROUP_COMMENT) return null;
+              
+              // Skip if this is a nested reply (parent is another comment, not the group)
+              const parentKindTag = approvedPost.tags.find(tag => tag[0] === "k");
+              const parentKind = parentKindTag ? parentKindTag[1] : null;
+              if (parentKind !== "34550") return null; // Only include top-level comments
 
               // Add the community ID and approval information
               return {
@@ -147,15 +160,7 @@ export default function GroupPostsFeed() {
               console.error("Error parsing approved post:", error);
               return null;
             }
-          }).filter((post): post is NostrEvent & {
-            communityId: string;
-            approval: {
-              id: string;
-              pubkey: string;
-              created_at: number;
-              kind: number;
-            }
-          } => post !== null);
+          }).filter((post): post is NonNullable<typeof post> => post !== null);
 
           // Add approved posts to our result array
           allPosts = [...allPosts, ...processedApprovedPosts];
@@ -168,14 +173,13 @@ export default function GroupPostsFeed() {
             // Skip if removed
             if (removedPostIds.has(post.id)) return null;
 
-            // Skip if this is a reply (kind 1111)
-            if (post.kind === KINDS.GROUP_POST_REPLY) return null;
-
-            // Skip if it has a reply marker in tags
-            const hasReplyTag = post.tags.some(tag =>
-              tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
-            );
-            if (hasReplyTag) return null;
+            // Skip if this is not a comment (kind 1111)
+            if (post.kind !== KINDS.GROUP_COMMENT) return null;
+            
+            // Skip if this is a nested reply (already filtered above, but double-check)
+            const parentKindTag = post.tags.find(tag => tag[0] === "k");
+            const parentKind = parentKindTag ? parentKindTag[1] : null;
+            if (parentKind !== "34550") return null; // Only include top-level comments
 
             // Check if the post is already in approved posts
             const isAlreadyApproved = processedApprovedPosts.some(
@@ -205,15 +209,7 @@ export default function GroupPostsFeed() {
               ...post,
               communityId
             };
-          }).filter((post): post is NostrEvent & {
-            communityId: string;
-            approval?: {
-              id: string;
-              pubkey: string;
-              created_at: number;
-              kind: number;
-            }
-          } => post !== null);
+          }).filter((post): post is NonNullable<typeof post> => post !== null);
 
           // Add all posts to the array
           allPosts = [...allPosts, ...allGroupPosts];

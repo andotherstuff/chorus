@@ -45,8 +45,8 @@
 - Kind 1984: Report
 
 ### Groups
-- Kind 11: Post in a group
-- Kind 1111: Reply to group posts
+- Kind 11: Legacy group posts (backwards compatibility)
+- Kind 1111: Group comments (NIP-22) - used for all new group discussions
 - Kind 4550: Post approval
 - Kind 4551: Post removal
 - Kind 4552: Join request

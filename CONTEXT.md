@@ -389,7 +389,7 @@ Chorus implements [NIP-72](https://github.com/nostr-protocol/nips/blob/master/72
 
 - **Kind 34550**: Community definition events that include community metadata and moderator lists
 - **Kind 4550**: Post approval events that moderators use to approve posts
-- **Kind 11**: Text note events used for posts within communities
+- **Kind 1111**: Text note events used for posts within communities
 
 **📋 IMPORTANT: This project extends NIP-72 with custom event kinds documented in `NIP.md`. When working with group functionality, always reference this specification and update it when making changes to event kinds or their usage patterns.**
 

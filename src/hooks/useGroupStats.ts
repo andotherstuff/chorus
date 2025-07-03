@@ -38,10 +38,10 @@ export function useGroupStats(communities: NostrEvent[] | undefined, enabled = t
         stats[communityId] = { posts: 0, participants: new Set<string>() };
       }
 
-      // 1. Get all posts (Kind 1, 11, 1111) that reference any community
+      // 1. Get all posts (Kind 1, 1111) that reference any community
       const posts = await nostr.query([{
-        kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_POST, KINDS.GROUP_POST_REPLY],
-        "#a": communityRefs,
+        kinds: [KINDS.TEXT_NOTE, KINDS.GROUP_COMMENT],
+        "#A": communityRefs, // Use uppercase A for root scope
         limit: 500
       }], { signal });
 

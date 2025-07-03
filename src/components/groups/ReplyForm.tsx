@@ -238,20 +238,29 @@ ${mediaUrl}`;
         ? hashtagMatches.map(hashtag => ["t", hashtag.slice(1).toLowerCase()])
         : [];
       
-      // Create tags for the reply
+      // Parse community ID to get group details
+      const parsedCommunityId = communityId.includes(':') 
+        ? (() => {
+            const [kind, pubkey, identifier] = communityId.split(':');
+            return { kind, pubkey, identifier };
+          })()
+        : null;
+      if (!parsedCommunityId) {
+        toast.error("Invalid community ID");
+        return;
+      }
+
+      // NIP-22 compliant tags for group comment reply
       const tags = [
-        // Community reference
-        ["a", communityId],
-        
-        // Root post reference (uppercase tags)
-        ["E", postId],
-        ["K", "11"], // Original post is kind 11
-        ["P", postAuthorPubkey],
+        // Root scope: the group itself (uppercase tags)
+        ["A", communityId],
+        ["K", "34550"], // Group kind
+        ["P", parsedCommunityId.pubkey], // Group author
         
         // Parent reference (lowercase tags)
-        ["e", replyToId],
-        ["k", parentId ? "1111" : "11"], // Parent is either a reply (1111) or the original post (11)
-        ["p", replyToPubkey],
+        ["e", replyToId], // Parent event ID
+        ["k", "1111"], // Parent is always a comment (kind 1111)
+        ["p", replyToPubkey], // Parent author
         
         // Media tags
         ...imageTags,
@@ -262,7 +271,7 @@ ${mediaUrl}`;
       
       // Publish the reply event (kind 1111)
       await publishEvent({
-        kind: KINDS.GROUP_POST_REPLY,
+        kind: KINDS.GROUP_COMMENT,
         tags,
         content: finalContent,
       });

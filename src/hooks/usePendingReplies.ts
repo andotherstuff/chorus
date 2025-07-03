@@ -22,10 +22,18 @@ export function usePendingReplies(communityId: string) {
       
       // Get all replies in the community (kind 1111 with the community tag)
       const replies = await nostr.query([{ 
-        kinds: [KINDS.GROUP_POST_REPLY],
-        "#a": [communityId],
+        kinds: [KINDS.GROUP_COMMENT],
+        "#A": [communityId], // Root scope is the group
         limit: 100,
       }], { signal });
+      
+      // Filter to only nested replies (parent is another comment, not the group)
+      const nestedReplies = replies.filter(reply => {
+        const parentKindTag = reply.tags.find(tag => tag[0] === "k");
+        const parentKind = parentKindTag ? parentKindTag[1] : null;
+        // Only include replies where parent is another comment (kind 1111)
+        return parentKind === "1111";
+      });
       
       // Parse the community ID to get the pubkey and identifier
       const parsedId = communityId.includes(':') 
@@ -49,7 +57,7 @@ export function usePendingReplies(communityId: string) {
       // 2. Posted by approved members (auto-approved)
       // 3. Posted by moderators (auto-approved)
       // 4. Posted by the community owner (auto-approved)
-      const pendingReplies = replies.filter(reply => {
+      const pendingReplies = nestedReplies.filter(reply => {
         // Skip if reply is already approved
         if (replyApprovals.includes(reply.id)) {
           return false;

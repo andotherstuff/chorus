@@ -2,6 +2,7 @@ import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { KINDS } from "@/lib/nostr-kinds";
+import { filterSpamPosts } from "@/lib/spam-filter";
 
 /**
  * Hook to fetch the count of pending posts in a community
@@ -24,12 +25,31 @@ export function usePendingPostsCount(communityId: string) {
 
       if (!parsedId) return 0;
 
-      // Get posts that tag the community
+      // Get posts that tag the community (kind 1111 comments)
       const posts = await nostr.query([{
-        kinds: [KINDS.GROUP_POST],
-        "#a": [communityId],
+        kinds: [KINDS.GROUP_COMMENT],
+        "#A": [communityId], // Root scope is the group
         limit: 100,
       }], { signal });
+
+      // Filter to only top-level comments (parent is the group, not another comment)
+      const topLevelPosts = posts.filter(post => {
+        const parentKindTag = post.tags.find(tag => tag[0] === "k");
+        const parentKind = parentKindTag ? parentKindTag[1] : null;
+        // Top-level comments have parent kind "34550" (group)
+        return parentKind === "34550";
+      });
+
+      // Get legacy kind 11 posts that tag the community
+      const legacyPosts = await nostr.query([{
+        kinds: [KINDS.GROUP_POST_LEGACY],
+        "#a": [communityId], // Legacy posts use lowercase "a" tag
+        limit: 100,
+      }], { signal });
+
+      // Combine both types of posts and filter out spam
+      const combinedPosts = [...topLevelPosts, ...legacyPosts];
+      const allPosts = filterSpamPosts(combinedPosts);
 
       // Get approval events
       const approvals = await nostr.query([{
@@ -90,12 +110,7 @@ export function usePendingPostsCount(communityId: string) {
       // 3. Posted by the community owner (auto-approved)
       // 4. Posted by approved members (auto-approved)
       // 5. Posted by moderators (auto-approved)
-      // 6. Replies (kind 1111)
-      const pendingPosts = posts.filter(post => {
-        // Skip if post is a reply
-        if (post.kind === KINDS.GROUP_POST_REPLY) {
-          return false;
-        }
+      const pendingPosts = allPosts.filter(post => {
 
         // Skip if post is already approved
         if (approvedPostIds.includes(post.id)) {
@@ -123,6 +138,8 @@ export function usePendingPostsCount(communityId: string) {
       // Debug logging
       // console.log("Pending posts count calculation:", {
       //   totalPosts: posts.length,
+      //   legacyPosts: legacyPosts.length,
+      //   allPosts: allPosts.length,
       //   approvedPostIds,
       //   removedPostIds,
       //   communityOwner: communityOwnerPubkey,

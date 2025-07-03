@@ -216,15 +216,25 @@ ${mediaUrl}`;
         ? hashtagMatches.map(hashtag => ["t", hashtag.slice(1).toLowerCase()])
         : [];
 
+      // NIP-22 compliant tags for top-level group comment
       const tags = [
+        // Root scope: the group itself (uppercase tags)
+        ["A", communityId],
+        ["K", "34550"], // Group kind
+        ["P", parsedId.pubkey], // Group author
+
+        // Parent scope: same as root for top-level posts (lowercase tags)
         ["a", communityId],
-        ["subject", `Post in ${parsedId?.identifier || 'group'}`],
+        ["k", "34550"], // Group kind
+        ["p", parsedId.pubkey], // Group author
+
+        // Additional tags
         ...imageTags,
         ...hashtagTags,
       ];
 
       await publishEvent({
-        kind: KINDS.GROUP_POST,
+        kind: KINDS.GROUP_COMMENT,
         tags,
         content: finalContent,
       });
