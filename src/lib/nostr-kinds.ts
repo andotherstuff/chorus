@@ -6,6 +6,8 @@ export const KINDS = {
   REACTION: 7,
   ZAP: 9735,
   REPORT: 1984,
+  // Legacy group post format (backwards compatibility)
+  GROUP_POST_LEGACY: 11,
   // NIP-22 Comment system for groups - ALL group discussion uses kind 1111
   GROUP_COMMENT: 1111,
   GROUP_POST_APPROVAL: 4550,

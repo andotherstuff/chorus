@@ -39,6 +39,16 @@ export function usePendingPostsCount(communityId: string) {
         return parentKind === "34550";
       });
 
+      // Get legacy kind 11 posts that tag the community
+      const legacyPosts = await nostr.query([{
+        kinds: [KINDS.GROUP_POST_LEGACY],
+        "#a": [communityId], // Legacy posts use lowercase "a" tag
+        limit: 100,
+      }], { signal });
+
+      // Combine both types of posts
+      const allPosts = [...topLevelPosts, ...legacyPosts];
+
       // Get approval events
       const approvals = await nostr.query([{
         kinds: [KINDS.GROUP_POST_APPROVAL],
@@ -98,7 +108,7 @@ export function usePendingPostsCount(communityId: string) {
       // 3. Posted by the community owner (auto-approved)
       // 4. Posted by approved members (auto-approved)
       // 5. Posted by moderators (auto-approved)
-      const pendingPosts = topLevelPosts.filter(post => {
+      const pendingPosts = allPosts.filter(post => {
 
         // Skip if post is already approved
         if (approvedPostIds.includes(post.id)) {
@@ -126,6 +136,8 @@ export function usePendingPostsCount(communityId: string) {
       // Debug logging
       // console.log("Pending posts count calculation:", {
       //   totalPosts: posts.length,
+      //   legacyPosts: legacyPosts.length,
+      //   allPosts: allPosts.length,
       //   approvedPostIds,
       //   removedPostIds,
       //   communityOwner: communityOwnerPubkey,
