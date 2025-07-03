@@ -25,7 +25,6 @@ const queryClient = new QueryClient({
 });
 
 const defaultConfig: AppConfig = {
-  theme: "system",
   relayUrl: "wss://relay.chorus.community", // DO NOT MODIFY THIS UNLESS EXPLICITLY REQUESTED
 };
 

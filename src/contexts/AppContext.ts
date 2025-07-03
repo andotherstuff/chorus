@@ -1,10 +1,6 @@
 import { createContext } from "react";
 
-export type Theme = "dark" | "light" | "system";
-
 export interface AppConfig {
-  /** Current theme */
-  theme: Theme;
   /** Selected relay URL */
   relayUrl: string;
 }
