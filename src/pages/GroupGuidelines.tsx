@@ -105,23 +105,22 @@ export default function GroupGuidelines() {
         <div className="flex gap-4">
           <div className="flex-1">
             <div className="h-36 rounded-lg overflow-hidden mb-2 relative">
-              {image ? (
+              {!image ? (
+                // Show a nice gradient background when no image is provided
+                <div className="w-full h-full bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20 flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <div className="h-12 w-12 mx-auto bg-primary/20 rounded-full flex items-center justify-center">
+                      <span className="text-2xl font-bold text-primary">{name.charAt(0).toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <img
                   src={image}
                   alt={name}
                   className="w-full h-full object-cover object-center"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = "flex";
-                  }}
                 />
-              ) : null}
-              <div 
-                className={`w-full h-full bg-primary/10 text-primary font-bold text-4xl flex items-center justify-center ${image ? 'hidden' : 'flex'}`}
-              >
-                {name.charAt(0).toUpperCase()}
-              </div>
+              )}
             </div>
 
             <div className="flex flex-row items-start justify-between gap-4 mb-2">

@@ -550,11 +550,17 @@ export default function GroupDetail() {
         <div className="flex gap-4">
           <div className="flex-1">
             <div className="h-40 rounded-lg overflow-hidden mb-2 relative">
-              {imageLoading && (
+              {imageLoading && image && (
                 <Skeleton className="absolute inset-0 w-full h-full z-10" />
               )}
-              {/* Check if the image URL is likely a video */}
-              {image && image.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+              {!image ? (
+                // Show a nice gradient background when no image is provided
+                <div className="w-full h-full bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20 flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto opacity-40" />
+                  </div>
+                </div>
+              ) : image.match(/\.(mp4|webm|ogg|mov)$/i) ? (
                 <video
                   src={image}
                   className="w-full h-full object-cover object-center"
@@ -563,13 +569,8 @@ export default function GroupDetail() {
                   loop
                   playsInline
                   onLoadedData={() => setImageLoading(false)}
-                  onError={(e) => {
+                  onError={() => {
                     setImageLoading(false);
-                    // Fall back to placeholder if video fails
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      parent.innerHTML = '<img src="/placeholder-community.svg" class="w-full h-full object-cover object-center" />';
-                    }
                   }}
                 />
               ) : (
@@ -578,9 +579,8 @@ export default function GroupDetail() {
                   alt={name}
                   className="w-full h-full object-cover object-center"
                   onLoad={() => setImageLoading(false)}
-                  onError={(e) => {
+                  onError={() => {
                     setImageLoading(false);
-                    e.currentTarget.src = "/placeholder-community.svg";
                   }}
                 />
               )}
