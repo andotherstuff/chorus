@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { NostrEvent, NostrFilter } from "@nostrify/nostrify";
 import { usePinnedGroups } from "./usePinnedGroups";
 import { KINDS } from "@/lib/nostr-kinds";
-import { useGroupDeletionRequests } from "./useGroupDeletionRequests";
+
 
 // Helper function to get a unique community ID
 function getCommunityId(community: NostrEvent): string {
@@ -15,7 +15,7 @@ function getCommunityId(community: NostrEvent): string {
 export function useUserGroups() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const { pinnedGroups, isLoading: isPinnedGroupsLoading } = usePinnedGroups();
+  const { pinnedGroups } = usePinnedGroups();
 
   return useQuery({
     queryKey: ["user-groups", user?.pubkey, pinnedGroups],
@@ -193,7 +193,7 @@ export function useUserGroups() {
         } else {
           // If not in the map, check if it's in the pinnedCommunityEvents
           // This would be a pinned group where user is NOT a member
-          const pinnedCommunity = pinnedCommunityEvents.find(event => {
+          pinnedCommunityEvents.find(event => {
             const eventCommunityId = getCommunityId(event);
             return eventCommunityId === communityId;
           });

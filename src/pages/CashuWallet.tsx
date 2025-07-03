@@ -1,11 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-import { LoginArea } from "@/components/auth/LoginArea";
 import { CashuHistoryCard } from "@/components/cashu/CashuHistoryCard";
 import { CashuTokenCard } from "@/components/cashu/CashuTokenCard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { CashuWalletLightningCard } from "@/components/cashu/CashuWalletLightningCard";
 import { CashuWalletCard } from "@/components/cashu/CashuWalletCard";
-import { NutzapCard } from "@/components/cashu/NutzapCard";
 import Header from "@/components/ui/Header";
 import { Separator } from "@/components/ui/separator";
 import { useCashuToken } from "@/hooks/useCashuToken";
@@ -18,8 +16,7 @@ import { Loader2, Bitcoin, DollarSign, ArrowLeftRight } from "lucide-react";
 import { formatBalance, calculateBalance } from "@/lib/cashu";
 import { useBitcoinPrice, satsToUSD, formatUSD } from "@/hooks/useBitcoinPrice";
 import { useCurrencyDisplayStore } from "@/stores/currencyDisplayStore";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, HelpCircle } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,

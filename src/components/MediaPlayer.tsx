@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { Music } from "lucide-react";
 
 interface MediaPlayerProps {
   url: string;

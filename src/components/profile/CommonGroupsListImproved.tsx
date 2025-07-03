@@ -8,10 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { RichText } from "@/components/ui/RichText";
 import { Users, Crown, Shield, User, ArrowRight } from "lucide-react";
 import type { NostrEvent } from "@nostrify/nostrify";
-import { parseNostrAddress } from "@/lib/nostr-utils";
 import { useAuthor } from "@/hooks/useAuthor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { KINDS } from "@/lib/nostr-kinds";
 import { useGroupDeletionRequests } from "@/hooks/useGroupDeletionRequests";
 
@@ -145,9 +143,7 @@ function UserWithRole({
 export function CommonGroupsListImproved({ profileUserPubkey }: CommonGroupsListProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const profileAuthor = useAuthor(profileUserPubkey);
-  const profileMetadata = profileAuthor.data?.metadata;
-  const profileDisplayName = profileMetadata?.name || profileUserPubkey.slice(0, 8);
+
 
   const { data: commonGroups, isLoading } = useQuery({
     queryKey: ["common-groups", user?.pubkey, profileUserPubkey],

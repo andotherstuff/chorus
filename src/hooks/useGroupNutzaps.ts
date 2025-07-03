@@ -1,7 +1,7 @@
 import { useNostr } from '@/hooks/useNostr';
 import { useQuery } from '@tanstack/react-query';
 import { CASHU_EVENT_KINDS } from '@/lib/cashu';
-import { NostrEvent } from 'nostr-tools';
+
 
 /**
  * Hook to fetch nutzaps for a specific group

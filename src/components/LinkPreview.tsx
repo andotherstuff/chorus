@@ -19,7 +19,7 @@ const extractDomain = (url: string): string => {
   try {
     const urlObj = new URL(url);
     return urlObj.hostname.replace('www.', '');
-  } catch (error) {
+  } catch {
     // If URL parsing fails, use a regex fallback
     const match = url.match(/^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:/\n?]+)/i);
     return match ? match[1] : url;
@@ -29,7 +29,6 @@ const extractDomain = (url: string): string => {
 export function LinkPreview({ url }: LinkPreviewProps) {
   const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [fetchTries, setFetchTries] = useState(0);
 
   // Clean and format the URL for display
@@ -41,7 +40,6 @@ export function LinkPreview({ url }: LinkPreviewProps) {
       // Reset state for new URL
       if (fetchTries === 0) {
         setLoading(true);
-        setError(false);
       }
 
       try {
@@ -141,7 +139,6 @@ export function LinkPreview({ url }: LinkPreviewProps) {
           setFetchTries(prev => prev + 1);
         } else {
           // After all retries fail, show fallback
-          setError(true);
           setLoading(false);
           
           // Still provide basic metadata for fallback display
@@ -180,8 +177,8 @@ export function LinkPreview({ url }: LinkPreviewProps) {
     );
   }
 
-  // Show fallback for errors or when all retries failed
-  if (error || (loading && fetchTries >= 2)) {
+  // Show fallback when all retries failed
+  if (loading && fetchTries >= 2) {
     return (
       <a 
         href={url} 

@@ -27,7 +27,7 @@ export interface ReceivedNutzap {
  * Hook to redeem nutzaps
  */
 export function useRedeemNutzap() {
-  const { wallet, updateProofs } = useCashuWallet();
+  const { updateProofs } = useCashuWallet();
   const { createRedemption } = useNutzapRedemption();
   const queryClient = useQueryClient();
   const { user } = useCurrentUser();
@@ -100,8 +100,7 @@ export function useReceivedNutzaps() {
         return [];
       }
 
-      // Get relays where the user reads nutzap events
-      const relays = nutzapInfo.data.relays;
+
 
       // Get p2pk pubkey that the tokens should be locked to
       const p2pkPubkey = nutzapInfo.data.p2pkPubkey;

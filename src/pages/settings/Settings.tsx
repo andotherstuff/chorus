@@ -7,22 +7,21 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useNostrPublish } from "@/hooks/useNostrPublish";
+
 import { nip19 } from 'nostr-tools';
-import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
+
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
 
 export default function Settings() {
   const { user } = useCurrentUser();
-  const { mutate: createEvent } = useNostrPublish();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [postExpiration, setPostExpiration] = useState("off");
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [copyPrivateSuccess, setCopyPrivateSuccess] = useState(false);
   const [copyPublicSuccess, setCopyPublicSuccess] = useState(false);
   const checkedForKey = useRef(false);
-  const unreadCount = useUnreadNotificationsCount();
+
 
   // Get pubkey in npub format
   const npub = user ? nip19.npubEncode(user.pubkey) : '';
@@ -105,18 +104,7 @@ export default function Settings() {
     return <Navigate to="/" />;
   }
 
-  // Function to handle deletion of all events
-  const handleDeleteAll = async () => {
-    // This would normally implement actual event deletion logic
-    // For Nostr, you would typically publish delete events for all your previous events
-    alert("Deletion functionality would be implemented here in a real application");
 
-    // In a real implementation, you would:
-    // 1. Query all events from this user
-    // 2. For each event, create a deletion event (kind 5)
-    // 3. Publish those deletion events
-    // createEvent({ kind: 5, tags: [["e", eventId]], content: "Deleted by user" });
-  };
 
   return (
     <div className="container mx-auto py-1 px-3 sm:px-4">

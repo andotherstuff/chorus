@@ -4,7 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Header from "@/components/ui/Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 import { GroupSearch } from "@/components/groups/GroupSearch";
 import { useState, useMemo, useEffect } from "react";
 import { TrendingUp } from "lucide-react";
@@ -34,7 +34,7 @@ export default function Groups() {
   const { pinGroup, unpinGroup, isGroupPinned, isUpdating } = usePinnedGroups();
   const [searchQuery, setSearchQuery] = useState("");
   const [showPWAInstructions, setShowPWAInstructions] = useState(false);
-  const { wallet, isLoading: isWalletLoading } = useCashuWallet();
+  const { wallet } = useCashuWallet();
 
   // Log wallet data when it loads
   useEffect(() => {

@@ -65,7 +65,7 @@ export function useFollowList(pubkey?: string) {
       }
 
       // Get the current follow list
-      const { followList = [], event } = followListQuery.data || {};
+      const { followList = [] } = followListQuery.data || {};
       
       // Create a new follow list based on the action (follow or unfollow)
       let newFollowList: string[];

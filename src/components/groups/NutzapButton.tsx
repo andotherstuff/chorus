@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { DollarSign, Bitcoin } from "lucide-react";
 import { toast } from "sonner";
@@ -29,7 +29,7 @@ interface NutzapButtonProps {
   refetchZaps?: () => void;
 }
 
-export function NutzapButton({ postId, authorPubkey, relayHint, showText = true, onToggle, isOpen = false, refetchZaps }: NutzapButtonProps) {
+export function NutzapButton({ postId, showText = true, onToggle, isOpen = false, refetchZaps }: NutzapButtonProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { wallet } = useCashuWallet();
@@ -62,7 +62,7 @@ export function NutzapButton({ postId, authorPubkey, relayHint, showText = true,
             .map(tag => {
               try {
                 return JSON.parse(tag[1]);
-              } catch (e) {
+              } catch {
                 return null;
               }
             })

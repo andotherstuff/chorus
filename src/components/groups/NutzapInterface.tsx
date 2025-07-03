@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { DollarSign, Loader2, Bitcoin, AlertCircle, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -30,7 +30,7 @@ export function NutzapInterface({ postId, authorPubkey, relayHint, onSuccess }: 
   const cashuStore = useCashuStore();
   const { sendToken } = useCashuToken();
   const { sendNutzap, isSending } = useSendNutzap();
-  const { fetchNutzapInfo, isFetching, error: fetchError } = useFetchNutzapInfo();
+  const { fetchNutzapInfo, isFetching } = useFetchNutzapInfo();
   const { verifyMintCompatibility } = useVerifyMintCompatibility();
   const { showSats } = useCurrencyDisplayStore();
   const { data: btcPrice } = useBitcoinPrice();
@@ -68,7 +68,7 @@ export function NutzapInterface({ postId, authorPubkey, relayHint, onSuccess }: 
             setRecipientWalletStatus('no-compatible-mint');
           }
         }
-      } catch (error) {
+      } catch {
         // If we can't fetch nutzap info, recipient doesn't have a wallet
         if (!cancelled) {
           setRecipientWalletStatus('no-wallet');
@@ -82,8 +82,7 @@ export function NutzapInterface({ postId, authorPubkey, relayHint, onSuccess }: 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authorPubkey, user?.pubkey, wallet, cashuStore.activeMintUrl]); // Only depend on stable values
+  }, [authorPubkey, user, wallet, cashuStore.activeMintUrl, fetchNutzapInfo, verifyMintCompatibility]);
 
   // Format amount based on user preference
   const formatAmount = (sats: number) => {

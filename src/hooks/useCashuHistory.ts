@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CASHU_EVENT_KINDS, SpendingHistoryEntry } from '@/lib/cashu';
 import { getLastEventTimestamp } from '@/lib/nostrTimestamps';
 import { useTransactionHistoryStore } from '@/stores/transactionHistoryStore';
-import { NostrEvent } from 'nostr-tools';
 
 /**
  * Hook to fetch and manage the user's Cashu spending history

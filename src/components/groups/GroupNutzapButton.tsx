@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, DollarSign, Bitcoin, AlertCircle, Wallet, Loader2 } from "lucide-react";
+import { DollarSign, Bitcoin, AlertCircle, Wallet, Loader2 } from "lucide-react";
 import {
   useSendNutzap,
   useFetchNutzapInfo,
@@ -87,7 +87,7 @@ export function GroupNutzapButton({
             setRecipientWalletStatus('no-compatible-mint');
           }
         }
-      } catch (error) {
+      } catch {
         // If we can't fetch nutzap info, recipient doesn't have a wallet
         if (!cancelled) {
           setRecipientWalletStatus('no-wallet');
@@ -101,8 +101,7 @@ export function GroupNutzapButton({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDialogOpen, ownerPubkey, user?.pubkey, wallet, cashuStore.activeMintUrl]); // Only depend on stable values
+  }, [isDialogOpen, ownerPubkey, user, wallet, cashuStore.activeMintUrl, fetchNutzapInfo, verifyMintCompatibility]);
 
   // Format amount based on user preference
   const formatAmount = (sats: number) => {

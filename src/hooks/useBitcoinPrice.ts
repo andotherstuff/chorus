@@ -1,9 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 
-interface BitcoinPrice {
-  USD: number;
-}
-
 export function useBitcoinPrice() {
   return useQuery({
     queryKey: ["bitcoin-price"],

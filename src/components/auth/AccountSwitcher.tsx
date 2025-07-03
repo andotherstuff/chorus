@@ -5,10 +5,8 @@ import {
   ChevronDown,
   LogOut,
   UserIcon,
-  UserPlus,
   Plus,
   Settings,
-  Edit,
   User,
   Bell,
   Wallet,
@@ -34,13 +32,9 @@ import { useCashuStore } from "@/stores/cashuStore";
 import { useState } from "react";
 import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
 import { usePWA } from "@/hooks/usePWA";
-interface AccountSwitcherProps {
-  onAddAccountClick: () => void;
-}
 
-export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
-  const { currentUser, otherUsers, setLogin, removeLogin } =
-    useLoggedInAccounts();
+export function AccountSwitcher() {
+  const { currentUser, removeLogin } = useLoggedInAccounts();
   const navigate = useNavigate();
   const unreadCount = useUnreadNotificationsCount();
   const markAllAsRead = useMarkAllNotificationsAsRead();

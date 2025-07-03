@@ -136,7 +136,7 @@ export function NoteContent({
             </Link>
           );
         }
-      } catch (e) {
+      } catch {
         return match[0];
       }
     });

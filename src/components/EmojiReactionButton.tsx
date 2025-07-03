@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SmilePlus } from "lucide-react";
@@ -22,7 +22,7 @@ interface Reaction {
   hasReacted: boolean;
 }
 
-export function EmojiReactionButton({ postId, showText = true }: EmojiReactionButtonProps) {
+export function EmojiReactionButton({ postId }: EmojiReactionButtonProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish({

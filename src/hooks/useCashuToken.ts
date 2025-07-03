@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { useCashuStore } from '@/stores/cashuStore';
 import { useCashuWallet } from '@/hooks/useCashuWallet';
 import { useCashuHistory } from '@/hooks/useCashuHistory';
-import { CashuMint, CashuWallet, Proof, getEncodedTokenV4, getDecodedToken, CheckStateEnum } from '@cashu/cashu-ts';
-import { CashuProof, CashuToken } from '@/lib/cashu';
+import { CashuMint, CashuWallet, Proof, getDecodedToken, CheckStateEnum } from '@cashu/cashu-ts';
+import { CashuToken } from '@/lib/cashu';
 import { hashToCurve } from "@cashu/crypto/modules/common";
-import { useNutzapStore } from '@/stores/nutzapStore';
 
 export function useCashuToken() {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,7 +13,6 @@ export function useCashuToken() {
   const { wallet, createWallet, updateProofs } = useCashuWallet();
 
   const { createHistory } = useCashuHistory();
-  const nutzapStore = useNutzapStore();
 
   /**
    * Generate a send token
@@ -157,7 +155,7 @@ export function useCashuToken() {
         throw new Error('Invalid token format');
       }
 
-      const { mint: mintUrl, proofs: tokenProofs } = decodedToken;
+      const { mint: mintUrl } = decodedToken;
 
       // if we don't have the mintUrl yet, add it
       await addMintIfNotExists(mintUrl);

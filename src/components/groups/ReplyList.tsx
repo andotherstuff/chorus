@@ -6,14 +6,14 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { useReplyApprovals } from "@/hooks/useReplyApprovals";
 import { useNostrPublish } from "@/hooks/useNostrPublish";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NoteContent } from "../NoteContent";
 import { ReplyForm } from "./ReplyForm";
 import { Link } from "react-router-dom";
-import { MessageSquare, CheckCircle, AlertTriangle, Shield, MoreVertical, Flag, Share2 } from "lucide-react";
+import { MessageSquare, CheckCircle, AlertTriangle, MoreVertical, Flag, Share2 } from "lucide-react";
 import { EmojiReactionButton } from "@/components/EmojiReactionButton";
 import { NutzapButton } from "@/components/groups/NutzapButton";
 import { toast } from "sonner";
@@ -45,10 +45,10 @@ interface ReplyListProps {
 }
 
 export function ReplyList({ postId, communityId, postAuthorPubkey }: ReplyListProps) {
-  const { data: replies, isLoading, refetch } = useReplies(postId, communityId);
+  const { data: replies, isLoading, refetch } = useReplies(postId);
   const { user } = useCurrentUser();
-  const { approvedMembers, moderators, isApprovedMember } = useApprovedMembers(communityId);
-  const { replyApprovals, isReplyApproved } = useReplyApprovals(communityId);
+  const { moderators, isApprovedMember } = useApprovedMembers(communityId);
+  const { isReplyApproved } = useReplyApprovals(communityId);
   const [showOnlyApproved, setShowOnlyApproved] = useState(true);
   
   // Check if current user is a moderator
@@ -145,7 +145,7 @@ export function ReplyList({ postId, communityId, postAuthorPubkey }: ReplyListPr
       </div>
       
       <div>
-        {filteredReplies.map((reply, index) => (
+        {filteredReplies.map((reply) => (
           <ReplyItem 
             key={reply.id} 
             reply={reply} 
@@ -195,7 +195,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
     ]
   });
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const { data: nestedReplies, isLoading: isLoadingNested, refetch: refetchNested } = useNestedReplies(reply.id);
+  const { data: nestedReplies, refetch: refetchNested } = useNestedReplies(reply.id);
 
   const handleShareReply = async () => {
     try {
@@ -228,8 +228,8 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
     }
   };
   const [showNestedReplies, setShowNestedReplies] = useState(true);
-  const { approvedMembers, isApprovedMember } = useApprovedMembers(communityId);
-  const { replyApprovals, isReplyApproved } = useReplyApprovals(communityId);
+  const { isApprovedMember } = useApprovedMembers(communityId);
+  const { isReplyApproved } = useReplyApprovals(communityId);
   
   const metadata = author.data?.metadata;
   const displayName = metadata?.name || reply.pubkey.slice(0, 8);
@@ -242,7 +242,7 @@ function ReplyItem({ reply, communityId, postId, postAuthorPubkey, onReplySubmit
     try {
       const npub = nip19.npubEncode(reply.pubkey);
       authorIdentifier = `${npub.slice(0,10)}...${npub.slice(-4)}`;
-    } catch (e) {
+    } catch {
       authorIdentifier = `${reply.pubkey.slice(0,8)}...${reply.pubkey.slice(-4)}`;
     }
   } else if (!authorNip05) {

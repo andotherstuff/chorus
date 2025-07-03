@@ -1,4 +1,4 @@
-import { Keys, MeltQuoteResponse, MintQuoteResponse, type Proof } from '@cashu/cashu-ts'
+import { MeltQuoteResponse, MintQuoteResponse, type Proof } from '@cashu/cashu-ts'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { GetInfoResponse, MintKeyset, MintKeys } from '@cashu/cashu-ts'

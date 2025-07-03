@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
-import { useNostr } from "@/hooks/useNostr";
+
 import { usePendingReplies } from "@/hooks/usePendingReplies";
 import { usePendingPostsCount } from "@/hooks/usePendingPostsCount";
 import { useOpenReportsCount } from "@/hooks/useOpenReportsCount";
 import { usePendingJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,13 +54,12 @@ export default function GroupDetail() {
   const { groupId } = useParams<{ groupId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const queryClient = useQueryClient();
   const [parsedId, setParsedId] = useState<{ kind: number; pubkey: string; identifier: string } | null>(null);
   const [showOnlyApproved, setShowOnlyApproved] = useState(true);
-  const [currentPostCount, setCurrentPostCount] = useState(0);
+
   const [activeTab, setActiveTab] = useState("posts");
   const [imageLoading, setImageLoading] = useState(true);
   const [showQRCode, setShowQRCode] = useState(false);
@@ -408,9 +408,7 @@ export default function GroupDetail() {
     // If the hash references a post ID (not a tab name), scroll to it
     else if (hash) {
       // Set active tab to posts to show the post content
-      if (activeTab !== "posts") {
-        setActiveTab("posts");
-      }
+      setActiveTab("posts");
       
       // Wait for content to render before attempting to scroll
       setTimeout(() => {
@@ -425,18 +423,15 @@ export default function GroupDetail() {
         }
       }, 500);
     }
-    // Only set these fallbacks on initial mount to avoid constantly resetting
-    else if (!activeTab || !validTabs.includes(activeTab)) {
+    // If no hash, set default tab
+    else {
       setActiveTab("posts");
     }
-
-    // Deliberately not including activeTab in the dependencies to prevent loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hash]);
 
   // Handle initial load for special cases (reports, pending items) without affecting normal tab operation
   useEffect(() => {
-    // Only run once on mount and if hash is not already set
+    // Only handle special cases if no hash is set
     if (!hash) {
       // For backward compatibility, try to handle old parameters
       if (reportId && isModerator) {
@@ -446,8 +441,7 @@ export default function GroupDetail() {
         setActiveTab("posts");
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hash, reportId, isModerator, totalPendingCount]);
 
   const nameTag = community?.tags.find(tag => tag[0] === "name");
   const descriptionTag = community?.tags.find(tag => tag[0] === "description");
@@ -722,7 +716,6 @@ export default function GroupDetail() {
             <PostList
               communityId={groupId || ''}
               showOnlyApproved={showOnlyApproved}
-              onPostCountChange={setCurrentPostCount}
             />
           </div>
         </TabsContent>

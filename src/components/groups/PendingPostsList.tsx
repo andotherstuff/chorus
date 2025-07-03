@@ -1,4 +1,4 @@
-import { useNostr } from "@/hooks/useNostr";
+
 import { usePendingPostsCount } from "@/hooks/usePendingPostsCount";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,6 @@ interface PendingPostsListProps {
 }
 
 export function PendingPostsList({ communityId }: PendingPostsListProps) {
-  const { nostr } = useNostr();
   
   // Query for pending posts count using our custom hook
   const { data: pendingPostsCount = 0, isLoading } = usePendingPostsCount(communityId);

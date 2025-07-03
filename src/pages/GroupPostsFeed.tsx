@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNostr } from "@/hooks/useNostr";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/ui/Header";
@@ -17,7 +17,6 @@ import { Icon } from "@/components/ui/Icon";
 
 export default function GroupPostsFeed() {
   const { nostr } = useNostr();
-  const { user } = useCurrentUser();
   const { data: userGroups } = useUserGroups();
   const [activeTab, setActiveTab] = useState<"all" | "approved">("approved");
   const [refreshTrigger, setRefreshTrigger] = useState(0);

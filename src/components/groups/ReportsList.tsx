@@ -5,13 +5,13 @@ import { useAuthor } from "@/hooks/useAuthor";
 import { usePostById } from "@/hooks/usePostById";
 import { useApprovedMembers } from "@/hooks/useApprovedMembers";
 import { useLocation } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckCircle, XCircle, UserX, Ban, MoreHorizontal, User, Inbox as InboxIcon, Archive as ArchiveIcon } from "lucide-react";
+import { CheckCircle, XCircle, UserX, Ban, MoreHorizontal, Inbox as InboxIcon, Archive as ArchiveIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   DropdownMenu,
@@ -98,7 +98,7 @@ export function ReportsList({ communityId }: ReportsListProps) {
       
       // Refresh the reports list
       refetch();
-    } catch (error) {
+    } catch {
       // Error is handled in the hook
     }
   };
@@ -367,7 +367,6 @@ const ReportItem = React.forwardRef<HTMLDivElement, ReportItemProps>(
     const { data: reportedPost, isLoading: isLoadingPost } = usePostById(report.reportedEventId);
     
     const reporterName = reporterAuthor.data?.metadata?.name || report.pubkey.slice(0, 8);
-    const reporterImage = reporterAuthor.data?.metadata?.picture;
     
     const reportedName = reportedAuthor.data?.metadata?.name || report.reportedPubkey.slice(0, 8);
     const reportedImage = reportedAuthor.data?.metadata?.picture;
