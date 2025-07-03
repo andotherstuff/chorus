@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/ui/Header";
-import { Eye, EyeOff, Copy, Check, Smartphone } from "lucide-react";
+import { Eye, EyeOff, Copy, Check, Smartphone, Wifi } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Navigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -12,6 +12,7 @@ import { nip19 } from 'nostr-tools';
 
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
+import { RelaySelector } from "@/components/RelaySelector";
 
 export default function Settings() {
   const { user } = useCurrentUser();
@@ -112,6 +113,33 @@ export default function Settings() {
       <div className="space-y-6 my-6">
         {/* Push Notifications Section */}
         <PushNotificationSettings />
+
+        {/* Relay Settings Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wifi className="w-5 h-5" />
+              Relay Settings
+            </CardTitle>
+            <CardDescription>
+              Choose which Nostr relay to connect to. Relays are servers that store and distribute your posts and messages across the Nostr network.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="relay-selector" className="text-sm font-medium mb-2 block">
+                  Active Relay
+                </label>
+                <RelaySelector className="w-full" />
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                You can select from popular relays or add your own custom relay URL. Changes take effect immediately.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Keys Section */}
         <Card>
