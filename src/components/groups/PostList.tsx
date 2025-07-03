@@ -157,8 +157,8 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
         approval: { id: string; pubkey: string; created_at: number; kind: number }
       }>;
 
-      // Filter out spam posts
-      const filteredApprovedPosts = approvedPosts.filter(post => !post.content || !post.content.toLowerCase().includes("has nostr figured out spam yet?"));
+      // Filter out spam posts using the centralized spam filter
+      const filteredApprovedPosts = filterSpamPosts(approvedPosts);
 
       // Debug logging
       console.log("Filtered approved posts:", {
@@ -215,8 +215,8 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
         return parentKind === "34550";
       });
 
-      // Filter out spam posts
-      const spamFilteredPosts = filteredPosts.filter(post => !post.content || !post.content.toLowerCase().includes("has nostr figured out spam yet?"));
+      // Filter out spam posts using the centralized spam filter
+      const spamFilteredPosts = filterSpamPosts(filteredPosts);
 
       // Debug logging
       console.log("Filtered posts:", {
@@ -245,8 +245,8 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
         limit: 50,
       }], { signal });
 
-      // Filter out spam posts
-      const spamFilteredPosts = posts.filter(post => !post.content || !post.content.toLowerCase().includes("has nostr figured out spam yet?"));
+      // Filter out spam posts using the centralized spam filter
+      const spamFilteredPosts = filterSpamPosts(posts);
 
       // Debug logging
       console.log("Legacy posts:", {

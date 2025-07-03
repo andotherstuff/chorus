@@ -2,6 +2,7 @@ import { useNostr } from "@/hooks/useNostr";
 import { useQuery } from "@tanstack/react-query";
 import { parseNostrAddress } from "@/lib/nostr-utils";
 import { KINDS } from "@/lib/nostr-kinds";
+import { filterSpamPosts } from "@/lib/spam-filter";
 
 /**
  * Hook to fetch the count of pending posts in a community
@@ -46,8 +47,9 @@ export function usePendingPostsCount(communityId: string) {
         limit: 100,
       }], { signal });
 
-      // Combine both types of posts
-      const allPosts = [...topLevelPosts, ...legacyPosts];
+      // Combine both types of posts and filter out spam
+      const combinedPosts = [...topLevelPosts, ...legacyPosts];
+      const allPosts = filterSpamPosts(combinedPosts);
 
       // Get approval events
       const approvals = await nostr.query([{
