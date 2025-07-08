@@ -202,21 +202,14 @@ export function PostList({ communityId, showOnlyApproved = true, pendingOnly = f
       const posts = await nostr.query([{
         kinds: [KINDS.GROUP_COMMENT],
         "#A": [communityId], // Root scope is the group
+        "#a": [communityId],
+        "#K": ["34550"],
+        "#k": ["34550"],
         limit: 50,
       }], { signal });
 
-      // Filter to only top-level comments (parent is the group, not another comment)
-      const filteredPosts = posts.filter(post => {
-        // Check if this is a top-level comment (parent is the group, not another comment)
-        const parentKindTag = post.tags.find(tag => tag[0] === "k");
-        const parentKind = parentKindTag ? parentKindTag[1] : null;
-        
-        // Top-level comments have parent kind "34550" (group)
-        return parentKind === "34550";
-      });
-
       // Filter out spam posts using the centralized spam filter
-      const spamFilteredPosts = filterSpamPosts(filteredPosts);
+      const spamFilteredPosts = filterSpamPosts(posts);
 
       // Debug logging
       console.log("Filtered posts:", {
